@@ -15,6 +15,8 @@ export type PostWithRelations = Prisma.PostGetPayload<{
 type PostFilters = {
   categorySlug?: string
   tagSlug?: string
+  limit?: number
+  skip?: number
 }
 
 export const getPublishedPosts = async (filters: PostFilters = {}) =>
@@ -40,11 +42,44 @@ export const getPublishedPosts = async (filters: PostFilters = {}) =>
           : {}),
       },
       orderBy: { publishedAt: 'desc' },
+      take: filters.limit ?? 20, // Limit to 20 posts by default
+      skip: filters.skip ?? 0,
       include: {
-        author: true,
-        category: true,
-        tags: { include: { tag: true } },
-        coverImage: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+          take: 5, // Limit tags per post
+        },
+        coverImage: {
+          select: {
+            id: true,
+            url: true,
+            alt: true,
+            title: true,
+          },
+        },
       },
     })
     .catch((error) => {
