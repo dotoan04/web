@@ -8,7 +8,8 @@ import { put } from '@vercel/blob'
 import prisma from '@/lib/prisma'
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
-const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+// Use Vercel Blob if BLOB_READ_WRITE_TOKEN exists (production)
+const USE_VERCEL_BLOB = !!process.env.BLOB_READ_WRITE_TOKEN
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,14 +29,16 @@ export async function POST(request: NextRequest) {
     
     let fileUrl: string
 
-    if (IS_PRODUCTION) {
+    if (USE_VERCEL_BLOB) {
       // Production: Use Vercel Blob
+      console.log('Using Vercel Blob storage for upload')
       try {
         const blob = await put(filename, buffer, {
           access: 'public',
           contentType: file.type,
         })
         fileUrl = blob.url
+        console.log('File uploaded to Vercel Blob:', fileUrl)
       } catch (blobError) {
         console.error('Vercel Blob error:', blobError)
         return NextResponse.json(
@@ -45,15 +48,17 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Development: Use local file system
+      console.log('Using local file system for upload')
       const filepath = path.join(UPLOAD_DIR, filename)
       try {
         await fs.mkdir(UPLOAD_DIR, { recursive: true })
         await fs.writeFile(filepath, buffer)
         fileUrl = `/uploads/${filename}`
+        console.log('File uploaded to local:', fileUrl)
       } catch (fsError) {
         console.error('File system error:', fsError)
         return NextResponse.json(
-          { error: 'Không thể lưu file vào thư mục uploads.' },
+          { error: 'Không thể lưu file vào thư mục uploads. Trên production, bạn cần setup Vercel Blob Storage.' },
           { status: 500 }
         )
       }
