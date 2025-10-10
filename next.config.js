@@ -12,6 +12,10 @@ const nextConfig = {
       '*': ['**/Application Data/**'],
     },
   },
+  // Optimize font loading for production builds
+  optimizeFonts: true,
+  // Increase timeout for font fetching during build
+  staticPageGenerationTimeout: 120,
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60,

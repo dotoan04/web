@@ -12,16 +12,21 @@ import { PwaRegister } from '@/components/pwa/pwa-register'
 import { AnalyticsTracker } from '@/components/analytics/analytics-tracker'
 
 const headingFont = Playfair_Display({
-  subsets: ['latin', 'vietnamese'],
+  subsets: ['latin'],
   weight: ['400', '600', '700'],
   variable: '--font-heading',
   display: 'swap',
+  fallback: ['Georgia', 'serif'],
+  adjustFontFallback: true,
 })
 const bodyFont = Inter({
-  subsets: ['latin', 'vietnamese'],
+  subsets: ['latin'],
   weight: ['400', '500', '600'],
   variable: '--font-body',
   display: 'swap',
+  fallback: ['system-ui', '-apple-system', 'sans-serif'],
+  adjustFontFallback: true,
+  preload: true,
 })
 
 export const metadata: Metadata = {
