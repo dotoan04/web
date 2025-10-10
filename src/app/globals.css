@@ -2,26 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+    color-scheme: light dark;
   }
-}
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  body {
+    @apply bg-ink-50 text-ink-800 antialiased transition-colors duration-300;
+    background-image: radial-gradient(circle at 20% 20%, rgba(128, 98, 58, 0.12), transparent 55%),
+      radial-gradient(circle at 80% 0%, rgba(27, 20, 14, 0.1), transparent 60%);
+  }
+
+  .dark body {
+    @apply bg-ink-900 text-ink-100;
+    background-image: radial-gradient(circle at 20% 20%, rgba(159, 127, 81, 0.15), transparent 55%),
+      radial-gradient(circle at 70% 0%, rgba(48, 35, 24, 0.65), transparent 60%);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display tracking-wide text-ink-900 dark:text-ink-100;
+  }
+
+  p {
+    @apply leading-[1.7];
+  }
+
+  .prose .heading-anchor {
+    @apply ml-2 text-xs font-normal text-ink-400 opacity-0 transition hover:text-ink-700 dark:text-ink-500 dark:hover:text-ink-200;
+  }
+
+  .prose h2:hover .heading-anchor,
+  .prose h3:hover .heading-anchor,
+  .prose h4:hover .heading-anchor,
+  .prose h2:focus-within .heading-anchor,
+  .prose h3:focus-within .heading-anchor,
+  .prose h4:focus-within .heading-anchor {
+    opacity: 1;
+  }
+
+  details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .code-block {
+    @apply mb-6 overflow-hidden rounded-3xl border border-ink-100 bg-white/90 shadow-[0_12px_30px_rgba(27,20,14,0.12)] dark:border-ink-700 dark:bg-ink-900/60 dark:shadow-[0_12px_30px_rgba(0,0,0,0.5)];
+  }
+
+  .code-block__toolbar {
+    @apply flex items-center justify-between gap-4 border-b border-ink-100 bg-white/70 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.35em] text-ink-400 dark:border-ink-700 dark:bg-ink-800/70 dark:text-ink-300;
+  }
+
+  .code-block__language {
+    @apply text-ink-500 dark:text-ink-200;
+  }
+
+  .code-block__copy {
+    @apply rounded-full border border-ink-200 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.35em] text-ink-500 transition hover:border-ink-400 hover:text-ink-800 dark:border-ink-600 dark:text-ink-300 dark:hover:border-ink-400 dark:hover:text-ink-100;
+  }
+
+  .code-block pre {
+    @apply m-0 max-h-[32rem] overflow-auto bg-transparent px-0 py-4;
+  }
+
+  .code-block pre code {
+    @apply block min-w-full px-4 text-sm leading-6;
+    counter-reset: line;
+  }
+
+  .code-block pre code .line {
+    @apply block rounded-lg px-4 py-0.5 transition;
+    position: relative;
+    padding-left: 3.5rem;
+  }
+
+  .code-block pre code .line::before {
+    @apply absolute left-4 inline-block w-8 text-right text-xs text-ink-400 dark:text-ink-500;
+    content: counter(line);
+    counter-increment: line;
+  }
+
+  .code-block pre code .line[data-highlighted='true'] {
+    @apply border-l-4 border-ink-300 bg-ink-100/70 dark:border-ink-500 dark:bg-ink-700/60;
+  }
+
+  .code-block pre code .line[data-highlighted='true']::before {
+    @apply text-ink-600 dark:text-ink-200;
+  }
 }

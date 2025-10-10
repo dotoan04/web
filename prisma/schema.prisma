@@ -1,0 +1,211 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  AUTHOR
+  READER
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String?
+  email     String    @unique
+  password  String
+  role      UserRole  @default(READER)
+  bio       String?
+  avatarUrl String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  posts        Post[]
+  revisions    PostRevision[]
+  accounts     Account[]
+  sessions     Session[]
+  mediaUploads Media[]    @relation("UserMediaUploads")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts Post[]
+}
+
+model Tag {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  posts       PostTag[]
+}
+
+model Media {
+  id            String    @id @default(cuid())
+  url           String
+  title         String?
+  alt           String?
+  type          MediaType @default(IMAGE)
+  size          Int?
+  width         Int?
+  height        Int?
+  createdAt     DateTime  @default(now())
+  uploadedById  String?
+  uploadedBy    User?     @relation("UserMediaUploads", fields: [uploadedById], references: [id], onDelete: SetNull)
+  coverForPosts Post[]    @relation("CoverImage")
+}
+
+model Post {
+  id            String      @id @default(cuid())
+  title         String
+  slug          String      @unique
+  excerpt       String?
+  content       Json
+  status        PostStatus  @default(DRAFT)
+  readingTime   Int?
+  publishedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  authorId      String?
+  categoryId    String?
+  coverImageId  String?
+
+  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  category    Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  coverImage  Media?      @relation("CoverImage", fields: [coverImageId], references: [id], onDelete: SetNull)
+  tags        PostTag[]
+  revisions   PostRevision[]
+
+  @@index([status, publishedAt])
+}
+
+model PostTag {
+  postId String
+  tagId  String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model PostRevision {
+  id        String     @id @default(cuid())
+  postId    String
+  title     String
+  excerpt   String?
+  content   Json
+  createdAt DateTime   @default(now())
+  authorId  String?
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Visit {
+  id          String   @id @default(cuid())
+  path        String
+  ip          String
+  userAgent   String?
+  referrer    String?
+  source      String?
+  country     String?
+  city        String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([ip])
+}
+
+model PortfolioProject {
+  id           String   @id @default(cuid())
+  title        String
+  slug         String   @unique
+  summary      String?
+  description  String?  @db.Text
+  timeline     String?
+  role         String?
+  technologies String[] @default([])
+  projectUrl   String?
+  repoUrl      String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  refresh_token_expires_in Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

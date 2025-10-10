@@ -1,0 +1,15 @@
+
+> web@0.1.0 dev
+> next dev --port 3001
+
+   ▲ Next.js 14.0.0
+   - Local:        http://localhost:3001
+   - Environments: .env.local, .env
+   - Experiments (use at your own risk):
+     · outputFileTracingRoot
+
+   automatically enabled Fast Refresh for 1 custom loader
+ ✓ Ready in 2.1s
+ ○ Compiling /page ...
+ ✓ Compiled /page in 2.2s (1173 modules)
+ ✓ Compiled in 504ms (279 modules)
