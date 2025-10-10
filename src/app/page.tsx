@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Badge } from '@/components/ui/badge'
+import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Button } from '@/components/ui/button'
 import { SmartImage } from '@/components/ui/smart-image'
