@@ -11,11 +11,20 @@ const nextConfig = {
     outputFileTracingExcludes: {
       '*': ['**/Application Data/**'],
     },
+    // Optimize package imports
+    optimizePackageImports: ['@/components', '@/lib', 'lucide-react', 'framer-motion'],
   },
   // Optimize font loading for production builds
   optimizeFonts: true,
   // Increase timeout for font fetching during build
   staticPageGenerationTimeout: 120,
+  // Compiler optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+  // Performance optimizations
+  poweredByHeader: false,
+  compress: true,
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60,

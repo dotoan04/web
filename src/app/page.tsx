@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
 import { Badge } from '@/components/ui/badge'
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Button } from '@/components/ui/button'
 import { SmartImage } from '@/components/ui/smart-image'
 import { PrefetchLink } from '@/components/ui/prefetch-link'
 import { SubscriptionBanner } from '@/components/subscription/subscription-banner'
+import { AnimatedHero, FloatingCircle } from '@/components/animated-hero'
+import { ScrollReveal, SlideIn } from '@/components/scroll-reveal'
 import { createMetadata } from '@/lib/metadata'
 import { formatViDate } from '@/lib/utils'
 import { getSiteSettings } from '@/server/settings'
@@ -12,7 +15,7 @@ import { getCategoryOptions } from '@/server/categories'
 import { getTagOptions } from '@/server/tags'
 import { cn } from '@/components/ui/cn'
 
-export const revalidate = 300
+export const revalidate = 60 // Faster cache updates
 
 export const metadata: Metadata = createMetadata()
 
@@ -56,44 +59,42 @@ export default async function Home({ searchParams }: HomeProps) {
 
   return (
     <main className="space-y-16">
-      <section className="relative overflow-hidden rounded-[2.5rem] border border-ink-100 bg-white/80 p-12 shadow-[0_25px_60px_rgba(27,20,14,0.12)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_25px_60px_rgba(11,9,6,0.45)]">
-        <div className="absolute -top-16 right-12 h-48 w-48 rounded-full bg-ink-200/30 blur-3xl dark:bg-ink-600/40" />
-        <div className="absolute -bottom-20 left-10 h-36 w-36 rounded-full bg-ink-300/20 blur-3xl dark:bg-ink-700/40" />
-        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-2xl space-y-5">
-            <p className="text-xs uppercase tracking-[0.4em] text-ink-400 dark:text-ink-300">
-              {slogan || 'BlogVibe Coding'}
-            </p>
-            <h1 className="font-display text-4xl leading-tight text-ink-900 dark:text-ink-50 md:text-5xl">
-              {(settings['site.name'] as string) ?? 'BlogVibe Coding'}
-            </h1>
-            <p className="text-lg text-ink-600 dark:text-ink-200">{hero}</p>
-            {heroCtaLabel && heroCtaLink ? (
+      <AnimatedHero>
+        <section className="relative overflow-hidden rounded-[2.5rem] border border-ink-100 bg-white/80 p-12 shadow-[0_25px_60px_rgba(27,20,14,0.12)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_25px_60px_rgba(11,9,6,0.45)]">
+          <div className="absolute -top-16 right-12 h-48 w-48 rounded-full bg-ink-200/30 blur-3xl dark:bg-ink-600/40" />
+          <div className="absolute -bottom-20 left-10 h-36 w-36 rounded-full bg-ink-300/20 blur-3xl dark:bg-ink-700/40" />
+          <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-2xl space-y-5">
+              <p className="text-xs uppercase tracking-[0.4em] text-ink-400 dark:text-ink-300">
+                {slogan || 'BlogVibe Coding'}
+              </p>
+              <h1 className="font-display text-4xl leading-tight text-ink-900 dark:text-ink-50 md:text-5xl">
+                {(settings['site.name'] as string) ?? 'BlogVibe Coding'}
+              </h1>
+              <p className="text-lg text-ink-600 dark:text-ink-200">{hero}</p>
+              {heroCtaLabel && heroCtaLink ? (
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild size="lg" className="rounded-full px-6">
+                    {heroCtaInternal ? (
+                      <PrefetchLink href={heroCtaLink}>{heroCtaLabel}</PrefetchLink>
+                    ) : (
+                      <a href={heroCtaLink} target="_blank" rel="noopener noreferrer">
+                        {heroCtaLabel}
+                      </a>
+                    )}
+                  </Button>
+                </div>
+              ) : null}
               <div className="flex flex-wrap gap-3">
-                <Button asChild size="lg" className="rounded-full px-6">
-                  {heroCtaInternal ? (
-                    <PrefetchLink href={heroCtaLink}>{heroCtaLabel}</PrefetchLink>
-                  ) : (
-                    <a href={heroCtaLink} target="_blank" rel="noopener noreferrer">
-                      {heroCtaLabel}
-                    </a>
-                  )}
-                </Button>
+                <Badge className="bg-ink-800 text-ink-50 dark:bg-ink-600">Cuộc sống</Badge>
+                <Badge className="bg-ink-100 text-ink-700 dark:bg-ink-700 dark:text-ink-100">Lập trình</Badge>
+                <Badge className="bg-ink-200 text-ink-700 dark:bg-ink-600/70 dark:text-ink-100">Sản xuất nội dung</Badge>
               </div>
-            ) : null}
-            <div className="flex flex-wrap gap-3">
-              <Badge className="bg-ink-800 text-ink-50 dark:bg-ink-600">Cuộc sống</Badge>
-              <Badge className="bg-ink-100 text-ink-700 dark:bg-ink-700 dark:text-ink-100">Lập trình</Badge>
-              <Badge className="bg-ink-200 text-ink-700 dark:bg-ink-600/70 dark:text-ink-100">Sản xuất nội dung</Badge>
             </div>
+            <FloatingCircle />
           </div>
-          <div className="relative h-40 w-40 overflow-hidden rounded-full bg-gradient-to-br from-ink-300/70 via-ink-200/40 to-ink-100/60 shadow-[0_20px_50px_rgba(27,20,14,0.25)] dark:from-ink-700/50 dark:via-ink-700/30 dark:to-ink-800/50 dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)] sm:h-52 sm:w-52">
-            <div className="absolute inset-2 rounded-full border border-white/60 dark:border-ink-600/60" />
-            <div className="absolute inset-6 rounded-full border border-white/30 dark:border-ink-600/40" />
-            <div className="absolute inset-10 rounded-full border border-white/20 dark:border-ink-600/30" />
-          </div>
-        </div>
-      </section>
+        </section>
+      </AnimatedHero>
 
       <section className="space-y-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -171,8 +172,9 @@ export default async function Home({ searchParams }: HomeProps) {
           </div>
         </div>
         <div className="grid gap-6 md:grid-cols-2">
-          {posts.map((post) => (
-            <article key={post.id} className="group flex h-full flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white/80 shadow-[0_15px_45px_rgba(27,20,14,0.1)] transition hover:-translate-y-1 dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_15px_45px_rgba(0,0,0,0.45)]">
+          {posts.map((post, index) => (
+            <ScrollReveal key={post.id} delay={index * 0.1}>
+              <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white/80 shadow-[0_15px_45px_rgba(27,20,14,0.1)] transition hover:-translate-y-1 dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_15px_45px_rgba(0,0,0,0.45)]">
               {post.coverImage?.url ? (
                 <div className="relative h-60 w-full overflow-hidden">
                   <SmartImage
@@ -213,6 +215,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 </div>
               </div>
             </article>
+            </ScrollReveal>
           ))}
           {posts.length === 0 ? (
             <div className="rounded-3xl border border-ink-100 bg-white/80 p-8 text-center text-sm text-ink-500 dark:border-ink-700 dark:bg-ink-800/60 dark:text-ink-300">
