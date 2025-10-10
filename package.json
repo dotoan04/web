@@ -13,7 +13,11 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
     "setup": "tsx scripts/install.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.10.2",
