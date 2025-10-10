@@ -118,8 +118,11 @@ export const PortfolioForm = ({ project }: PortfolioFormProps) => {
       }
 
       setMessage('Đã lưu dự án thành công.')
+      router.refresh() // Refresh to show updated data
       if (!project && data.id) {
-        router.push(`/admin/portfolio/${data.id}`)
+        setTimeout(() => {
+          router.push(`/admin/portfolio/${data.id}`)
+        }, 500)
       }
     } catch (thrown) {
       console.error(thrown)

@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   try {
     const project = await createPortfolioProject(parsed.data)
     revalidatePath('/portfolio')
+    revalidatePath('/admin/portfolio')
     return NextResponse.json(project)
   } catch (error) {
     console.error('Không thể tạo dự án mới:', error)

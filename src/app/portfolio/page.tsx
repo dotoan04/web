@@ -9,7 +9,7 @@ import { createMetadata } from '@/lib/metadata'
 import { getSiteSettings } from '@/server/settings'
 import { getPortfolioProjects } from '@/server/portfolio'
 
-export const revalidate = 300
+export const revalidate = 60 // Revalidate every minute for faster updates
 
 export const metadata: Metadata = createMetadata({
   title: 'Portfolio',

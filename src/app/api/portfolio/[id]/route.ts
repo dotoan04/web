@@ -41,6 +41,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const project = await updatePortfolioProject(params.id, parsed.data)
     revalidatePath('/portfolio')
+    revalidatePath('/admin/portfolio')
     return NextResponse.json(project)
   } catch (error) {
     console.error('Không thể cập nhật dự án:', error)
@@ -62,5 +63,6 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   }
 
   revalidatePath('/portfolio')
+  revalidatePath('/admin/portfolio')
   return NextResponse.json({ success: true })
 }
