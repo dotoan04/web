@@ -138,7 +138,7 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
       try {
         const processor = unified()
           .use(remarkParse)
-          .use(remarkFrontmatter, ['yaml', 'toml'])
+          .use(remarkFrontmatter as any, ['yaml', 'toml'])
           .use(remarkMdx)
           .use(remarkGfm)
           .use(removeMdxNodes)

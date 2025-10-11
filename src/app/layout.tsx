@@ -1,4 +1,5 @@
 import Script from 'next/script'
+import { Suspense } from 'react'
 import { Plus_Jakarta_Sans, Sora } from 'next/font/google'
 import type { Metadata } from 'next'
 
@@ -82,7 +83,9 @@ export default async function RootLayout({
         <SessionProvider>
           <ThemeProvider>
             {preferences.snowEffectEnabled ? <Snowfall density={1} /> : null}
-            <AnalyticsTracker />
+            <Suspense fallback={null}>
+              <AnalyticsTracker />
+            </Suspense>
             <PwaRegister />
             <div className="relative mx-auto max-w-6xl px-6 py-10 lg:px-12">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-[radial-gradient(circle_at_top,_rgba(120,129,255,0.3)_0%,_rgba(243,244,255,0)_70%)] dark:bg-[radial-gradient(circle_at_top,_rgba(92,100,236,0.28)_0%,_rgba(19,20,56,0)_75%)]" />
