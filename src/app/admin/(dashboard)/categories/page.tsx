@@ -5,7 +5,7 @@ import { getCurrentSession } from '@/lib/auth/session'
 import prisma from '@/lib/prisma'
 
 export const metadata = {
-  title: 'Quản lý chuyên mục | BlogVibe',
+  title: 'Quản lý chuyên mục',
 }
 
 export default async function CategoriesPage() {

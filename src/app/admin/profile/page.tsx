@@ -4,7 +4,7 @@ import { ProfileForm } from '@/components/admin/profile-form'
 import prisma from '@/lib/prisma'
 
 export const metadata = {
-  title: 'Hồ sơ cá nhân | BlogVibe',
+  title: 'Hồ sơ cá nhân',
 }
 
 export default async function ProfilePage() {

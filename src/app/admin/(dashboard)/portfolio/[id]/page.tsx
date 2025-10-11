@@ -11,7 +11,7 @@ type PageProps = {
 }
 
 export const metadata = {
-  title: 'Chỉnh sửa dự án | BlogVibe',
+  title: 'Chỉnh sửa dự án',
 }
 
 export default async function EditPortfolioProjectPage({ params }: PageProps) {

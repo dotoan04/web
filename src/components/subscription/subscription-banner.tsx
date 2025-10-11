@@ -1,11 +1,15 @@
 const endpoint = process.env.NEXT_PUBLIC_SUBSCRIBE_ENDPOINT
 const placeholder = process.env.NEXT_PUBLIC_SUBSCRIBE_PLACEHOLDER ?? 'Nhập email của bạn'
 
-export const SubscriptionBanner = () => (
-  <section className="rounded-[2.5rem] border border-ink-100 bg-white/80 p-8 shadow-[0_18px_45px_rgba(27,20,14,0.1)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_18px_45px_rgba(0,0,0,0.45)]">
+type SubscriptionBannerProps = {
+  siteName: string
+}
+
+export const SubscriptionBanner = ({ siteName }: SubscriptionBannerProps) => (
+  <section className="rounded-[2.5rem] border border-ink-100 bg-white/80 p-8 shadow-[0_18px_45px_rgba(33,38,94,0.12)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_18px_45px_rgba(9,11,38,0.45)]">
     <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
       <div>
-        <h2 className="font-display text-3xl text-ink-900 dark:text-ink-100">Nhận thư BlogVibe</h2>
+        <h2 className="font-display text-3xl text-ink-900 dark:text-ink-100">Nhận thư từ {siteName}</h2>
         <p className="mt-2 max-w-xl text-sm text-ink-500 dark:text-ink-300">
           Cập nhật câu chuyện mới nhất và các ghi chú chuyên sâu qua email. Không spam, chỉ những điều đáng đọc.
         </p>

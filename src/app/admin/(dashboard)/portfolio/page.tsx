@@ -7,7 +7,7 @@ import prisma from '@/lib/prisma'
 import { formatViDate } from '@/lib/utils'
 
 export const metadata = {
-  title: 'Quản lý Portfolio | BlogVibe',
+  title: 'Quản lý Portfolio',
 }
 
 export default async function PortfolioAdminPage() {

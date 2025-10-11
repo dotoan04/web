@@ -1,21 +1,23 @@
-import type { Metadata } from 'next'
 import { ArrowUpRight } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { SmartImage } from '@/components/ui/smart-image'
-import { createMetadata } from '@/lib/metadata'
-import { getSiteSettings } from '@/server/settings'
+import { createDynamicMetadata } from '@/lib/metadata'
+import { resolveSitePreferences } from '@/server/settings'
 import { getPortfolioProjects } from '@/server/portfolio'
 
 export const revalidate = 60 // Revalidate every minute for faster updates
 
-export const metadata: Metadata = createMetadata({
-  title: 'Portfolio',
-  description:
-    'Những dự án tiêu biểu thể hiện năng lực thiết kế, xây dựng sản phẩm và dẫn dắt kỹ thuật của tôi.',
-})
+export async function generateMetadata() {
+  return createDynamicMetadata({
+    title: 'Portfolio',
+    description:
+      'Những dự án tiêu biểu thể hiện năng lực thiết kế, xây dựng sản phẩm và dẫn dắt kỹ thuật của tôi.',
+    path: '/portfolio',
+  })
+}
 
 const formatLinkLabel = (url: string) => {
   try {
@@ -27,13 +29,15 @@ const formatLinkLabel = (url: string) => {
 }
 
 export default async function PortfolioPage() {
-  const [settings, projects] = await Promise.all([getSiteSettings(), getPortfolioProjects()])
+  const [preferences, projects] = await Promise.all([resolveSitePreferences(), getPortfolioProjects()])
 
-  const heroSettings = (settings['site.hero'] as { intro?: string; ctaLabel?: string; ctaLink?: string }) ?? {}
-  const slogan = (settings['site.slogan'] as string) ?? 'Crafting calm experiences & resilient systems.'
-  const intro = heroSettings.intro ??
+  const slogan = preferences.slogan || 'Crafting calm experiences & resilient systems.'
+  const intro =
+    preferences.heroIntro ||
     'Kết hợp tư duy thiết kế, kỹ năng kỹ thuật và storytelling để tạo ra những sản phẩm hữu dụng, bền bỉ.'
-  const ownerProfile = (settings['portfolio.owner'] as { name?: string | null; age?: number | null; avatarUrl?: string | null }) ?? {}
+  const heroCtaLabel = preferences.heroCtaLabel ?? 'Xem thêm dự án'
+  const heroCtaLink = preferences.heroCtaLink ?? null
+  const ownerProfile = preferences.owner ?? {}
   const ownerName = ownerProfile.name ?? 'Nhà sáng tạo ẩn danh'
   const avatarUrl = typeof ownerProfile.avatarUrl === 'string' && ownerProfile.avatarUrl.trim().length > 0 ? ownerProfile.avatarUrl.trim() : null
   const ownerInitials = ownerName
@@ -51,8 +55,8 @@ export default async function PortfolioPage() {
   const featuredTechnologies = Array.from(technologySet).slice(0, 6)
   
   // Lấy thông tin học tập và chứng chỉ từ settings
-  const education = (settings['portfolio.education'] as string) ?? 'Đại học Công nghệ'
-  const certifications = (settings['portfolio.certifications'] as string[]) ?? []
+  const education = preferences.education || 'Đại học Công nghệ'
+  const certifications = preferences.certifications ?? []
   
   const metrics = [
     { label: 'Dự án hoàn thiện', value: totalProjects > 0 ? `${totalProjects}+` : 'Đang cập nhật' },
@@ -80,7 +84,7 @@ export default async function PortfolioPage() {
 
   return (
     <main className="space-y-16">
-      <section className="relative overflow-hidden rounded-[2.5rem] border border-ink-100 bg-white/85 px-10 py-14 shadow-[0_28px_70px_rgba(27,20,14,0.16)] backdrop-blur-2xl dark:border-ink-700 dark:bg-ink-900/70 dark:shadow-[0_30px_70px_rgba(0,0,0,0.45)]">
+      <section className="relative overflow-hidden rounded-[2.5rem] border border-ink-100 bg-white/85 px-10 py-14 shadow-[0_28px_70px_rgba(33,38,94,0.14)] backdrop-blur-2xl dark:border-ink-700 dark:bg-ink-900/70 dark:shadow-[0_30px_70px_rgba(9,11,38,0.5)]">
         <div className="pointer-events-none absolute -left-10 top-0 h-56 w-56 rounded-full bg-ink-200/40 blur-3xl dark:bg-ink-600/30" />
         <div className="pointer-events-none absolute -right-24 bottom-0 h-64 w-64 rounded-full bg-ink-100/40 blur-[90px] dark:bg-ink-700/40" />
         <div className="relative z-10 grid gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -98,7 +102,7 @@ export default async function PortfolioPage() {
               {metrics.map((metric) => (
                 <div
                   key={metric.label}
-                  className="rounded-2xl border border-ink-200/60 bg-white/90 p-4 text-sm text-ink-500 shadow-[0_15px_35px_rgba(27,20,14,0.1)] transition hover:-translate-y-1 hover:border-ink-300 hover:text-ink-700 dark:border-ink-700/70 dark:bg-ink-800/70 dark:text-ink-300 dark:hover:border-ink-500"
+                  className="rounded-2xl border border-ink-200/60 bg-white/90 p-4 text-sm text-ink-500 shadow-[0_15px_35px_rgba(33,38,94,0.12)] transition hover:-translate-y-1 hover:border-ink-300 hover:text-ink-700 dark:border-ink-700/70 dark:bg-ink-800/70 dark:text-ink-300 dark:hover:border-ink-500"
                 >
                   <p className="text-xs uppercase tracking-[0.35em] text-ink-400 dark:text-ink-500">{metric.label}</p>
                   <p className="mt-2 font-display text-xl text-ink-900 dark:text-ink-50">{metric.value}</p>
@@ -139,7 +143,7 @@ export default async function PortfolioPage() {
           </div>
 
           <div className="flex flex-col items-center gap-6">
-            <div className="relative aspect-square w-44 overflow-hidden rounded-[2rem] border border-ink-100/80 bg-gradient-to-br from-ink-200/60 via-ink-100/40 to-white/20 shadow-[0_25px_60px_rgba(27,20,14,0.15)] dark:border-ink-700/80 dark:from-ink-700/40 dark:via-ink-800/30 dark:to-ink-900/20 dark:shadow-[0_25px_60px_rgba(0,0,0,0.45)] sm:w-56">
+            <div className="relative aspect-square w-44 overflow-hidden rounded-[2rem] border border-ink-100/80 bg-gradient-to-br from-ink-200/60 via-ink-100/40 to-white/20 shadow-[0_25px_60px_rgba(33,38,94,0.14)] dark:border-ink-700/80 dark:from-ink-700/40 dark:via-ink-800/30 dark:to-ink-900/20 dark:shadow-[0_25px_60px_rgba(9,11,38,0.45)] sm:w-56">
               {avatarUrl ? (
                 <SmartImage
                   src={avatarUrl}
@@ -155,7 +159,7 @@ export default async function PortfolioPage() {
               )}
               <div className="pointer-events-none absolute inset-0 rounded-[2rem] border border-white/40 shadow-[inset_0_0_20px_rgba(255,255,255,0.3)] dark:border-white/10" />
             </div>
-            <div className="rounded-2xl border border-ink-100/70 bg-white/80 p-4 text-center shadow-[0_18px_45px_rgba(27,20,14,0.12)] dark:border-ink-700/70 dark:bg-ink-800/70 dark:text-ink-200">
+            <div className="rounded-2xl border border-ink-100/70 bg-white/80 p-4 text-center shadow-[0_18px_45px_rgba(33,38,94,0.12)] dark:border-ink-700/70 dark:bg-ink-800/70 dark:text-ink-200">
               <p className="text-sm uppercase tracking-[0.35em] text-ink-400 dark:text-ink-500">Triết lý làm việc</p>
               <p className="mt-3 text-base leading-relaxed text-ink-700 dark:text-ink-100">
                 “Thiết kế nên những trải nghiệm tinh tế, vận hành bởi hệ thống vững vàng và câu chuyện có chiều sâu.”
@@ -169,7 +173,7 @@ export default async function PortfolioPage() {
         {highlightCards.map((item) => (
           <Card
             key={item.title}
-            className="border border-ink-100/70 bg-white/75 shadow-[0_18px_45px_rgba(27,20,14,0.1)] transition hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(27,20,14,0.12)] dark:border-ink-700/70 dark:bg-ink-900/60 dark:text-ink-100"
+            className="border border-ink-100/70 bg-white/75 shadow-[0_18px_45px_rgba(33,38,94,0.1)] transition hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(33,38,94,0.15)] dark:border-ink-700/70 dark:bg-ink-900/60 dark:text-ink-100"
           >
             <CardHeader>
               <CardTitle className="text-lg text-ink-900 dark:text-ink-50">{item.title}</CardTitle>
@@ -251,7 +255,7 @@ export default async function PortfolioPage() {
         )}
       </section>
 
-      <section className="rounded-[2rem] border border-ink-100 bg-white/85 p-10 text-center shadow-[0_20px_55px_rgba(27,20,14,0.12)] dark:border-ink-700 dark:bg-ink-900/70 dark:text-ink-200">
+      <section className="rounded-[2rem] border border-ink-100 bg-white/85 p-10 text-center shadow-[0_20px_55px_rgba(33,38,94,0.12)] dark:border-ink-700 dark:bg-ink-900/70 dark:text-ink-200">
         <h3 className="font-display text-2xl text-ink-900 dark:text-ink-50">Cùng xây dựng dự án kế tiếp?</h3>
         <p className="mt-3 text-sm leading-relaxed text-ink-600 dark:text-ink-200">
           Tôi luôn tò mò về những ý tưởng mới mẻ. Hãy chia sẻ thử thách của bạn, chúng ta sẽ cùng tạo nên trải nghiệm tử tế và khác biệt.
@@ -263,13 +267,13 @@ export default async function PortfolioPage() {
               <ArrowUpRight size={16} className="ml-1" />
             </a>
           </Button>
-          {heroSettings.ctaLink ? (
+          {heroCtaLink ? (
             <Button
               asChild
               variant="ghost"
               className="border border-ink-200 bg-white/70 text-ink-700 hover:border-ink-300 dark:border-ink-700 dark:bg-ink-900/60 dark:text-ink-100"
             >
-              <a href={heroSettings.ctaLink}>{heroSettings.ctaLabel ?? 'Xem thêm dự án'}</a>
+              <a href={heroCtaLink}>{heroCtaLabel}</a>
             </Button>
           ) : null}
         </div>

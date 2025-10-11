@@ -5,7 +5,7 @@ import { getCurrentSession } from '@/lib/auth/session'
 import prisma from '@/lib/prisma'
 
 export const metadata = {
-  title: 'Quản lý thẻ | BlogVibe',
+  title: 'Quản lý thẻ',
 }
 
 export default async function TagsPage() {

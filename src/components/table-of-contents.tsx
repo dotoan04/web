@@ -41,7 +41,7 @@ export const TableOfContents = ({ headings }: TableOfContentsProps) => {
 
   return (
     <nav aria-label="Mục lục bài viết" className="relative">
-      <div className="sticky top-32 hidden max-h-[70vh] overflow-y-auto rounded-3xl border border-ink-100 bg-white/70 p-5 text-sm shadow-[0_12px_30px_rgba(27,20,14,0.08)] dark:border-ink-700 dark:bg-ink-800/70 dark:text-ink-200 lg:block">
+      <div className="sticky top-32 hidden max-h-[70vh] overflow-y-auto rounded-3xl border border-ink-100 bg-white/70 p-5 text-sm shadow-[0_12px_30px_rgba(33,38,94,0.12)] dark:border-ink-700 dark:bg-ink-800/70 dark:text-ink-200 lg:block">
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-ink-400 dark:text-ink-300">
           Mục lục
         </p>

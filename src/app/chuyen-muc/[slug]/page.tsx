@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 import { getCategoryWithPosts } from '@/server/categories'
 import { formatViDate } from '@/lib/utils'
-import { createMetadata, absoluteUrl } from '@/lib/metadata'
+import { createDynamicMetadata, absoluteUrl } from '@/lib/metadata'
 import { createBreadcrumbJsonLd } from '@/lib/structured-data'
 import { JsonLd } from '@/components/json-ld'
 
@@ -14,12 +14,12 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const category = await getCategoryWithPosts(params.slug)
   if (!category) {
-    return createMetadata({
+    return createDynamicMetadata({
       title: 'Chuyên mục',
       path: `/chuyen-muc/${params.slug}`,
     })
   }
-  return createMetadata({
+  return createDynamicMetadata({
     title: category.name,
     description: category.description ?? undefined,
     path: `/chuyen-muc/${category.slug}`,
@@ -31,7 +31,7 @@ export default async function CategoryPage({ params }: Props) {
 
   if (!category) {
     return (
-      <section className="space-y-6 rounded-[2.5rem] border border-ink-100 bg-white/70 p-10 text-center shadow-[0_20px_50px_rgba(27,20,14,0.08)]">
+      <section className="space-y-6 rounded-[2.5rem] border border-ink-100 bg-white/70 p-10 text-center shadow-[0_20px_50px_rgba(33,38,94,0.12)]">
         <h1 className="font-display text-3xl text-ink-900">Chuyên mục đang cập nhật</h1>
         <p className="text-sm text-ink-500">
           Dữ liệu hiện chưa sẵn sàng hoặc cơ sở dữ liệu đang bảo trì. Vui lòng quay lại sau.
@@ -49,7 +49,7 @@ export default async function CategoryPage({ params }: Props) {
   return (
     <div className="space-y-10">
       <JsonLd data={breadcrumb} />
-      <header className="rounded-[2.5rem] border border-ink-100 bg-white/70 p-10 shadow-[0_20px_50px_rgba(27,20,14,0.08)] dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+      <header className="rounded-[2.5rem] border border-ink-100 bg-white/70 p-10 shadow-[0_20px_50px_rgba(33,38,94,0.12)] dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_20px_50px_rgba(9,11,38,0.45)]">
         <p className="text-xs uppercase tracking-[0.3em] text-ink-400 dark:text-ink-300">Chuyên mục</p>
         <h1 className="font-display text-3xl text-ink-900 dark:text-ink-100">{category.name}</h1>
         {category.description ? <p className="mt-2 max-w-2xl text-sm text-ink-500 dark:text-ink-300">{category.description}</p> : null}
@@ -57,7 +57,7 @@ export default async function CategoryPage({ params }: Props) {
 
       <div className="grid gap-6 md:grid-cols-2">
         {category.posts.map((post) => (
-          <article key={post.id} className="rounded-3xl border border-ink-100 bg-white/80 p-6 shadow-[0_15px_40px_rgba(27,20,14,0.08)] dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_15px_40px_rgba(0,0,0,0.45)]">
+          <article key={post.id} className="rounded-3xl border border-ink-100 bg-white/80 p-6 shadow-[0_15px_40px_rgba(33,38,94,0.1)] dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_15px_40px_rgba(9,11,38,0.45)]">
             <div className="flex items-center justify-between text-xs uppercase tracking-wider text-ink-400 dark:text-ink-300">
               <span>{formatViDate(post.publishedAt ?? post.createdAt)}</span>
               <span>{post.author?.name ?? 'Ẩn danh'}</span>

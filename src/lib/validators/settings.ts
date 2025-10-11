@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const siteSettingsSchema = z.object({
   siteName: z.string().min(2, 'Tên trang quá ngắn'),
+  tabTitle: z.string().min(2, 'Tiêu đề tab quá ngắn'),
   slogan: z.string().optional(),
   heroIntro: z.string().optional(),
   heroCtaLabel: z.string().optional(),
@@ -25,6 +26,15 @@ export const siteSettingsSchema = z.object({
     .optional(),
   education: z.string().optional(),
   certifications: z.array(z.string()).optional(),
+  featuredBadges: z.array(z.string()).optional(),
+  seoKeywords: z.array(z.string()).optional(),
+  seoDescription: z.string().optional(),
+  faviconUrl: z
+    .string()
+    .url('Favicon phải là đường dẫn hợp lệ')
+    .nullable()
+    .optional(),
+  snowEffectEnabled: z.boolean().optional(),
 })
 
 export type SiteSettingsInput = z.infer<typeof siteSettingsSchema>

@@ -5,12 +5,12 @@ type ListItem = {
   url: string
 }
 
-export const createSiteJsonLd = () => ({
+export const createSiteJsonLd = (overrides?: { name?: string; description?: string; url?: string }) => ({
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: siteConfig.name,
-  url: siteConfig.url,
-  description: siteConfig.description,
+  name: overrides?.name ?? siteConfig.name,
+  url: overrides?.url ?? siteConfig.url,
+  description: overrides?.description ?? siteConfig.description,
   potentialAction: {
     '@type': 'SearchAction',
     target: `${absoluteUrl('/tim-kiem')}?query={search_term_string}`,
@@ -18,12 +18,12 @@ export const createSiteJsonLd = () => ({
   },
 })
 
-export const createOrganizationJsonLd = () => ({
+export const createOrganizationJsonLd = (overrides?: { name?: string; logo?: string; url?: string }) => ({
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: siteConfig.name,
-  url: siteConfig.url,
-  logo: absoluteUrl('/og?title=BlogVibe'),
+  name: overrides?.name ?? siteConfig.name,
+  url: overrides?.url ?? siteConfig.url,
+  logo: overrides?.logo ?? absoluteUrl(`/og?title=${encodeURIComponent(siteConfig.name)}`),
 })
 
 export const createBreadcrumbJsonLd = (items: ListItem[]) => ({
@@ -57,19 +57,19 @@ export const createArticleJsonLd = ({
   authorName,
   coverImage,
   tags = [],
-}: ArticleOptions) => ({
+}: ArticleOptions, overrides?: { siteName?: string; siteDescription?: string; logo?: string }) => ({
   '@context': 'https://schema.org',
   '@type': 'Article',
   mainEntityOfPage: absoluteUrl(`/bai-viet/${slug}`),
   headline: title,
-  description: description ?? siteConfig.description,
+  description: description ?? overrides?.siteDescription ?? siteConfig.description,
   author: authorName ? { '@type': 'Person', name: authorName } : undefined,
   publisher: {
     '@type': 'Organization',
-    name: siteConfig.name,
+    name: overrides?.siteName ?? siteConfig.name,
     logo: {
       '@type': 'ImageObject',
-      url: absoluteUrl('/og?title=BlogVibe'),
+      url: overrides?.logo ?? absoluteUrl(`/og?title=${encodeURIComponent(siteConfig.name)}`),
     },
   },
   image: coverImage ? [coverImage] : [absoluteUrl(`/og?title=${encodeURIComponent(title)}`)],

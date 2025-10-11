@@ -4,7 +4,7 @@ import { PortfolioForm } from '@/components/admin/portfolio-form'
 import { getCurrentSession } from '@/lib/auth/session'
 
 export const metadata = {
-  title: 'Thêm dự án Portfolio | BlogVibe',
+  title: 'Thêm dự án Portfolio',
 }
 
 export default async function NewPortfolioProjectPage() {

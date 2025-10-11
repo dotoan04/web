@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 type Props = {
   siteName: string
+  tabTitle: string
   slogan?: string
   heroIntro?: string
   heroCtaLabel?: string | null
@@ -18,10 +19,16 @@ type Props = {
   ownerAvatarUrl?: string | null
   education?: string
   certifications?: string[]
+  featuredBadges?: string[]
+  seoKeywords?: string[]
+  seoDescription?: string
+  faviconUrl?: string | null
+  snowEffectEnabled?: boolean
 }
 
 export const SettingsForm = ({
   siteName,
+  tabTitle,
   slogan,
   heroIntro,
   heroCtaLabel,
@@ -31,9 +38,15 @@ export const SettingsForm = ({
   ownerAvatarUrl,
   education,
   certifications,
+  featuredBadges,
+  seoKeywords,
+  seoDescription,
+  faviconUrl,
+  snowEffectEnabled,
 }: Props) => {
   const [values, setValues] = useState({
     siteName,
+    tabTitle,
     slogan: slogan ?? '',
     heroIntro: heroIntro ?? '',
     heroCtaLabel: heroCtaLabel ?? '',
@@ -43,9 +56,14 @@ export const SettingsForm = ({
     ownerAvatarUrl: ownerAvatarUrl ?? '',
     education: education ?? '',
     certifications: certifications?.join(', ') ?? '',
+    featuredBadges: featuredBadges?.join(', ') ?? 'Cuộc sống, Lập trình, Sản xuất nội dung',
+    seoKeywords: seoKeywords?.join(', ') ?? '',
+    seoDescription: seoDescription ?? '',
+    faviconUrl: faviconUrl ?? '',
   })
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [snowEnabled, setSnowEnabled] = useState(Boolean(snowEffectEnabled))
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -58,9 +76,18 @@ export const SettingsForm = ({
         .split(',')
         .map((c) => c.trim())
         .filter(Boolean)
+      const badgeArray = values.featuredBadges
+        .split(',')
+        .map((badge) => badge.trim())
+        .filter(Boolean)
+      const keywordArray = values.seoKeywords
+        .split(',')
+        .map((keyword) => keyword.trim())
+        .filter(Boolean)
       const payload = {
         ...values,
         siteName: values.siteName.trim(),
+        tabTitle: values.tabTitle.trim() || values.siteName.trim(),
         slogan: values.slogan.trim() || undefined,
         heroIntro: values.heroIntro.trim() || undefined,
         heroCtaLabel: values.heroCtaLabel.trim() || undefined,
@@ -70,6 +97,11 @@ export const SettingsForm = ({
         ownerAvatarUrl: values.ownerAvatarUrl.trim() ? values.ownerAvatarUrl.trim() : null,
         education: values.education.trim() || undefined,
         certifications: certArray.length > 0 ? certArray : undefined,
+        featuredBadges: badgeArray.length > 0 ? badgeArray : undefined,
+        seoKeywords: keywordArray.length > 0 ? keywordArray : undefined,
+        seoDescription: values.seoDescription.trim() || undefined,
+        faviconUrl: values.faviconUrl.trim() ? values.faviconUrl.trim() : null,
+        snowEffectEnabled: snowEnabled,
       }
 
       const response = await fetch('/api/settings', {
@@ -94,20 +126,33 @@ export const SettingsForm = ({
     <Card>
       <CardHeader>
         <CardTitle>Cài đặt giao diện</CardTitle>
-        <CardDescription>Điều chỉnh thông tin mô tả và lời chào trên trang chủ.</CardDescription>
+        <CardDescription>Điều chỉnh thương hiệu, giao diện và thông tin mô tả trên toàn bộ trang.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="siteName">
-              Tên trang
-            </label>
-            <Input
-              id="siteName"
-              value={values.siteName}
-              onChange={(event) => setValues((prev) => ({ ...prev, siteName: event.target.value }))}
-              required
-            />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="siteName">
+                Tên hiển thị trên giao diện
+              </label>
+              <Input
+                id="siteName"
+                value={values.siteName}
+                onChange={(event) => setValues((prev) => ({ ...prev, siteName: event.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="tabTitle">
+                Tiêu đề hiển thị trên tab trình duyệt
+              </label>
+              <Input
+                id="tabTitle"
+                value={values.tabTitle}
+                onChange={(event) => setValues((prev) => ({ ...prev, tabTitle: event.target.value }))}
+                required
+              />
+            </div>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="slogan">
@@ -152,6 +197,31 @@ export const SettingsForm = ({
                 onChange={(event) => setValues((prev) => ({ ...prev, heroCtaLink: event.target.value }))}
                 placeholder="https://"
               />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="featuredBadges">
+                Nhãn nổi bật dưới banner (phân cách bằng dấu phẩy)
+              </label>
+              <Input
+                id="featuredBadges"
+                value={values.featuredBadges}
+                onChange={(event) => setValues((prev) => ({ ...prev, featuredBadges: event.target.value }))}
+                placeholder="Ví dụ: Cuộc sống, Lập trình, Sản xuất nội dung"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="faviconUrl">
+                Favicon (URL)
+              </label>
+              <Input
+                id="faviconUrl"
+                value={values.faviconUrl}
+                onChange={(event) => setValues((prev) => ({ ...prev, faviconUrl: event.target.value }))}
+                placeholder="https://.../favicon.png"
+              />
+              <p className="mt-1 text-xs text-ink-400">Sử dụng ảnh vuông PNG hoặc ICO. Có thể lấy từ thư viện media.</p>
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
@@ -220,6 +290,42 @@ export const SettingsForm = ({
               Nhập các chứng chỉ của bạn, phân cách bằng dấu phẩy.
             </p>
           </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="seoKeywords">
+                Từ khoá SEO (phân cách bằng dấu phẩy)
+              </label>
+              <Textarea
+                id="seoKeywords"
+                rows={3}
+                value={values.seoKeywords}
+                onChange={(event) => setValues((prev) => ({ ...prev, seoKeywords: event.target.value }))}
+                placeholder="Ví dụ: blog cá nhân, kinh nghiệm lập trình, phong cách sống"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="seoDescription">
+                Mô tả SEO ngắn gọn
+              </label>
+              <Textarea
+                id="seoDescription"
+                rows={3}
+                value={values.seoDescription}
+                onChange={(event) => setValues((prev) => ({ ...prev, seoDescription: event.target.value }))}
+                placeholder="Tóm tắt nội dung trang để cải thiện khả năng xuất hiện trên công cụ tìm kiếm."
+              />
+            </div>
+          </div>
+          <label className="flex items-center gap-3 text-sm font-medium text-ink-600" htmlFor="snowEffect">
+            <input
+              id="snowEffect"
+              type="checkbox"
+              checked={snowEnabled}
+              onChange={(event) => setSnowEnabled(event.target.checked)}
+              className="h-4 w-4 rounded border-ink-300 text-ink-600 focus:ring-ink-500"
+            />
+            Bật hiệu ứng hạt rơi trên giao diện
+          </label>
           <div className="flex items-center justify-between">
             {message ? <p className="text-sm text-ink-500">{message}</p> : <span />}
             <Button type="submit" disabled={loading}>

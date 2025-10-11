@@ -1,4 +1,3 @@
-import type { Metadata } from 'next'
 import { Badge } from '@/components/ui/badge'
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -8,9 +7,9 @@ import { PrefetchLink } from '@/components/ui/prefetch-link'
 import { SubscriptionBanner } from '@/components/subscription/subscription-banner'
 import { AnimatedHero, FloatingCircle } from '@/components/animated-hero'
 import { ScrollReveal, SlideIn } from '@/components/scroll-reveal'
-import { createMetadata } from '@/lib/metadata'
+import { createDynamicMetadata } from '@/lib/metadata'
 import { formatViDate } from '@/lib/utils'
-import { getSiteSettings } from '@/server/settings'
+import { resolveSitePreferences } from '@/server/settings'
 import { getPublishedPosts } from '@/server/posts'
 import { getCategoryOptions } from '@/server/categories'
 import { getTagOptions } from '@/server/tags'
@@ -18,7 +17,9 @@ import { cn } from '@/components/ui/cn'
 
 export const revalidate = 60 // Faster cache updates
 
-export const metadata: Metadata = createMetadata()
+export async function generateMetadata() {
+  return createDynamicMetadata()
+}
 
 type HomeProps = {
   searchParams?: {
@@ -38,8 +39,8 @@ export default async function Home({ searchParams }: HomeProps) {
   const selectedCategory = searchParams?.category
   const selectedTag = searchParams?.tag
 
-  const [settings, categoryOptions, tagOptions] = await Promise.all([
-    getSiteSettings(),
+  const [preferences, categoryOptions, tagOptions] = await Promise.all([
+    resolveSitePreferences(),
     getCategoryOptions(),
     getTagOptions(),
   ])
@@ -51,26 +52,27 @@ export default async function Home({ searchParams }: HomeProps) {
 
   const posts = await getPublishedPosts({ categorySlug: validCategory, tagSlug: validTag })
 
-  const heroSettings = (settings['site.hero'] as { intro?: string; ctaLabel?: string; ctaLink?: string }) ?? {}
-  const hero = heroSettings.intro ?? 'Nơi lưu lại những lát cắt đời sống và câu chuyện về hành trình lập trình.'
-  const heroCtaLabel = heroSettings.ctaLabel?.trim()
-  const heroCtaLink = heroSettings.ctaLink?.trim()
+  const hero = preferences.heroIntro
+  const heroCtaLabel = preferences.heroCtaLabel?.trim()
+  const heroCtaLink = preferences.heroCtaLink?.trim()
   const heroCtaInternal = heroCtaLink?.startsWith('/')
-  const slogan = (settings['site.slogan'] as string) ?? ''
+  const slogan = preferences.slogan ?? ''
+  const featuredBadges = preferences.featuredBadges.length > 0 ? preferences.featuredBadges : ['Cuộc sống', 'Lập trình', 'Sản xuất nội dung']
+  const badgeClasses = ['bg-ink-800 text-ink-50 dark:bg-ink-600', 'bg-ink-100 text-ink-700 dark:bg-ink-700 dark:text-ink-50', 'bg-ink-200 text-ink-700 dark:bg-ink-600/70 dark:text-ink-100']
 
   return (
     <main className="space-y-16">
       <AnimatedHero>
-        <section className="relative overflow-hidden rounded-[2.5rem] border border-ink-100 bg-white/80 p-12 shadow-[0_25px_60px_rgba(27,20,14,0.12)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_25px_60px_rgba(11,9,6,0.45)]">
-          <div className="absolute -top-16 right-12 h-48 w-48 rounded-full bg-ink-200/30 blur-3xl dark:bg-ink-600/40" />
-          <div className="absolute -bottom-20 left-10 h-36 w-36 rounded-full bg-ink-300/20 blur-3xl dark:bg-ink-700/40" />
+        <section className="relative overflow-hidden rounded-[2.5rem] border border-ink-100 bg-white/82 p-12 shadow-[0_25px_60px_rgba(33,38,94,0.12)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_25px_60px_rgba(9,11,38,0.45)]">
+          <div className="absolute -top-16 right-12 h-48 w-48 rounded-full bg-ink-200/40 blur-3xl dark:bg-ink-600/40" />
+          <div className="absolute -bottom-20 left-10 h-36 w-36 rounded-full bg-ink-300/25 blur-3xl dark:bg-ink-700/35" />
           <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="max-w-2xl space-y-5">
               <p className="text-xs uppercase tracking-[0.4em] text-ink-400 dark:text-ink-300">
-                {slogan || 'BlogVibe Coding'}
+                {slogan || preferences.tabTitle}
               </p>
               <h1 className="font-display text-4xl leading-tight text-ink-900 dark:text-ink-50 md:text-5xl">
-                {(settings['site.name'] as string) ?? 'BlogVibe Coding'}
+                {preferences.siteName}
               </h1>
               <p className="text-lg text-ink-600 dark:text-ink-200">{hero}</p>
               {heroCtaLabel && heroCtaLink ? (
@@ -87,9 +89,11 @@ export default async function Home({ searchParams }: HomeProps) {
                 </div>
               ) : null}
               <div className="flex flex-wrap gap-3">
-                <Badge className="bg-ink-800 text-ink-50 dark:bg-ink-600">Cuộc sống</Badge>
-                <Badge className="bg-ink-100 text-ink-700 dark:bg-ink-700 dark:text-ink-100">Lập trình</Badge>
-                <Badge className="bg-ink-200 text-ink-700 dark:bg-ink-600/70 dark:text-ink-100">Sản xuất nội dung</Badge>
+                {featuredBadges.map((label, index) => (
+                  <Badge key={`${label}-${index}`} className={badgeClasses[index % badgeClasses.length]}>
+                    {label}
+                  </Badge>
+                ))}
               </div>
             </div>
             <FloatingCircle />
@@ -175,7 +179,7 @@ export default async function Home({ searchParams }: HomeProps) {
         <div className="grid gap-6 md:grid-cols-2">
           {posts.map((post, index) => (
             <ScrollReveal key={post.id} delay={index * 0.1}>
-              <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white/80 shadow-[0_15px_45px_rgba(27,20,14,0.1)] transition hover:-translate-y-1 dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_15px_45px_rgba(0,0,0,0.45)]">
+              <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white/80 shadow-[0_15px_45px_rgba(33,38,94,0.12)] transition hover:-translate-y-1 dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_15px_45px_rgba(9,11,38,0.45)]">
               {post.coverImage?.url ? (
                 <div className="relative h-60 w-full overflow-hidden">
                   <SmartImage
@@ -226,7 +230,7 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
       </section>
 
-      <SubscriptionBanner />
+      <SubscriptionBanner siteName={preferences.siteName} />
     </main>
   )
 }

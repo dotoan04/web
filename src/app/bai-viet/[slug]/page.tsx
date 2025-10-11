@@ -7,8 +7,9 @@ import { formatViDate } from '@/lib/utils'
 import { ReadingProgress } from '@/components/reading-progress'
 import { SmartImage } from '@/components/ui/smart-image'
 import { getPostBySlug, getRelatedPosts } from '@/server/posts'
-import { absoluteUrl, createMetadata } from '@/lib/metadata'
+import { absoluteUrl, createDynamicMetadata } from '@/lib/metadata'
 import { createArticleJsonLd, createBreadcrumbJsonLd } from '@/lib/structured-data'
+import { resolveSitePreferences } from '@/server/settings'
 import { JsonLd } from '@/components/json-ld'
 import { cn } from '@/components/ui/cn'
 import { Badge } from '@/components/ui/badge'
@@ -38,12 +39,12 @@ export const revalidate = 60
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getPostBySlug(params.slug)
   if (!post) {
-    return createMetadata({
+    return createDynamicMetadata({
       title: 'Bài viết',
       path: `/bai-viet/${params.slug}`,
     })
   }
-  return createMetadata({
+  return createDynamicMetadata({
     title: post.title,
     description: post.excerpt ?? undefined,
     path: `/bai-viet/${post.slug}`,
@@ -62,8 +63,11 @@ export default async function PostDetailPage({ params }: Props) {
     notFound()
   }
 
-  const { html, headings } = await renderRichText(post.content as Record<string, unknown>)
-  const relatedPosts = await getRelatedPosts(post.slug)
+  const [{ html, headings }, relatedPosts, preferences] = await Promise.all([
+    renderRichText(post.content as Record<string, unknown>),
+    getRelatedPosts(post.slug),
+    resolveSitePreferences(),
+  ])
   const breadcrumb = createBreadcrumbJsonLd([
     { name: 'Trang chủ', url: absoluteUrl('/') },
     ...(post.category
@@ -71,16 +75,23 @@ export default async function PostDetailPage({ params }: Props) {
       : []),
     { name: post.title, url: absoluteUrl(`/bai-viet/${post.slug}`) },
   ])
-  const article = createArticleJsonLd({
-    title: post.title,
-    description: post.excerpt,
-    slug: post.slug,
-    publishedAt: post.publishedAt ?? post.createdAt,
-    updatedAt: post.updatedAt,
-    authorName: post.author?.name,
-    coverImage: post.coverImage?.url ?? null,
-    tags: post.tags.map((item) => item.tag.name),
-  })
+  const article = createArticleJsonLd(
+    {
+      title: post.title,
+      description: post.excerpt,
+      slug: post.slug,
+      publishedAt: post.publishedAt ?? post.createdAt,
+      updatedAt: post.updatedAt,
+      authorName: post.author?.name,
+      coverImage: post.coverImage?.url ?? null,
+      tags: post.tags.map((item) => item.tag.name),
+    },
+    {
+      siteName: preferences.siteName,
+      siteDescription: preferences.seoDescription || preferences.slogan || undefined,
+      logo: preferences.faviconUrl ?? absoluteUrl(`/og?title=${encodeURIComponent(preferences.siteName)}`),
+    },
+  )
   const hasHeadings = headings.length > 0
 
   return (
@@ -107,7 +118,7 @@ export default async function PostDetailPage({ params }: Props) {
           </header>
 
           {post.coverImage?.url ? (
-            <div className="relative h-80 w-full overflow-hidden rounded-[2.5rem] shadow-[0_20px_50px_rgba(27,20,14,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+            <div className="relative h-80 w-full overflow-hidden rounded-[2.5rem] shadow-[0_20px_50px_rgba(33,38,94,0.18)] dark:shadow-[0_20px_50px_rgba(9,11,38,0.5)]">
               <SmartImage
                 src={post.coverImage.url}
                 alt={post.coverImage.alt ?? post.title}
@@ -125,14 +136,14 @@ export default async function PostDetailPage({ params }: Props) {
           />
 
           {relatedPosts.length ? (
-            <section className="rounded-[2rem] border border-ink-100 bg-white/75 p-8 shadow-[0_12px_35px_rgba(27,20,14,0.08)] dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_12px_35px_rgba(0,0,0,0.45)]">
+            <section className="rounded-[2rem] border border-ink-100 bg-white/75 p-8 shadow-[0_12px_35px_rgba(33,38,94,0.12)] dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_12px_35px_rgba(9,11,38,0.45)]">
               <h2 className="font-display text-2xl text-ink-900 dark:text-ink-100">Bài viết liên quan</h2>
               <p className="mt-1 text-sm text-ink-500 dark:text-ink-300">
                 Những câu chuyện tương tự mà bạn có thể hứng thú khám phá thêm.
               </p>
               <div className="mt-6 grid gap-6 md:grid-cols-2">
                 {relatedPosts.map((item) => (
-                  <article key={item.id} className="rounded-2xl border border-ink-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(27,20,14,0.1)] dark:border-ink-700 dark:bg-ink-800/70">
+                  <article key={item.id} className="rounded-2xl border border-ink-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(33,38,94,0.12)] dark:border-ink-700 dark:bg-ink-800/70">
                     <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-ink-400 dark:text-ink-300">
                       <span>{formatViDate(item.publishedAt ?? item.createdAt)}</span>
                       <span>{item.readingTime ?? post.readingTime ?? 3} phút đọc</span>
@@ -156,7 +167,7 @@ export default async function PostDetailPage({ params }: Props) {
             </section>
           ) : null}
 
-          <section className="rounded-[2rem] border border-ink-100 bg-white/70 p-8 shadow-[0_12px_35px_rgba(27,20,14,0.08)] dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_12px_35px_rgba(0,0,0,0.45)]">
+          <section className="rounded-[2rem] border border-ink-100 bg-white/70 p-8 shadow-[0_12px_35px_rgba(33,38,94,0.12)] dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_12px_35px_rgba(9,11,38,0.45)]">
             <h2 className="font-display text-2xl text-ink-900 dark:text-ink-100">Trò chuyện cùng nhau</h2>
             <p className="mt-1 text-sm text-ink-500 dark:text-ink-300">Chia sẻ suy nghĩ của bạn về bài viết này.</p>
             <div className="mt-6">
@@ -164,7 +175,7 @@ export default async function PostDetailPage({ params }: Props) {
             </div>
           </section>
 
-          <footer className="rounded-[2rem] border border-ink-100 bg-white/70 p-8 text-center shadow-[0_15px_40px_rgba(27,20,14,0.08)] dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_15px_40px_rgba(0,0,0,0.45)]">
+          <footer className="rounded-[2rem] border border-ink-100 bg-white/70 p-8 text-center shadow-[0_15px_40px_rgba(33,38,94,0.1)] dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_15px_40px_rgba(9,11,38,0.45)]">
             <p className="text-sm text-ink-500 dark:text-ink-300">
               Viết bởi <span className="font-medium text-ink-700 dark:text-ink-100">{post.author?.name ?? 'Một người yêu viết'}</span>
             </p>

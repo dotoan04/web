@@ -1,11 +1,13 @@
 import { Callout } from '@/components/ui/callout'
-import { createMetadata } from '@/lib/metadata'
+import { createDynamicMetadata } from '@/lib/metadata'
 
-export const metadata = createMetadata({
-  title: 'Giới thiệu',
-  description: 'Tìm hiểu định hướng sáng tác và giá trị BlogVibe Coding mang lại.',
-  path: '/gioi-thieu',
-})
+export async function generateMetadata() {
+  return createDynamicMetadata({
+    title: 'Giới thiệu',
+    description: 'Tìm hiểu định hướng sáng tác và giá trị mà blog mang lại.',
+    path: '/gioi-thieu',
+  })
+}
 
 # Xin chào từ BlogVibe Coding
 

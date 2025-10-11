@@ -21,7 +21,7 @@ export const AnimatedHero = ({ children }: AnimatedHeroProps) => {
 
 export const FloatingCircle = () => {
   return (
-    <div className="relative h-40 w-40 overflow-hidden rounded-full bg-gradient-to-br from-ink-300/70 via-ink-200/40 to-ink-100/60 shadow-[0_20px_50px_rgba(27,20,14,0.25)] dark:from-ink-700/50 dark:via-ink-700/30 dark:to-ink-800/50 dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)] sm:h-52 sm:w-52">
+    <div className="relative h-40 w-40 overflow-hidden rounded-full bg-gradient-to-br from-ink-300/70 via-ink-200/40 to-ink-100/60 shadow-[0_20px_50px_rgba(33,38,94,0.2)] dark:from-ink-700/50 dark:via-ink-700/30 dark:to-ink-800/50 dark:shadow-[0_20px_50px_rgba(9,11,38,0.45)] sm:h-52 sm:w-52">
       {/* Animated pulse rings */}
       <motion.div
         className="absolute inset-2 rounded-full border border-white/60 dark:border-ink-600/60"

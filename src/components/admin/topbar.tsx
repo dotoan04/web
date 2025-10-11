@@ -18,16 +18,16 @@ type AdminTopbarProps = {
 export const AdminTopbar = ({ user, className }: AdminTopbarProps) => (
   <header
     className={cn(
-      'flex items-center justify-between rounded-3xl border border-ink-100 bg-white/80 px-6 py-4 shadow-[0_10px_40px_rgba(27,20,14,0.06)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_10px_40px_rgba(0,0,0,0.45)]',
+      'flex flex-col gap-4 rounded-3xl border border-ink-100 bg-white/80 px-5 py-4 shadow-[0_10px_40px_rgba(33,38,94,0.08)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_10px_40px_rgba(9,11,38,0.45)]',
       className,
     )}
   >
-    <div>
+    <div className="space-y-1">
       <h1 className="font-display text-2xl text-ink-900 dark:text-ink-100">Xin chào, {user.name ?? 'tác giả'}!</h1>
       <p className="text-sm text-ink-500 dark:text-ink-300">Hãy để mỗi bài viết kể một câu chuyện riêng.</p>
     </div>
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-ink-50/60 px-3 py-2 dark:border-ink-700 dark:bg-ink-800/60">
+    <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
+      <div className="flex flex-1 items-center gap-3 rounded-2xl border border-ink-100 bg-ink-50/60 px-3 py-2 sm:flex-none dark:border-ink-700 dark:bg-ink-800/60">
         {user.image ? (
           <SmartImage
             src={user.image}

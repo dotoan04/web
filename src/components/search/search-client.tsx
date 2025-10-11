@@ -14,7 +14,11 @@ type SearchResult = SearchDocument & {
 
 const SEARCH_PLACEHOLDER = 'Tìm kiếm bài viết, chủ đề, thẻ…'
 
-export const SearchClient = () => {
+type SearchClientProps = {
+  siteName: string
+}
+
+export const SearchClient = ({ siteName }: SearchClientProps) => {
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<SearchResult[]>([])
@@ -74,8 +78,8 @@ export const SearchClient = () => {
 
   return (
     <div className="flex flex-col gap-10">
-      <div className="rounded-[2.5rem] border border-ink-100 bg-white/80 p-10 shadow-[0_20px_50px_rgba(27,20,14,0.08)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-        <h1 className="font-display text-3xl text-ink-900 dark:text-ink-100">Tìm kiếm BlogVibe</h1>
+      <div className="rounded-[2.5rem] border border-ink-100 bg-white/80 p-10 shadow-[0_20px_50px_rgba(33,38,94,0.12)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_20px_50px_rgba(9,11,38,0.45)]">
+        <h1 className="font-display text-3xl text-ink-900 dark:text-ink-100">Tìm kiếm {siteName}</h1>
         <p className="mt-3 max-w-2xl text-sm text-ink-500 dark:text-ink-300">
           Nhập vài từ khóa để khám phá các bài viết, ghi chú và chuyên mục. Hỗ trợ tìm kiếm tiêu đề, trích đoạn, thẻ và nội dung.
         </p>
@@ -100,7 +104,7 @@ export const SearchClient = () => {
         {results.map((item) => (
           <article
             key={item.id}
-            className="rounded-3xl border border-ink-100 bg-white/85 p-6 shadow-[0_15px_35px_rgba(27,20,14,0.08)] transition hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(27,20,14,0.1)] dark:border-ink-700 dark:bg-ink-800/70 dark:hover:shadow-[0_25px_60px_rgba(0,0,0,0.5)]"
+            className="rounded-3xl border border-ink-100 bg-white/85 p-6 shadow-[0_15px_35px_rgba(33,38,94,0.1)] transition hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(33,38,94,0.14)] dark:border-ink-700 dark:bg-ink-800/70 dark:hover:shadow-[0_25px_60px_rgba(9,11,38,0.5)]"
           >
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-ink-400 dark:text-ink-300">
               <span>{new Date(item.publishedAt).toLocaleDateString('vi-VN')}</span>

@@ -80,7 +80,7 @@ export const RichTextEditor = ({ value, onChange, placeholder, uploaderId }: Ric
           content: [
             {
               type: 'text',
-              text: 'Xin chào BlogVibe! Hãy viết vài dòng tâm sự tại đây.',
+              text: 'Xin chào! Hãy viết vài dòng tâm sự tại đây.',
             },
           ],
         },

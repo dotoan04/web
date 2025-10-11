@@ -11,22 +11,22 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        display: ['var(--font-heading)', 'serif'],
-        body: ['var(--font-body)', 'serif'],
+        display: ['var(--font-heading)', 'sans-serif'],
+        body: ['var(--font-body)', 'sans-serif'],
         sans: ['var(--font-body)', 'sans-serif'],
       },
       colors: {
         ink: {
-          50: '#f4f2ec',
-          100: '#e5e0d1',
-          200: '#cfc1a3',
-          300: '#b6a077',
-          400: '#9f7f51',
-          500: '#80623a',
-          600: '#654d2f',
-          700: '#4c3a26',
-          800: '#302318',
-          900: '#1b140e',
+          50: '#f3f4ff',
+          100: '#dee3ff',
+          200: '#c5cbff',
+          300: '#a5adff',
+          400: '#8891f8',
+          500: '#6c74f0',
+          600: '#5158e3',
+          700: '#3c43c1',
+          800: '#2b3191',
+          900: '#1d235f',
         },
       },
       backgroundImage: {
@@ -35,7 +35,7 @@ const config: Config = {
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
       boxShadow: {
-        scroll: '0 20px 45px rgba(27, 20, 14, 0.2)',
+        scroll: '0 20px 45px rgba(33, 38, 94, 0.2)',
       },
       typography: ({ theme }) => ({
         ink: {

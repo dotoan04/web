@@ -75,7 +75,7 @@ export const UserMenu = () => {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 top-12 z-[60] w-56 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-[0_20px_50px_rgba(27,20,14,0.15)] dark:border-ink-700 dark:bg-ink-800 dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+          <div className="absolute right-0 top-12 z-[60] w-56 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-[0_20px_50px_rgba(33,38,94,0.15)] dark:border-ink-700 dark:bg-ink-800 dark:shadow-[0_20px_50px_rgba(9,11,38,0.5)]">
           <div className="border-b border-ink-100 p-4 dark:border-ink-700">
             <p className="font-medium text-ink-900 dark:text-ink-50">{session.user.name || 'User'}</p>
             <p className="mt-1 text-xs text-ink-500 dark:text-ink-400">{session.user.email}</p>

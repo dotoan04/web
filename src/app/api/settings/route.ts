@@ -28,6 +28,10 @@ export async function POST(request: Request) {
   await updateSiteSettings(parsed.data)
   revalidatePath('/')
   revalidatePath('/portfolio')
+  revalidatePath('/tim-kiem')
+  revalidatePath('/gioi-thieu')
+  revalidatePath('/offline')
+  revalidatePath('/manifest.webmanifest')
 
   return NextResponse.json({ success: true })
 }

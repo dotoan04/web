@@ -5,7 +5,7 @@ import { SignInForm } from '@/components/admin/sign-in-form'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export const metadata: Metadata = {
-  title: 'Đăng nhập quản trị | BlogVibe',
+  title: 'Đăng nhập quản trị',
 }
 
 export default function AdminSignInPage() {

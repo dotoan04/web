@@ -1,18 +1,20 @@
-import type { Metadata } from 'next'
-
-import { createMetadata } from '@/lib/metadata'
+import { createDynamicMetadata } from '@/lib/metadata'
+import { resolveSitePreferences } from '@/server/settings'
 import { SearchClient } from '@/components/search/search-client'
 
-export const metadata: Metadata = createMetadata({
-  title: 'Tìm kiếm',
-  description: 'Khám phá nhanh các bài viết, chủ đề và thẻ trên BlogVibe.',
-  path: '/tim-kiem',
-})
+export async function generateMetadata() {
+  return createDynamicMetadata({
+    title: 'Tìm kiếm',
+    description: 'Khám phá nhanh các bài viết, chủ đề và thẻ trên trang.',
+    path: '/tim-kiem',
+  })
+}
 
-export default function SearchPage() {
+export default async function SearchPage() {
+  const preferences = await resolveSitePreferences()
   return (
     <section className="mx-auto w-full max-w-5xl">
-      <SearchClient />
+      <SearchClient siteName={preferences.siteName} />
     </section>
   )
 }

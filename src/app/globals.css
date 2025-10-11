@@ -9,14 +9,14 @@
 
   body {
     @apply bg-ink-50 text-ink-800 antialiased transition-colors duration-300;
-    background-image: radial-gradient(circle at 20% 20%, rgba(128, 98, 58, 0.12), transparent 55%),
-      radial-gradient(circle at 80% 0%, rgba(27, 20, 14, 0.1), transparent 60%);
+    background-image: radial-gradient(circle at 20% 20%, rgba(136, 145, 248, 0.18), transparent 55%),
+      radial-gradient(circle at 80% 0%, rgba(43, 49, 145, 0.15), transparent 60%);
   }
 
   .dark body {
     @apply bg-ink-900 text-ink-100;
-    background-image: radial-gradient(circle at 20% 20%, rgba(159, 127, 81, 0.15), transparent 55%),
-      radial-gradient(circle at 70% 0%, rgba(48, 35, 24, 0.65), transparent 60%);
+    background-image: radial-gradient(circle at 20% 20%, rgba(108, 116, 240, 0.12), transparent 55%),
+      radial-gradient(circle at 70% 0%, rgba(29, 35, 95, 0.55), transparent 60%);
   }
 
   h1,
@@ -50,7 +50,7 @@
   }
 
   .code-block {
-    @apply mb-6 overflow-hidden rounded-3xl border border-ink-100 bg-white/90 shadow-[0_12px_30px_rgba(27,20,14,0.12)] dark:border-ink-700 dark:bg-ink-900/60 dark:shadow-[0_12px_30px_rgba(0,0,0,0.5)];
+    @apply mb-6 overflow-hidden rounded-3xl border border-ink-100 bg-white/90 shadow-[0_12px_30px_rgba(33,38,94,0.12)] dark:border-ink-700 dark:bg-ink-900/60 dark:shadow-[0_12px_30px_rgba(6,8,24,0.55)];
   }
 
   .code-block__toolbar {

@@ -5,7 +5,7 @@ import { getCurrentSession } from '@/lib/auth/session'
 import prisma from '@/lib/prisma'
 
 export const metadata = {
-  title: 'Thư viện media | BlogVibe',
+  title: 'Thư viện media',
 }
 
 export default async function MediaPage() {

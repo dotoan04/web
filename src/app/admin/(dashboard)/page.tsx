@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma'
 import { formatViDate } from '@/lib/utils'
 
 export const metadata = {
-  title: 'Tổng quan quản trị | BlogVibe',
+  title: 'Tổng quan quản trị',
 }
 
 export default async function AdminDashboardPage() {

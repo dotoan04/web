@@ -1,10 +1,14 @@
+import { cache } from 'react'
+
 import type { Metadata } from 'next'
+
+import { resolveSitePreferences } from '@/server/settings'
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 export const siteConfig = {
   name: 'BlogVibe Coding',
-  description: 'Không gian blog cá nhân giản dị, kể chuyện đời sống và chia sẻ trải nghiệm lập trình.',
+  description: 'Không gian blog cá nhân kể lại những trải nghiệm sống, học và làm việc đầy cảm hứng.',
   url: appUrl.replace(/\/$/, ''),
   twitter: '@blogvibe',
   locales: {
@@ -25,6 +29,14 @@ export const siteConfig = {
 
 export const absoluteUrl = (path: string) =>
   path.startsWith('http') ? path : `${siteConfig.url}${path.startsWith('/') ? path : `/${path}`}`
+
+type MetadataOverrides = {
+  siteName?: string
+  tabTitle?: string
+  siteDescription?: string
+  seoKeywords?: string[]
+  faviconUrl?: string | null
+}
 
 type CreateMetadataOptions = {
   title?: string
@@ -48,11 +60,14 @@ export const createMetadata = ({
   modifiedTime,
   authors,
   translations,
-}: CreateMetadataOptions = {}): Metadata => {
-  const fullTitle = title ? `${title} | ${siteConfig.name}` : siteConfig.name
-  const summary = description ?? siteConfig.description
+}: CreateMetadataOptions = {}, overrides?: MetadataOverrides): Metadata => {
+  const baseTitle = overrides?.tabTitle ?? overrides?.siteName ?? siteConfig.name
+  const siteName = overrides?.siteName ?? siteConfig.name
+  const fullTitle = title ? `${title} | ${baseTitle}` : baseTitle
+  const summary = description ?? overrides?.siteDescription ?? siteConfig.description
+  const keywords = overrides?.seoKeywords?.length ? overrides.seoKeywords : undefined
   const url = absoluteUrl(path)
-  const ogImage = image ? absoluteUrl(image) : absoluteUrl(`/og?title=${encodeURIComponent(siteConfig.name)}`)
+  const ogImage = image ? absoluteUrl(image) : absoluteUrl(`/og?title=${encodeURIComponent(siteName)}`)
   const languageAlternates = Object.entries(siteConfig.locales.languages).reduce<Record<string, string>>((acc, [locale, basePath]) => {
     const trimmedBase = basePath === '/' ? '' : basePath.replace(/\/$/, '')
     const cleanedPath = path === '/' ? '' : path
@@ -69,6 +84,7 @@ export const createMetadata = ({
   return {
     title: fullTitle,
     description: summary,
+    keywords,
     alternates: { canonical: url, languages: languageAlternates },
     openGraph: {
       type,
@@ -76,7 +92,7 @@ export const createMetadata = ({
       url,
       title: fullTitle,
       description: summary,
-      siteName: siteConfig.name,
+      siteName,
       images: [{ url: ogImage, width: 1200, height: 630 }],
       ...(publishedTime ? { publishedTime } : {}),
       ...(modifiedTime ? { modifiedTime } : {}),
@@ -90,4 +106,20 @@ export const createMetadata = ({
       images: [ogImage],
     },
   }
+}
+
+export const getMetadataOverrides = cache(async () => {
+  const preferences = await resolveSitePreferences()
+  return {
+    siteName: preferences.siteName,
+    tabTitle: preferences.tabTitle,
+    siteDescription: preferences.seoDescription || preferences.slogan || siteConfig.description,
+    seoKeywords: preferences.seoKeywords,
+    faviconUrl: preferences.faviconUrl,
+  }
+})
+
+export const createDynamicMetadata = async (options?: CreateMetadataOptions) => {
+  const overrides = await getMetadataOverrides()
+  return createMetadata(options, overrides)
 }

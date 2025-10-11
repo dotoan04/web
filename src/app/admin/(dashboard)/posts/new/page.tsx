@@ -7,7 +7,7 @@ import { getCategoryOptions } from '@/server/categories'
 import { getTagOptions } from '@/server/tags'
 
 export const metadata = {
-  title: 'Viết bài mới | BlogVibe',
+  title: 'Viết bài mới',
 }
 
 export default async function NewPostPage() {
