@@ -1,12 +1,6 @@
 'use client'
 
 import matter from 'gray-matter'
-import { generateHTML } from '@tiptap/html'
-import StarterKit from '@tiptap/starter-kit'
-import Image from '@tiptap/extension-image'
-import Link from '@tiptap/extension-link'
-import { lowlight } from '@/lib/lowlight'
-import { createCodeBlockExtension } from '@/components/editor/extensions/code-block'
 
 export type MarkdownMetadata = {
   title?: string
@@ -51,51 +45,135 @@ export function parseMarkdownFile(fileContent: string): ParsedMarkdown {
  * Chuyển đổi markdown content sang TipTap JSON format
  */
 export async function markdownToTipTapJSON(markdown: string): Promise<Record<string, unknown>> {
-  // Import remark dynamically
-  const { unified } = await import('unified')
-  const remarkParse = (await import('remark-parse')).default
-  const remarkGfm = (await import('remark-gfm')).default
-  
-  // Parse markdown to MDAST (Markdown Abstract Syntax Tree)
-  const processor = unified()
-    .use(remarkParse)
-    .use(remarkGfm)
-  
-  const mdast = processor.parse(markdown)
-  
-  // Convert MDAST to HTML first (easier path)
-  const html = mdastToHTML(mdast)
-  
-  // Use TipTap's generateHTML to convert HTML to JSON
   try {
-    const extensions = [
-      StarterKit.configure({
-        heading: { levels: [2, 3, 4] },
-        codeBlock: false,
-      }),
-      createCodeBlockExtension(lowlight),
-      Link.configure({
-        openOnClick: true,
-        HTMLAttributes: {
-          class: 'text-ink-700 underline decoration-ink-300 underline-offset-4 hover:text-ink-900',
-        },
-      }),
-      Image.configure({ 
-        inline: false, 
-        HTMLAttributes: { class: 'rounded-2xl shadow-lg my-8' } 
-      }),
-    ]
-    
-    const json = generateHTML({ type: 'doc', content: parseHTMLToTipTap(html) }, extensions)
-    
-    // Parse back to JSON structure
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(json, 'text/html')
-    
-    return htmlToTipTapJSON(doc.body)
+    const lines = markdown.split('\n')
+    const content: any[] = []
+    let i = 0
+
+    while (i < lines.length) {
+      const line = lines[i]
+
+      // Empty line - skip
+      if (!line.trim()) {
+        i++
+        continue
+      }
+
+      // Heading
+      const headingMatch = line.match(/^(#{1,6})\s+(.+)$/)
+      if (headingMatch) {
+        const level = Math.min(Math.max(headingMatch[1].length, 2), 4)
+        content.push({
+          type: 'heading',
+          attrs: { level },
+          content: parseInlineContent(headingMatch[2]),
+        })
+        i++
+        continue
+      }
+
+      // Code block
+      if (line.startsWith('```')) {
+        const language = line.slice(3).trim() || 'plaintext'
+        const codeLines: string[] = []
+        i++
+        while (i < lines.length && !lines[i].startsWith('```')) {
+          codeLines.push(lines[i])
+          i++
+        }
+        content.push({
+          type: 'codeBlock',
+          attrs: { language },
+          content: [{ type: 'text', text: codeLines.join('\n') }],
+        })
+        i++ // skip closing ```
+        continue
+      }
+
+      // Unordered list
+      if (line.match(/^[-*+]\s+/)) {
+        const listItems: any[] = []
+        while (i < lines.length && lines[i].match(/^[-*+]\s+/)) {
+          const itemText = lines[i].replace(/^[-*+]\s+/, '')
+          listItems.push({
+            type: 'listItem',
+            content: [
+              {
+                type: 'paragraph',
+                content: parseInlineContent(itemText),
+              },
+            ],
+          })
+          i++
+        }
+        content.push({
+          type: 'bulletList',
+          content: listItems,
+        })
+        continue
+      }
+
+      // Ordered list
+      if (line.match(/^\d+\.\s+/)) {
+        const listItems: any[] = []
+        while (i < lines.length && lines[i].match(/^\d+\.\s+/)) {
+          const itemText = lines[i].replace(/^\d+\.\s+/, '')
+          listItems.push({
+            type: 'listItem',
+            content: [
+              {
+                type: 'paragraph',
+                content: parseInlineContent(itemText),
+              },
+            ],
+          })
+          i++
+        }
+        content.push({
+          type: 'orderedList',
+          content: listItems,
+        })
+        continue
+      }
+
+      // Blockquote
+      if (line.startsWith('> ')) {
+        const quoteLines: string[] = []
+        while (i < lines.length && lines[i].startsWith('> ')) {
+          quoteLines.push(lines[i].replace(/^>\s*/, ''))
+          i++
+        }
+        content.push({
+          type: 'blockquote',
+          content: [
+            {
+              type: 'paragraph',
+              content: parseInlineContent(quoteLines.join(' ')),
+            },
+          ],
+        })
+        continue
+      }
+
+      // Regular paragraph
+      const paragraphLines: string[] = [line]
+      i++
+      while (i < lines.length && lines[i].trim() && !isSpecialLine(lines[i])) {
+        paragraphLines.push(lines[i])
+        i++
+      }
+      content.push({
+        type: 'paragraph',
+        content: parseInlineContent(paragraphLines.join(' ')),
+      })
+    }
+
+    return {
+      type: 'doc',
+      content: content.length > 0 ? content : [{ type: 'paragraph', content: [] }],
+    }
   } catch (error) {
     console.error('Error converting markdown to TipTap JSON:', error)
-    // Fallback: return simple paragraph
     return {
       type: 'doc',
       content: [
@@ -109,250 +187,93 @@ export async function markdownToTipTapJSON(markdown: string): Promise<Record<str
 }
 
 /**
- * Convert MDAST to HTML
+ * Check if line is special (heading, code, list, etc)
  */
-function mdastToHTML(node: any): string {
-  if (!node) return ''
-  
-  switch (node.type) {
-    case 'root':
-      return node.children?.map(mdastToHTML).join('') || ''
-    
-    case 'paragraph':
-      const pContent = node.children?.map(mdastToHTML).join('') || ''
-      return `<p>${pContent}</p>`
-    
-    case 'heading':
-      const hContent = node.children?.map(mdastToHTML).join('') || ''
-      return `<h${node.depth}>${hContent}</h${node.depth}>`
-    
-    case 'text':
-      return escapeHtml(node.value || '')
-    
-    case 'emphasis':
-      return `<em>${node.children?.map(mdastToHTML).join('') || ''}</em>`
-    
-    case 'strong':
-      return `<strong>${node.children?.map(mdastToHTML).join('') || ''}</strong>`
-    
-    case 'link':
-      const linkText = node.children?.map(mdastToHTML).join('') || ''
-      return `<a href="${escapeHtml(node.url || '')}">${linkText}</a>`
-    
-    case 'image':
-      return `<img src="${escapeHtml(node.url || '')}" alt="${escapeHtml(node.alt || '')}" />`
-    
-    case 'code':
-      return `<code>${escapeHtml(node.value || '')}</code>`
-    
-    case 'inlineCode':
-      return `<code>${escapeHtml(node.value || '')}</code>`
-    
-    case 'blockquote':
-      const bqContent = node.children?.map(mdastToHTML).join('') || ''
-      return `<blockquote>${bqContent}</blockquote>`
-    
-    case 'list':
-      const listItems = node.children?.map(mdastToHTML).join('') || ''
-      return node.ordered ? `<ol>${listItems}</ol>` : `<ul>${listItems}</ul>`
-    
-    case 'listItem':
-      const liContent = node.children?.map(mdastToHTML).join('') || ''
-      return `<li>${liContent}</li>`
-    
-    case 'break':
-      return '<br />'
-    
-    case 'thematicBreak':
-      return '<hr />'
-    
-    default:
-      return node.children?.map(mdastToHTML).join('') || ''
-  }
+function isSpecialLine(line: string): boolean {
+  return (
+    line.match(/^#{1,6}\s+/) !== null ||
+    line.startsWith('```') ||
+    line.match(/^[-*+]\s+/) !== null ||
+    line.match(/^\d+\.\s+/) !== null ||
+    line.startsWith('> ')
+  )
 }
 
 /**
- * Parse HTML to TipTap nodes
+ * Parse inline content (bold, italic, links, images, code)
  */
-function parseHTMLToTipTap(html: string): any[] {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
-  return Array.from(doc.body.childNodes).map(nodeToTipTap).filter(Boolean)
-}
-
-/**
- * Convert HTML node to TipTap JSON
- */
-function htmlToTipTapJSON(element: HTMLElement): Record<string, unknown> {
-  const content: any[] = []
-  
-  Array.from(element.childNodes).forEach((node) => {
-    const tipTapNode = nodeToTipTap(node)
-    if (tipTapNode) content.push(tipTapNode)
-  })
-  
-  return {
-    type: 'doc',
-    content: content.length > 0 ? content : [{ type: 'paragraph' }],
+function parseInlineContent(text: string): any[] {
+  if (!text.trim()) {
+    return []
   }
-}
 
-/**
- * Convert single HTML node to TipTap node
- */
-function nodeToTipTap(node: Node): any {
-  if (node.nodeType === Node.TEXT_NODE) {
-    const text = node.textContent || ''
-    return text.trim() ? { type: 'text', text } : null
-  }
-  
-  if (node.nodeType !== Node.ELEMENT_NODE) return null
-  
-  const element = node as HTMLElement
-  const tagName = element.tagName.toLowerCase()
-  
-  switch (tagName) {
-    case 'p':
-      return {
-        type: 'paragraph',
-        content: getChildNodes(element),
-      }
-    
-    case 'h1':
-    case 'h2':
-    case 'h3':
-    case 'h4':
-    case 'h5':
-    case 'h6':
-      const level = parseInt(tagName[1])
-      return {
-        type: 'heading',
-        attrs: { level: level >= 2 ? level : 2 },
-        content: getChildNodes(element),
-      }
-    
-    case 'strong':
-    case 'b':
-      return getChildNodes(element).map((child: any) => ({
-        ...child,
-        marks: [...(child.marks || []), { type: 'bold' }],
-      }))
-    
-    case 'em':
-    case 'i':
-      return getChildNodes(element).map((child: any) => ({
-        ...child,
-        marks: [...(child.marks || []), { type: 'italic' }],
-      }))
-    
-    case 'a':
-      const href = element.getAttribute('href') || ''
-      return getChildNodes(element).map((child: any) => ({
-        ...child,
-        marks: [...(child.marks || []), { type: 'link', attrs: { href } }],
-      }))
-    
-    case 'code':
-      return {
-        type: 'text',
-        text: element.textContent || '',
-        marks: [{ type: 'code' }],
-      }
-    
-    case 'pre':
-      const codeElement = element.querySelector('code')
-      const codeText = codeElement?.textContent || element.textContent || ''
-      const language = codeElement?.className.match(/language-(\w+)/)?.[1] || 'plaintext'
-      return {
-        type: 'codeBlock',
-        attrs: { language },
-        content: [{ type: 'text', text: codeText }],
-      }
-    
-    case 'img':
-      return {
-        type: 'image',
-        attrs: {
-          src: element.getAttribute('src') || '',
-          alt: element.getAttribute('alt') || '',
-        },
-      }
-    
-    case 'ul':
-      return {
-        type: 'bulletList',
-        content: Array.from(element.children)
-          .filter((child) => child.tagName.toLowerCase() === 'li')
-          .map((li) => ({
-            type: 'listItem',
-            content: getChildNodes(li as HTMLElement),
-          })),
-      }
-    
-    case 'ol':
-      return {
-        type: 'orderedList',
-        content: Array.from(element.children)
-          .filter((child) => child.tagName.toLowerCase() === 'li')
-          .map((li) => ({
-            type: 'listItem',
-            content: getChildNodes(li as HTMLElement),
-          })),
-      }
-    
-    case 'blockquote':
-      return {
-        type: 'blockquote',
-        content: getChildNodes(element),
-      }
-    
-    case 'br':
-      return { type: 'hardBreak' }
-    
-    case 'hr':
-      return { type: 'horizontalRule' }
-    
-    default:
-      return {
-        type: 'paragraph',
-        content: getChildNodes(element),
-      }
-  }
-}
-
-/**
- * Get child nodes as TipTap nodes
- */
-function getChildNodes(element: HTMLElement): any[] {
   const nodes: any[] = []
+  let currentText = text
+  let lastIndex = 0
+
+  // Pattern để match: **bold**, *italic*, `code`, [link](url), ![alt](url)
+  const pattern = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|(`(.+?)`)|(!?\[([^\]]+)\]\(([^)]+)\))/g
   
-  Array.from(element.childNodes).forEach((child) => {
-    if (child.nodeType === Node.TEXT_NODE) {
-      const text = child.textContent || ''
-      if (text.trim()) {
-        nodes.push({ type: 'text', text })
-      }
-    } else {
-      const tipTapNode = nodeToTipTap(child)
-      if (tipTapNode) {
-        if (Array.isArray(tipTapNode)) {
-          nodes.push(...tipTapNode)
-        } else {
-          nodes.push(tipTapNode)
-        }
+  let match: RegExpExecArray | null
+
+  while ((match = pattern.exec(text)) !== null) {
+    // Add text before match
+    if (match.index > lastIndex) {
+      const beforeText = text.slice(lastIndex, match.index)
+      if (beforeText) {
+        nodes.push({ type: 'text', text: beforeText })
       }
     }
-  })
-  
-  return nodes.length > 0 ? nodes : [{ type: 'text', text: '' }]
-}
 
-/**
- * Escape HTML
- */
-function escapeHtml(text: string): string {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
-}
+    // **bold**
+    if (match[1]) {
+      nodes.push({
+        type: 'text',
+        text: match[2],
+        marks: [{ type: 'bold' }],
+      })
+    }
+    // *italic*
+    else if (match[3]) {
+      nodes.push({
+        type: 'text',
+        text: match[4],
+        marks: [{ type: 'italic' }],
+      })
+    }
+    // `code`
+    else if (match[5]) {
+      nodes.push({
+        type: 'text',
+        text: match[6],
+        marks: [{ type: 'code' }],
+      })
+    }
+    // ![image](url) or [link](url)
+    else if (match[7]) {
+      const isImage = match[7].startsWith('!')
+      if (isImage) {
+        // Images are not inline in TipTap, skip for now
+        nodes.push({ type: 'text', text: match[7] })
+      } else {
+        nodes.push({
+          type: 'text',
+          text: match[8],
+          marks: [{ type: 'link', attrs: { href: match[9] } }],
+        })
+      }
+    }
 
+    lastIndex = pattern.lastIndex
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    const remainingText = text.slice(lastIndex)
+    if (remainingText) {
+      nodes.push({ type: 'text', text: remainingText })
+    }
+  }
+
+  return nodes.length > 0 ? nodes : [{ type: 'text', text: text }]
+}

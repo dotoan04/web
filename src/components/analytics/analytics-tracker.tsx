@@ -22,8 +22,9 @@ export const AnalyticsTracker = () => {
     lastTracked.current = currentPath
 
     const params = new URLSearchParams(search)
-    const controller = new AbortController()
 
+    // Use keepalive to ensure tracking completes even if page navigates away
+    // Don't use AbortController to avoid fetch failed errors
     void fetch('/api/analytics/track', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -32,17 +33,14 @@ export const AnalyticsTracker = () => {
         referrer: document.referrer || undefined,
         source: params.get('utm_source') ?? undefined,
       }),
-      signal: controller.signal,
       keepalive: true,
     }).catch((error) => {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('Không thể gửi sự kiện analytics:', error)
+      // Silently fail in production to avoid console noise
+      // Analytics should not break user experience
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Analytics tracking failed:', error)
       }
     })
-
-    return () => {
-      controller.abort()
-    }
   }, [pathname, search])
 
   return null
