@@ -100,8 +100,14 @@ export default async function PostDetailPage({ params }: Props) {
       <CodeBlockClient />
       <JsonLd data={breadcrumb} />
       <JsonLd data={article} />
-      <div className={cn('grid gap-12', hasHeadings && 'lg:grid-cols-[minmax(0,1fr)_18rem]')}>
-        <div className="flex flex-col gap-10">
+      <div
+        className={cn(
+          'grid gap-12',
+          hasHeadings &&
+            'xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start xl:gap-14 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:gap-16',
+        )}
+      >
+        <div className="flex flex-col gap-10 xl:mx-auto xl:w-full xl:max-w-4xl xl:pr-6 2xl:pr-10">
           <header className="flex flex-col gap-4 text-center">
             <p className="text-xs uppercase tracking-[0.3em] text-ink-400 dark:text-ink-300">{post.category?.name ?? 'Không phân loại'}</p>
             <h1 className="font-display text-4xl text-ink-900 dark:text-ink-100">{post.title}</h1>
@@ -131,7 +137,7 @@ export default async function PostDetailPage({ params }: Props) {
           ) : null}
 
           <div
-            className="prose prose-lg prose-ink mx-auto max-w-none text-ink-800 dark:text-ink-100 dark:prose-invert dark:prose-ink-dark"
+            className="prose prose-lg prose-ink mx-auto w-full max-w-3xl text-ink-800 dark:text-ink-100 dark:prose-invert dark:prose-ink-dark"
             dangerouslySetInnerHTML={{ __html: html }}
           />
 
@@ -188,7 +194,11 @@ export default async function PostDetailPage({ params }: Props) {
             </p>
           </footer>
         </div>
-        {hasHeadings ? <TableOfContents headings={headings} /> : null}
+        {hasHeadings ? (
+          <div className="xl:mx-auto xl:w-full xl:max-w-sm">
+            <TableOfContents headings={headings} />
+          </div>
+        ) : null}
       </div>
     </article>
   )

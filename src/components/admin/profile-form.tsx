@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { SmartImage } from '@/components/ui/smart-image'
 
 type Props = {
   userId: string
@@ -113,9 +114,11 @@ export const ProfileForm = ({ userId, name, email, avatarUrl, bio }: Props) => {
             </p>
             {values.avatarUrl && (
               <div className="mt-3">
-                <img
+                <SmartImage
                   src={values.avatarUrl}
                   alt="Preview"
+                  width={80}
+                  height={80}
                   className="h-20 w-20 rounded-full border border-ink-200 object-cover dark:border-ink-700"
                 />
               </div>

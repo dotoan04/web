@@ -1,10 +1,24 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { FileUp } from 'lucide-react'
+import matter from 'gray-matter'
+import { generateJSON } from '@tiptap/html'
+import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
+import { unified } from 'unified'
+import remarkParse from 'remark-parse'
+import remarkFrontmatter from 'remark-frontmatter'
+import remarkMdx from 'remark-mdx'
+import remarkGfm from 'remark-gfm'
+import remarkRehype from 'remark-rehype'
+import rehypeRaw from 'rehype-raw'
+import rehypeStringify from 'rehype-stringify'
+import { visit } from 'unist-util-visit'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,12 +27,16 @@ import { RichTextEditor } from '@/components/editor/rich-text-editor'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/components/ui/cn'
 import { postInputSchema } from '@/lib/validators/post'
-import { parseMarkdownFile, markdownToTipTapJSON } from '@/lib/markdown-parser'
 import type { PostWithRelations } from '@/server/posts'
+import { createCodeBlockExtension } from '@/components/editor/extensions/code-block'
+import { lowlight } from '@/lib/lowlight'
+import { slugify } from '@/lib/utils'
+import { UploadCloud } from 'lucide-react'
 
 type Option = {
   id: string
   name: string
+  slug: string
 }
 
 type PostEditorProps = {
@@ -36,7 +54,7 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
-  const markdownFileInputRef = useRef<HTMLInputElement | null>(null)
+  const importInputRef = useRef<HTMLInputElement | null>(null)
 
   const initialValues: FormValues = useMemo(() => {
     if (!defaultValues) {
@@ -82,65 +100,249 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
     form.reset(initialValues)
   }, [form, initialValues])
 
-  const handleSubmit = form.handleSubmit(
-    async (values) => {
-      console.log('🚀 Form submit triggered')
-      console.log('📦 Form values:', values)
-      console.log('📝 Content type:', typeof values.content)
-      console.log('📄 Content:', JSON.stringify(values.content, null, 2))
-      
-      setSubmitting(true)
-      setMessage(null)
-      try {
-        const payload = {
-          ...values,
-          authorId,
-          tagIds: values.tagIds ?? [],
-          publishedAt: values.publishedAt ? new Date(values.publishedAt).toISOString() : undefined,
-          coverImageId: values.coverImageId || null,
-        }
+  const escapeHtml = useCallback((value: string) => {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }, [])
 
-        console.log('📤 Sending payload:', payload)
+  const stripMdxArtifacts = useCallback((content: string) => {
+    return content
+      .replace(/import\s+.+?from\s+['"][^'"]+['"];?/g, '')
+      .replace(/export\s+const\s+.+?=\s+.+?;?/g, '')
+      .replace(/<([A-Z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)?)\b(?:(?!<\/\1>).)*?<\/\1>/gs, '')
+      .replace(/<([A-Z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)?)\b[^>]*\/>/g, '')
+  }, [])
 
-        const response = await fetch(defaultValues?.id ? `/api/posts/${defaultValues.id}` : '/api/posts', {
-          method: defaultValues?.id ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+  const transformMarkdownToJson = useCallback(
+    async (markdown: string) => {
+      const removeMdxNodes = () => (tree: unknown) => {
+        visit(tree as any, (node, index, parent) => {
+          if (!parent || index === undefined) return
+          if (
+            node.type === 'mdxJsxFlowElement' ||
+            node.type === 'mdxJsxTextElement' ||
+            node.type === 'mdxFlowExpression' ||
+            node.type === 'mdxTextExpression' ||
+            node.type === 'mdxjsEsm'
+          ) {
+            parent.children.splice(index, 1)
+            return index
+          }
         })
+      }
 
-        console.log('📥 Response status:', response.status)
+      try {
+        const processor = unified()
+          .use(remarkParse)
+          .use(remarkFrontmatter, ['yaml', 'toml'])
+          .use(remarkMdx)
+          .use(remarkGfm)
+          .use(removeMdxNodes)
+          .use(remarkRehype, { allowDangerousHtml: true })
+          .use(rehypeRaw)
+          .use(rehypeStringify, { allowDangerousHtml: true })
 
-        if (!response.ok) {
-          const error = await response.json()
-          console.error('❌ API Error:', error)
-          const errorMsg = typeof error.error === 'string' 
-            ? error.error 
-            : JSON.stringify(error.error, null, 2)
-          throw new Error('Lỗi: ' + (errorMsg ?? 'Không thể lưu bài viết'))
-        }
+        const file = await processor.process(stripMdxArtifacts(markdown))
+        const html = String(file).trim() || '<p></p>'
 
-        const data = await response.json()
-        console.log('✅ Success:', data)
-
-        setMessage('✅ Đã lưu bài viết thành công!')
-        // Redirect after successful save
-        if (!defaultValues?.id) {
-          setTimeout(() => {
-            window.location.href = '/admin/posts'
-          }, 1500)
-        }
+        return generateJSON(html, [
+          StarterKit.configure({ heading: { levels: [2, 3, 4] }, codeBlock: false, link: false }),
+          createCodeBlockExtension(lowlight),
+          Link.configure({ HTMLAttributes: { class: 'text-ink-700 underline decoration-ink-300 underline-offset-4 hover:text-ink-900' } }),
+          Image.configure({ inline: false, HTMLAttributes: { class: 'rounded-2xl shadow-lg my-8' } }),
+        ]) as Record<string, unknown>
       } catch (error) {
-        console.error('❌ Submit error:', error)
-        setMessage('❌ ' + (error as Error).message)
-      } finally {
-        setSubmitting(false)
+        console.error('Markdown parse failed:', error)
+        const fallbackHtml = `<p>${escapeHtml(markdown).replace(/\n/g, '<br />')}</p>`
+        return generateJSON(fallbackHtml, [
+          StarterKit.configure({ heading: { levels: [2, 3, 4] }, codeBlock: false, link: false }),
+          createCodeBlockExtension(lowlight),
+          Link.configure({ HTMLAttributes: { class: 'text-ink-700 underline decoration-ink-300 underline-offset-4 hover:text-ink-900' } }),
+          Image.configure({ inline: false, HTMLAttributes: { class: 'rounded-2xl shadow-lg my-8' } }),
+        ]) as Record<string, unknown>
       }
     },
-    (errors) => {
-      console.error('❌ Form validation failed:', errors)
-      setMessage('❌ Form validation failed. Check console for details.')
-    }
+    [escapeHtml, stripMdxArtifacts],
   )
+
+  const normalizeIdentifiers = useCallback((input: unknown): string[] => {
+    if (Array.isArray(input)) {
+      return input
+        .map((item) => {
+          if (typeof item === 'string') return item
+          if (item && typeof item === 'object') {
+            if ('slug' in item && typeof item.slug === 'string') return item.slug
+            if ('name' in item && typeof item.name === 'string') return item.name
+          }
+          return null
+        })
+        .filter((item): item is string => Boolean(item))
+        .map((item) => slugify(item))
+    }
+    if (typeof input === 'string') {
+      return input
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => slugify(item))
+    }
+    return []
+  }, [])
+
+  const handleImportFile = useCallback(
+    async (file: File) => {
+      setImporting(true)
+      setMessage(null)
+      try {
+        const rawText = await file.text()
+        const parsed = matter(rawText)
+        const fileContent = parsed.content
+        const jsonContent = await transformMarkdownToJson(fileContent || '')
+
+        const current = form.getValues()
+        const nextValues: FormValues = {
+          ...current,
+          content: jsonContent,
+        }
+
+        const frontMatter = parsed.data as Record<string, unknown>
+        const extractString = (...keys: string[]) => {
+          for (const key of keys) {
+            const value = frontMatter?.[key]
+            if (typeof value === 'string' && value.trim().length > 0) {
+              return value.trim()
+            }
+          }
+          return undefined
+        }
+
+        const incomingTitle = extractString('title', 'name')
+        if (incomingTitle) {
+          nextValues.title = incomingTitle
+        }
+
+        const incomingSlug = extractString('slug', 'permalink')
+        if (incomingSlug) {
+          nextValues.slug = slugify(incomingSlug)
+        }
+
+        const incomingExcerpt = extractString('excerpt', 'description', 'summary')
+        if (incomingExcerpt) {
+          nextValues.excerpt = incomingExcerpt
+        }
+
+        const incomingStatus = extractString('status')?.toUpperCase()
+        if (incomingStatus && ['DRAFT', 'SCHEDULED', 'PUBLISHED'].includes(incomingStatus)) {
+          nextValues.status = incomingStatus as FormValues['status']
+        }
+
+        const incomingDate = extractString('publishedAt', 'date', 'published_at')
+        if (incomingDate) {
+          const parsedDate = new Date(incomingDate)
+          if (!Number.isNaN(parsedDate.valueOf())) {
+            nextValues.publishedAt = parsedDate.toISOString()
+          }
+        }
+
+        const tagIdentifiers = normalizeIdentifiers(frontMatter?.tags ?? frontMatter?.tag ?? frontMatter?.keywords)
+        if (tagIdentifiers.length) {
+          const matchedTagIds = new Set(nextValues.tagIds ?? [])
+          tagIdentifiers.forEach((identifier) => {
+            const match = tags.find((tag) => slugify(tag.slug) === identifier || slugify(tag.name) === identifier)
+            if (match) {
+              matchedTagIds.add(match.id)
+            }
+          })
+          nextValues.tagIds = Array.from(matchedTagIds)
+        }
+
+        const categoryIdentifier = extractString('category', 'categorySlug', 'category_id')
+        if (categoryIdentifier) {
+          const normalizedCategory = slugify(categoryIdentifier)
+          const matchCategory = categories.find(
+            (category) => slugify(category.slug) === normalizedCategory || slugify(category.name) === normalizedCategory,
+          )
+          if (matchCategory) {
+            nextValues.categoryId = matchCategory.id
+          }
+        }
+
+        const coverImageId = extractString('coverImageId', 'cover_image_id', 'coverImage')
+        if (coverImageId) {
+          nextValues.coverImageId = coverImageId
+        }
+
+        form.reset(nextValues)
+        setMessage('Đã import nội dung từ file thành công. Vui lòng kiểm tra trước khi lưu.')
+      } catch (error) {
+        console.error('Import markdown failed:', error)
+        setMessage((error as Error).message || 'Không thể import file được chọn.')
+      } finally {
+        setImporting(false)
+      }
+    },
+    [categories, form, normalizeIdentifiers, tags, transformMarkdownToJson],
+  )
+
+  const handleImportChange = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      event.target.value = ''
+      if (!file) return
+      if (!/\.(md|mdx)$/i.test(file.name)) {
+        setMessage('Vui lòng chọn file có định dạng .md hoặc .mdx')
+        return
+      }
+      await handleImportFile(file)
+    },
+    [handleImportFile],
+  )
+
+  const handleSubmit = form.handleSubmit(async (values) => {
+    setSubmitting(true)
+    setMessage(null)
+    try {
+      const payload = {
+        ...values,
+        authorId,
+        tagIds: values.tagIds ?? [],
+        publishedAt: values.publishedAt ? new Date(values.publishedAt).toISOString() : undefined,
+        coverImageId: values.coverImageId || null,
+      }
+
+      const response = await fetch(defaultValues?.id ? `/api/posts/${defaultValues.id}` : '/api/posts', {
+        method: defaultValues?.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        console.error('API Error:', error)
+        const errorMsg = typeof error.error === 'string' 
+          ? error.error 
+          : JSON.stringify(error.error, null, 2)
+        throw new Error('Lỗi: ' + (errorMsg ?? 'Không thể lưu bài viết'))
+      }
+
+      setMessage('Đã lưu bài viết thành công!')
+      // Redirect after successful save
+      if (!defaultValues?.id) {
+        setTimeout(() => {
+          window.location.href = '/admin/posts'
+        }, 1500)
+      }
+    } catch (error) {
+      console.error('Submit error:', error)
+      setMessage((error as Error).message)
+    } finally {
+      setSubmitting(false)
+    }
+  })
 
   const toggleTag = (tagId: string) => {
     const selected = form.getValues('tagIds') ?? []
@@ -153,138 +355,47 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
 
   const status = form.watch('status')
 
-  const handleMarkdownImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    setImporting(true)
-    setMessage(null)
-
-    try {
-      const fileContent = await file.text()
-      console.log('📄 File content loaded:', fileContent.substring(0, 200))
-      
-      const { metadata, content } = parseMarkdownFile(fileContent)
-      console.log('📋 Parsed metadata:', metadata)
-      console.log('📝 Markdown content:', content.substring(0, 200))
-      
-      // Convert markdown content to TipTap JSON
-      const tipTapJSON = await markdownToTipTapJSON(content)
-      console.log('🎨 TipTap JSON:', JSON.stringify(tipTapJSON, null, 2))
-
-      // Validate JSON structure
-      if (!tipTapJSON || tipTapJSON.type !== 'doc' || !Array.isArray(tipTapJSON.content)) {
-        throw new Error('Invalid TipTap JSON structure')
-      }
-
-      // Update form with parsed data - use shouldValidate: true
-      form.setValue('title', metadata.title || '', { shouldDirty: true, shouldValidate: true })
-      form.setValue('slug', metadata.slug || '', { shouldDirty: true, shouldValidate: true })
-      form.setValue('excerpt', metadata.excerpt || '', { shouldDirty: true, shouldValidate: true })
-      form.setValue('content', tipTapJSON, { shouldDirty: true, shouldValidate: true })
-      
-      if (metadata.categoryId) {
-        form.setValue('categoryId', metadata.categoryId, { shouldDirty: true, shouldValidate: true })
-      }
-      
-      // Handle tagIds - convert tag names to IDs or validate existing IDs
-      if (metadata.tagIds && metadata.tagIds.length > 0) {
-        // Filter to only valid CUID format tags or match by name
-        const validTagIds: string[] = []
-        const invalidTags: string[] = []
-        
-        metadata.tagIds.forEach((tagIdOrName) => {
-          // Check if it's a valid CUID format (starts with 'c' and alphanumeric)
-          const isCuid = /^c[a-z0-9]{24,}$/i.test(tagIdOrName)
-          
-          if (isCuid) {
-            // It's already a valid ID, check if it exists in our tags list
-            if (tags.find((t) => t.id === tagIdOrName)) {
-              validTagIds.push(tagIdOrName)
-            } else {
-              invalidTags.push(tagIdOrName)
-            }
-          } else {
-            // Try to find tag by name (case-insensitive)
-            const matchedTag = tags.find(
-              (t) => t.name.toLowerCase() === tagIdOrName.toLowerCase()
-            )
-            if (matchedTag) {
-              validTagIds.push(matchedTag.id)
-            } else {
-              invalidTags.push(tagIdOrName)
-            }
-          }
-        })
-        
-        form.setValue('tagIds', validTagIds, { shouldDirty: true, shouldValidate: true })
-        
-        if (invalidTags.length > 0) {
-          console.warn('⚠️ Invalid or not found tags:', invalidTags)
-          setMessage(`⚠️ Import thành công nhưng một số tags không tìm thấy: ${invalidTags.join(', ')}. Hãy chọn tags từ danh sách bên dưới.`)
-        }
-      }
-      
-      if (metadata.status) {
-        form.setValue('status', metadata.status, { shouldDirty: true, shouldValidate: true })
-      }
-      
-      if (metadata.publishedAt) {
-        form.setValue('publishedAt', metadata.publishedAt, { shouldDirty: true, shouldValidate: true })
-      }
-      
-      if (metadata.coverImageId) {
-        form.setValue('coverImageId', metadata.coverImageId, { shouldDirty: true, shouldValidate: true })
-      }
-
-      // Trigger validation
-      const isValid = await form.trigger()
-      console.log('✅ Form validation result:', isValid)
-      console.log('📊 Form values after import:', form.getValues())
-      console.log('❌ Form errors:', form.formState.errors)
-
-      if (!message) {
-        setMessage('✨ Đã import file Markdown thành công! Hãy kiểm tra và click "Lưu bài viết".')
-      }
-    } catch (error) {
-      console.error('❌ Import markdown error:', error)
-      setMessage('❌ Lỗi khi import file Markdown: ' + (error as Error).message)
-    } finally {
-      setImporting(false)
-      // Reset input
-      if (markdownFileInputRef.current) {
-        markdownFileInputRef.current.value = ''
-      }
-    }
-  }
-
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <input
-        ref={markdownFileInputRef}
+        ref={importInputRef}
         type="file"
-        accept=".md,.mdx,.markdown"
+        accept=".md,.mdx"
         className="hidden"
-        onChange={handleMarkdownImport}
+        onChange={handleImportChange}
       />
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="space-y-1">
-            <CardTitle>Thông tin cơ bản</CardTitle>
-            <CardDescription>Tiêu đề, tóm tắt và cấu trúc bài viết.</CardDescription>
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-ink-100 bg-white/80 px-4 py-3 shadow-[0_12px_30px_rgba(33,38,94,0.12)] dark:border-ink-700 dark:bg-ink-800/60">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
             variant="subtle"
-            size="sm"
-            onClick={() => markdownFileInputRef.current?.click()}
+            onClick={() => importInputRef.current?.click()}
             disabled={importing}
             className="gap-2"
           >
-            <FileUp size={16} />
-            {importing ? 'Đang import...' : 'Import Markdown'}
+            <UploadCloud size={16} />
+            {importing ? 'Đang import...' : 'Import file MD/MDX'}
           </Button>
+          <span className="text-xs text-ink-400 dark:text-ink-300">
+            Hỗ trợ front matter (title, slug, tags, category, status, publishedAt...)
+          </span>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            form.reset(initialValues)
+            setMessage(null)
+          }}
+        >
+          Phục hồi dữ liệu ban đầu
+        </Button>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Thông tin cơ bản</CardTitle>
+          <CardDescription>Tiêu đề, tóm tắt và cấu trúc bài viết.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div>

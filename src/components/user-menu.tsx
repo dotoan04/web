@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { User, LogOut, Settings, FileText } from 'lucide-react'
 
+import { SmartImage } from '@/components/ui/smart-image'
+
 export const UserMenu = () => {
   const { data: session, status } = useSession()
   const [isOpen, setIsOpen] = useState(false)
@@ -68,7 +70,7 @@ export const UserMenu = () => {
           aria-label="User menu"
         >
           {avatarUrl ? (
-            <img src={avatarUrl} alt={session.user.name || 'User'} className="h-full w-full object-cover" />
+            <SmartImage src={avatarUrl} alt={session.user.name || 'User'} fill className="object-cover" sizes="36px" />
           ) : (
             userInitials
           )}

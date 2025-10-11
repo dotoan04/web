@@ -4,6 +4,8 @@ import { PostEditor } from '@/components/admin/post-editor'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getCurrentSession } from '@/lib/auth/session'
 import prisma from '@/lib/prisma'
+import { getCategoryOptions } from '@/server/categories'
+import { getTagOptions } from '@/server/tags'
 
 type Params = {
   params: {
@@ -32,10 +34,7 @@ export default async function EditPostPage({ params }: Params) {
     notFound()
   }
 
-  const [categories, tags] = await Promise.all([
-    prisma.category.findMany({ orderBy: { name: 'asc' } }),
-    prisma.tag.findMany({ orderBy: { name: 'asc' } }),
-  ])
+  const [categories, tags] = await Promise.all([getCategoryOptions(), getTagOptions()])
 
   return (
     <Card>

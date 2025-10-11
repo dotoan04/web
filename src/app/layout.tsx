@@ -1,8 +1,6 @@
 import Script from 'next/script'
 import { Plus_Jakarta_Sans, Sora } from 'next/font/google'
 import type { Metadata } from 'next'
-import { Analytics } from '@vercel/analytics/react'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import './globals.css'
 
@@ -86,8 +84,6 @@ export default async function RootLayout({
             {preferences.snowEffectEnabled ? <Snowfall density={1} /> : null}
             <AnalyticsTracker />
             <PwaRegister />
-            <Analytics />
-            <SpeedInsights />
             <div className="relative mx-auto max-w-6xl px-6 py-10 lg:px-12">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-[radial-gradient(circle_at_top,_rgba(120,129,255,0.3)_0%,_rgba(243,244,255,0)_70%)] dark:bg-[radial-gradient(circle_at_top,_rgba(92,100,236,0.28)_0%,_rgba(19,20,56,0)_75%)]" />
               <div className="relative z-10 flex min-h-screen flex-col gap-10">
