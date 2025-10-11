@@ -2,6 +2,7 @@
 title: "Tiêu đề bài viết của bạn"
 slug: ""
 excerpt: "Mô tả ngắn gọn về bài viết (hiển thị trong danh sách và SEO)"
+tags: []
 status: "DRAFT"
 ---
 
@@ -125,16 +126,20 @@ title: "Tiêu đề"
 slug: "tieu-de-url"
 excerpt: "Mô tả"
 status: "DRAFT"
-categoryId: ""
-tagIds: []
-coverImageId: ""
-publishedAt: ""
+categoryId: "clxxxxxxxxxxxxx"  # Copy từ Admin > Categories
+tags: ["javascript", "tutorial", "nextjs"]  # Dùng tên tag (recommended)
+# Hoặc dùng tagIds: ["clxxxxxxxxxxxxx", "clxxxxxxxxxxxxx"]  # Dùng IDs
+coverImageId: "clxxxxxxxxxxxxx"  # Copy từ Admin > Media
+publishedAt: "2024-10-11T10:00:00"
 ---
 ```
 
 **Lấy IDs:**
 - `categoryId`: Admin → Categories → Copy ID
-- `tagIds`: Admin → Tags → Copy IDs
+- `tags`: **Dùng tên tag** (ví dụ: ["javascript", "tutorial", "nextjs"])
+  - Hệ thống tự động tìm và khớp tag theo tên
+  - Nếu tag không tồn tại, bạn sẽ được thông báo và có thể chọn từ danh sách
+  - Hoặc dùng `tagIds` với CUID IDs từ Admin → Tags nếu muốn chính xác
 - `coverImageId`: Admin → Media → Upload → Copy ID
 
 **publishedAt format:**
@@ -211,7 +216,7 @@ Supported languages: javascript, typescript, python, java, go, rust, html, css, 
 ❌ Không có excerpt → SEO không tốt
 ❌ Title quá ngắn (< 3 chars) → Validation error
 ❌ Không có headings → Không có Table of Contents
-❌ categoryId/tagIds không đúng format → Validation error
+❌ categoryId không đúng format hoặc tags không tồn tại → Validation error
 ❌ Code blocks không chỉ định language → Không có syntax highlighting
 
 ✅ Luôn điền excerpt

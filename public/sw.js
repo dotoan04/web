@@ -30,6 +30,12 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
 
+  // Skip caching for Vercel analytics and external resources
+  if (url.pathname.includes('/_vercel/') || url.origin !== self.location.origin) {
+    // Let the request go through without caching
+    return
+  }
+
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -43,7 +49,7 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  if (url.origin === self.location.origin && url.pathname.startsWith('/_next/')) {
+  if (url.pathname.startsWith('/_next/')) {
     event.respondWith(cacheFirst(request))
     return
   }

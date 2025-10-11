@@ -187,8 +187,42 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
         form.setValue('categoryId', metadata.categoryId, { shouldDirty: true, shouldValidate: true })
       }
       
+      // Handle tagIds - convert tag names to IDs or validate existing IDs
       if (metadata.tagIds && metadata.tagIds.length > 0) {
-        form.setValue('tagIds', metadata.tagIds, { shouldDirty: true, shouldValidate: true })
+        // Filter to only valid CUID format tags or match by name
+        const validTagIds: string[] = []
+        const invalidTags: string[] = []
+        
+        metadata.tagIds.forEach((tagIdOrName) => {
+          // Check if it's a valid CUID format (starts with 'c' and alphanumeric)
+          const isCuid = /^c[a-z0-9]{24,}$/i.test(tagIdOrName)
+          
+          if (isCuid) {
+            // It's already a valid ID, check if it exists in our tags list
+            if (tags.find((t) => t.id === tagIdOrName)) {
+              validTagIds.push(tagIdOrName)
+            } else {
+              invalidTags.push(tagIdOrName)
+            }
+          } else {
+            // Try to find tag by name (case-insensitive)
+            const matchedTag = tags.find(
+              (t) => t.name.toLowerCase() === tagIdOrName.toLowerCase()
+            )
+            if (matchedTag) {
+              validTagIds.push(matchedTag.id)
+            } else {
+              invalidTags.push(tagIdOrName)
+            }
+          }
+        })
+        
+        form.setValue('tagIds', validTagIds, { shouldDirty: true, shouldValidate: true })
+        
+        if (invalidTags.length > 0) {
+          console.warn('⚠️ Invalid or not found tags:', invalidTags)
+          setMessage(`⚠️ Import thành công nhưng một số tags không tìm thấy: ${invalidTags.join(', ')}. Hãy chọn tags từ danh sách bên dưới.`)
+        }
       }
       
       if (metadata.status) {
@@ -209,7 +243,9 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
       console.log('📊 Form values after import:', form.getValues())
       console.log('❌ Form errors:', form.formState.errors)
 
-      setMessage('✨ Đã import file Markdown thành công! Hãy kiểm tra và click "Lưu bài viết".')
+      if (!message) {
+        setMessage('✨ Đã import file Markdown thành công! Hãy kiểm tra và click "Lưu bài viết".')
+      }
     } catch (error) {
       console.error('❌ Import markdown error:', error)
       setMessage('❌ Lỗi khi import file Markdown: ' + (error as Error).message)
