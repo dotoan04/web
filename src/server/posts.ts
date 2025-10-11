@@ -354,6 +354,7 @@ export const listAdminPosts = async () =>
         author: true,
         category: true,
         tags: { include: { tag: true } },
+        coverImage: true,
       },
     })
     .catch((error) => {
