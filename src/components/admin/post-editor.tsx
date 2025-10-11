@@ -82,47 +82,65 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
     form.reset(initialValues)
   }, [form, initialValues])
 
-  const handleSubmit = form.handleSubmit(async (values) => {
-    setSubmitting(true)
-    setMessage(null)
-    try {
-      const payload = {
-        ...values,
-        authorId,
-        tagIds: values.tagIds ?? [],
-        publishedAt: values.publishedAt ? new Date(values.publishedAt).toISOString() : undefined,
-        coverImageId: values.coverImageId || null,
-      }
+  const handleSubmit = form.handleSubmit(
+    async (values) => {
+      console.log('🚀 Form submit triggered')
+      console.log('📦 Form values:', values)
+      console.log('📝 Content type:', typeof values.content)
+      console.log('📄 Content:', JSON.stringify(values.content, null, 2))
+      
+      setSubmitting(true)
+      setMessage(null)
+      try {
+        const payload = {
+          ...values,
+          authorId,
+          tagIds: values.tagIds ?? [],
+          publishedAt: values.publishedAt ? new Date(values.publishedAt).toISOString() : undefined,
+          coverImageId: values.coverImageId || null,
+        }
 
-      const response = await fetch(defaultValues?.id ? `/api/posts/${defaultValues.id}` : '/api/posts', {
-        method: defaultValues?.id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+        console.log('📤 Sending payload:', payload)
 
-      if (!response.ok) {
-        const error = await response.json()
-        console.error('API Error:', error)
-        const errorMsg = typeof error.error === 'string' 
-          ? error.error 
-          : JSON.stringify(error.error, null, 2)
-        throw new Error('Lỗi: ' + (errorMsg ?? 'Không thể lưu bài viết'))
-      }
+        const response = await fetch(defaultValues?.id ? `/api/posts/${defaultValues.id}` : '/api/posts', {
+          method: defaultValues?.id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
 
-      setMessage('Đã lưu bài viết thành công!')
-      // Redirect after successful save
-      if (!defaultValues?.id) {
-        setTimeout(() => {
-          window.location.href = '/admin/posts'
-        }, 1500)
+        console.log('📥 Response status:', response.status)
+
+        if (!response.ok) {
+          const error = await response.json()
+          console.error('❌ API Error:', error)
+          const errorMsg = typeof error.error === 'string' 
+            ? error.error 
+            : JSON.stringify(error.error, null, 2)
+          throw new Error('Lỗi: ' + (errorMsg ?? 'Không thể lưu bài viết'))
+        }
+
+        const data = await response.json()
+        console.log('✅ Success:', data)
+
+        setMessage('✅ Đã lưu bài viết thành công!')
+        // Redirect after successful save
+        if (!defaultValues?.id) {
+          setTimeout(() => {
+            window.location.href = '/admin/posts'
+          }, 1500)
+        }
+      } catch (error) {
+        console.error('❌ Submit error:', error)
+        setMessage('❌ ' + (error as Error).message)
+      } finally {
+        setSubmitting(false)
       }
-    } catch (error) {
-      console.error('Submit error:', error)
-      setMessage((error as Error).message)
-    } finally {
-      setSubmitting(false)
+    },
+    (errors) => {
+      console.error('❌ Form validation failed:', errors)
+      setMessage('❌ Form validation failed. Check console for details.')
     }
-  })
+  )
 
   const toggleTag = (tagId: string) => {
     const selected = form.getValues('tagIds') ?? []
@@ -144,40 +162,56 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
 
     try {
       const fileContent = await file.text()
+      console.log('📄 File content loaded:', fileContent.substring(0, 200))
+      
       const { metadata, content } = parseMarkdownFile(fileContent)
+      console.log('📋 Parsed metadata:', metadata)
+      console.log('📝 Markdown content:', content.substring(0, 200))
       
       // Convert markdown content to TipTap JSON
       const tipTapJSON = await markdownToTipTapJSON(content)
+      console.log('🎨 TipTap JSON:', JSON.stringify(tipTapJSON, null, 2))
 
-      // Update form with parsed data
-      form.setValue('title', metadata.title || '', { shouldDirty: true })
-      form.setValue('slug', metadata.slug || '', { shouldDirty: true })
-      form.setValue('excerpt', metadata.excerpt || '', { shouldDirty: true })
-      form.setValue('content', tipTapJSON, { shouldDirty: true })
+      // Validate JSON structure
+      if (!tipTapJSON || tipTapJSON.type !== 'doc' || !Array.isArray(tipTapJSON.content)) {
+        throw new Error('Invalid TipTap JSON structure')
+      }
+
+      // Update form with parsed data - use shouldValidate: true
+      form.setValue('title', metadata.title || '', { shouldDirty: true, shouldValidate: true })
+      form.setValue('slug', metadata.slug || '', { shouldDirty: true, shouldValidate: true })
+      form.setValue('excerpt', metadata.excerpt || '', { shouldDirty: true, shouldValidate: true })
+      form.setValue('content', tipTapJSON, { shouldDirty: true, shouldValidate: true })
       
       if (metadata.categoryId) {
-        form.setValue('categoryId', metadata.categoryId, { shouldDirty: true })
+        form.setValue('categoryId', metadata.categoryId, { shouldDirty: true, shouldValidate: true })
       }
       
       if (metadata.tagIds && metadata.tagIds.length > 0) {
-        form.setValue('tagIds', metadata.tagIds, { shouldDirty: true })
+        form.setValue('tagIds', metadata.tagIds, { shouldDirty: true, shouldValidate: true })
       }
       
       if (metadata.status) {
-        form.setValue('status', metadata.status, { shouldDirty: true })
+        form.setValue('status', metadata.status, { shouldDirty: true, shouldValidate: true })
       }
       
       if (metadata.publishedAt) {
-        form.setValue('publishedAt', metadata.publishedAt, { shouldDirty: true })
+        form.setValue('publishedAt', metadata.publishedAt, { shouldDirty: true, shouldValidate: true })
       }
       
       if (metadata.coverImageId) {
-        form.setValue('coverImageId', metadata.coverImageId, { shouldDirty: true })
+        form.setValue('coverImageId', metadata.coverImageId, { shouldDirty: true, shouldValidate: true })
       }
 
-      setMessage('✨ Đã import file Markdown thành công!')
+      // Trigger validation
+      const isValid = await form.trigger()
+      console.log('✅ Form validation result:', isValid)
+      console.log('📊 Form values after import:', form.getValues())
+      console.log('❌ Form errors:', form.formState.errors)
+
+      setMessage('✨ Đã import file Markdown thành công! Hãy kiểm tra và click "Lưu bài viết".')
     } catch (error) {
-      console.error('Import markdown error:', error)
+      console.error('❌ Import markdown error:', error)
       setMessage('❌ Lỗi khi import file Markdown: ' + (error as Error).message)
     } finally {
       setImporting(false)

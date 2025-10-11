@@ -201,79 +201,105 @@ function isSpecialLine(line: string): boolean {
 
 /**
  * Parse inline content (bold, italic, links, images, code)
+ * Process in order: code, bold, italic, links to avoid conflicts
  */
 function parseInlineContent(text: string): any[] {
   if (!text.trim()) {
     return []
   }
 
-  const nodes: any[] = []
-  let currentText = text
-  let lastIndex = 0
+  // First pass: extract code segments to protect them
+  const codeSegments: Array<{ placeholder: string; text: string }> = []
+  let protectedText = text.replace(/`([^`]+)`/g, (match, code) => {
+    const placeholder = `__CODE_${codeSegments.length}__`
+    codeSegments.push({ placeholder, text: code })
+    return placeholder
+  })
 
-  // Pattern để match: **bold**, *italic*, `code`, [link](url), ![alt](url)
-  const pattern = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|(`(.+?)`)|(!?\[([^\]]+)\]\(([^)]+)\))/g
-  
+  // Second pass: parse remaining formatting
+  const nodes: any[] = []
+  let remaining = protectedText
+
+  // Pattern: **bold**, *italic*, [link](url)
+  const pattern = /(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(\[([^\]]+)\]\(([^)]+)\))/g
+  let lastIndex = 0
   let match: RegExpExecArray | null
 
-  while ((match = pattern.exec(text)) !== null) {
+  while ((match = pattern.exec(protectedText)) !== null) {
     // Add text before match
     if (match.index > lastIndex) {
-      const beforeText = text.slice(lastIndex, match.index)
-      if (beforeText) {
-        nodes.push({ type: 'text', text: beforeText })
-      }
+      const beforeText = protectedText.slice(lastIndex, match.index)
+      nodes.push(...restoreCodeSegments(beforeText, codeSegments))
     }
 
     // **bold**
     if (match[1]) {
-      nodes.push({
-        type: 'text',
-        text: match[2],
-        marks: [{ type: 'bold' }],
-      })
+      nodes.push(...restoreCodeSegments(match[2], codeSegments, [{ type: 'bold' }]))
     }
     // *italic*
     else if (match[3]) {
-      nodes.push({
-        type: 'text',
-        text: match[4],
-        marks: [{ type: 'italic' }],
-      })
+      nodes.push(...restoreCodeSegments(match[4], codeSegments, [{ type: 'italic' }]))
     }
-    // `code`
+    // [link](url)
     else if (match[5]) {
-      nodes.push({
-        type: 'text',
-        text: match[6],
-        marks: [{ type: 'code' }],
-      })
-    }
-    // ![image](url) or [link](url)
-    else if (match[7]) {
-      const isImage = match[7].startsWith('!')
-      if (isImage) {
-        // Images are not inline in TipTap, skip for now
-        nodes.push({ type: 'text', text: match[7] })
-      } else {
-        nodes.push({
-          type: 'text',
-          text: match[8],
-          marks: [{ type: 'link', attrs: { href: match[9] } }],
-        })
-      }
+      nodes.push(...restoreCodeSegments(match[6], codeSegments, [{ type: 'link', attrs: { href: match[7] } }]))
     }
 
     lastIndex = pattern.lastIndex
   }
 
   // Add remaining text
-  if (lastIndex < text.length) {
-    const remainingText = text.slice(lastIndex)
-    if (remainingText) {
-      nodes.push({ type: 'text', text: remainingText })
-    }
+  if (lastIndex < protectedText.length) {
+    const remainingText = protectedText.slice(lastIndex)
+    nodes.push(...restoreCodeSegments(remainingText, codeSegments))
   }
 
   return nodes.length > 0 ? nodes : [{ type: 'text', text: text }]
+}
+
+/**
+ * Restore code segments and create text nodes
+ */
+function restoreCodeSegments(text: string, codeSegments: Array<{ placeholder: string; text: string }>, marks: any[] = []): any[] {
+  if (!text) return []
+
+  const nodes: any[] = []
+  let remaining = text
+  
+  codeSegments.forEach(({ placeholder, text: codeText }) => {
+    const index = remaining.indexOf(placeholder)
+    if (index !== -1) {
+      // Add text before placeholder
+      if (index > 0) {
+        const beforeText = remaining.slice(0, index)
+        if (beforeText) {
+          nodes.push({
+            type: 'text',
+            text: beforeText,
+            ...(marks.length > 0 && { marks }),
+          })
+        }
+      }
+      
+      // Add code node
+      nodes.push({
+        type: 'text',
+        text: codeText,
+        marks: [...marks, { type: 'code' }],
+      })
+      
+      remaining = remaining.slice(index + placeholder.length)
+    }
+  })
+
+  // Add remaining text
+  if (remaining) {
+    nodes.push({
+      type: 'text',
+      text: remaining,
+      ...(marks.length > 0 && { marks }),
+    })
+  }
+
+  return nodes.length > 0 ? nodes : text ? [{ type: 'text', text, ...(marks.length > 0 && { marks }) }] : []
 }
