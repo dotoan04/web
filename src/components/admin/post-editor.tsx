@@ -206,7 +206,7 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
           </div>
           <Button
             type="button"
-            variant="outline"
+            variant="subtle"
             size="sm"
             onClick={() => markdownFileInputRef.current?.click()}
             disabled={importing}
