@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { FileUp } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +13,7 @@ import { RichTextEditor } from '@/components/editor/rich-text-editor'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/components/ui/cn'
 import { postInputSchema } from '@/lib/validators/post'
+import { parseMarkdownFile, markdownToTipTapJSON } from '@/lib/markdown-parser'
 import type { PostWithRelations } from '@/server/posts'
 
 type Option = {
@@ -33,6 +35,8 @@ type FormValues = z.input<typeof formSchema>
 export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEditorProps) => {
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
+  const markdownFileInputRef = useRef<HTMLInputElement | null>(null)
 
   const initialValues: FormValues = useMemo(() => {
     if (!defaultValues) {
@@ -131,12 +135,86 @@ export const PostEditor = ({ authorId, categories, tags, defaultValues }: PostEd
 
   const status = form.watch('status')
 
+  const handleMarkdownImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImporting(true)
+    setMessage(null)
+
+    try {
+      const fileContent = await file.text()
+      const { metadata, content } = parseMarkdownFile(fileContent)
+      
+      // Convert markdown content to TipTap JSON
+      const tipTapJSON = await markdownToTipTapJSON(content)
+
+      // Update form with parsed data
+      form.setValue('title', metadata.title || '', { shouldDirty: true })
+      form.setValue('slug', metadata.slug || '', { shouldDirty: true })
+      form.setValue('excerpt', metadata.excerpt || '', { shouldDirty: true })
+      form.setValue('content', tipTapJSON, { shouldDirty: true })
+      
+      if (metadata.categoryId) {
+        form.setValue('categoryId', metadata.categoryId, { shouldDirty: true })
+      }
+      
+      if (metadata.tagIds && metadata.tagIds.length > 0) {
+        form.setValue('tagIds', metadata.tagIds, { shouldDirty: true })
+      }
+      
+      if (metadata.status) {
+        form.setValue('status', metadata.status, { shouldDirty: true })
+      }
+      
+      if (metadata.publishedAt) {
+        form.setValue('publishedAt', metadata.publishedAt, { shouldDirty: true })
+      }
+      
+      if (metadata.coverImageId) {
+        form.setValue('coverImageId', metadata.coverImageId, { shouldDirty: true })
+      }
+
+      setMessage('✨ Đã import file Markdown thành công!')
+    } catch (error) {
+      console.error('Import markdown error:', error)
+      setMessage('❌ Lỗi khi import file Markdown: ' + (error as Error).message)
+    } finally {
+      setImporting(false)
+      // Reset input
+      if (markdownFileInputRef.current) {
+        markdownFileInputRef.current.value = ''
+      }
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <input
+        ref={markdownFileInputRef}
+        type="file"
+        accept=".md,.mdx,.markdown"
+        className="hidden"
+        onChange={handleMarkdownImport}
+      />
+      
       <Card>
-        <CardHeader>
-          <CardTitle>Thông tin cơ bản</CardTitle>
-          <CardDescription>Tiêu đề, tóm tắt và cấu trúc bài viết.</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="space-y-1">
+            <CardTitle>Thông tin cơ bản</CardTitle>
+            <CardDescription>Tiêu đề, tóm tắt và cấu trúc bài viết.</CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => markdownFileInputRef.current?.click()}
+            disabled={importing}
+            className="gap-2"
+          >
+            <FileUp size={16} />
+            {importing ? 'Đang import...' : 'Import Markdown'}
+          </Button>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div>
