@@ -25,6 +25,7 @@ export const siteConfig = {
   social: {
     webmention: process.env.NEXT_PUBLIC_WEBMENTION_ENDPOINT,
     pingback: process.env.NEXT_PUBLIC_PINGBACK_ENDPOINT,
+    twitter: process.env.NEXT_PUBLIC_TWITTER_HANDLE,
   },
 }
 
@@ -101,7 +102,7 @@ export const createMetadata = ({
     },
     twitter: {
       card: 'summary_large_image',
-      creator: siteConfig.twitter,
+      creator: siteConfig.social.twitter,
       title: fullTitle,
       description: summary,
       images: [ogImage],

@@ -46,6 +46,7 @@ type ArticleOptions = {
   authorName?: string | null
   authorWebsite?: string | null
   coverImage?: string | null
+  tags?: string[]
 }
 
 export const createArticleJsonLd = ({
