@@ -15,7 +15,7 @@ type TableOfContentsProps = {
   className?: string
 }
 
-const DESKTOP_TOP_OFFSET = "8rem"
+const DESKTOP_TOP_OFFSET = "5rem"
 
 export const TableOfContents = ({ headings, className }: TableOfContentsProps) => {
   const [activeId, setActiveId] = useState<string | null>(headings[0]?.id ?? null)

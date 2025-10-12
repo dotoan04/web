@@ -4,13 +4,14 @@ import type { Metadata } from 'next'
 
 import { resolveSitePreferences } from '@/server/settings'
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+const appUrl = process.env.NODE_ENV === 'production'
+  ? 'https://thetoan.id.vn'
+  : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
 
 export const siteConfig = {
-  name: 'BlogVibe Coding',
-  description: 'Không gian blog cá nhân kể lại những trải nghiệm sống, học và làm việc đầy cảm hứng.',
+  name: 'Cathartica',
+  description: 'Blog chia sẻ về cuộc sống, lập trình và phát triển game với Unity.',
   url: appUrl.replace(/\/$/, ''),
-  twitter: '@blogvibe',
   locales: {
     default: 'vi-VN',
     languages: {
@@ -46,7 +47,7 @@ type CreateMetadataOptions = {
   type?: 'website' | 'article'
   publishedTime?: string
   modifiedTime?: string
-  authors?: string[]
+  authorLinks?: string[]
   translations?: Record<string, string>
 }
 
@@ -58,7 +59,7 @@ export const createMetadata = ({
   type = 'website',
   publishedTime,
   modifiedTime,
-  authors,
+  authorLinks,
   translations,
 }: CreateMetadataOptions = {}, overrides?: MetadataOverrides): Metadata => {
   const baseTitle = overrides?.tabTitle ?? overrides?.siteName ?? siteConfig.name
@@ -96,7 +97,7 @@ export const createMetadata = ({
       images: [{ url: ogImage, width: 1200, height: 630 }],
       ...(publishedTime ? { publishedTime } : {}),
       ...(modifiedTime ? { modifiedTime } : {}),
-      ...(authors ? { authors } : {}),
+      ...(authorLinks ? { authors: authorLinks } : {}),
     },
     twitter: {
       card: 'summary_large_image',

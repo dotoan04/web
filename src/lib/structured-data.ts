@@ -44,8 +44,8 @@ type ArticleOptions = {
   publishedAt: Date
   updatedAt: Date
   authorName?: string | null
+  authorWebsite?: string | null
   coverImage?: string | null
-  tags?: string[]
 }
 
 export const createArticleJsonLd = ({
@@ -55,6 +55,7 @@ export const createArticleJsonLd = ({
   publishedAt,
   updatedAt,
   authorName,
+  authorWebsite,
   coverImage,
   tags = [],
 }: ArticleOptions, overrides?: { siteName?: string; siteDescription?: string; logo?: string }) => ({
@@ -63,7 +64,7 @@ export const createArticleJsonLd = ({
   mainEntityOfPage: absoluteUrl(`/bai-viet/${slug}`),
   headline: title,
   description: description ?? overrides?.siteDescription ?? siteConfig.description,
-  author: authorName ? { '@type': 'Person', name: authorName } : undefined,
+  author: authorName ? { '@type': 'Person', name: authorName, ...(authorWebsite ? { sameAs: authorWebsite } : {}) } : undefined,
   publisher: {
     '@type': 'Organization',
     name: overrides?.siteName ?? siteConfig.name,
