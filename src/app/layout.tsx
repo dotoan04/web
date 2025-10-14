@@ -92,7 +92,7 @@ export default async function RootLayout({
               <div className="relative z-10 flex min-h-screen flex-col gap-10">
                 <Header siteName={preferences.siteName} />
                 <main className="flex flex-1 flex-col gap-10">{children}</main>
-                <footer className="rounded-[2rem] border border-ink-100 bg-white/75 px-6 py-6 text-center text-xs text-ink-400 shadow-[0_12px_35px_rgba(33,38,94,0.08)] dark:border-ink-700 dark:bg-ink-800/60 dark:text-ink-300">
+                <footer className="glass-card border-white/20 bg-white/30 px-6 py-6 text-center text-xs text-ink-400 shadow-[0_8px_32px_rgba(31,38,135,0.15)] dark:border-white/10 dark:bg-white/5 dark:text-ink-300 dark:shadow-[0_8px_32px_rgba(31,38,135,0.25)]">
                   © {new Date().getFullYear()} {preferences.siteName} · {slogan}
                 </footer>
               </div>

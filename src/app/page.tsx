@@ -7,6 +7,7 @@ import { PrefetchLink } from '@/components/ui/prefetch-link'
 import { SubscriptionBanner } from '@/components/subscription/subscription-banner'
 import { AnimatedHero, FloatingCircle } from '@/components/animated-hero'
 import { ScrollReveal, SlideIn } from '@/components/scroll-reveal'
+import { SakuraPetals } from '@/components/effects/sakura-petals'
 import { createDynamicMetadata } from '@/lib/metadata'
 import { formatViDate } from '@/lib/utils'
 import { resolveSitePreferences } from '@/server/settings'
@@ -61,11 +62,12 @@ export default async function Home({ searchParams }: HomeProps) {
   const badgeClasses = ['bg-ink-800 text-ink-50 dark:bg-ink-600', 'bg-ink-100 text-ink-700 dark:bg-ink-700 dark:text-ink-50', 'bg-ink-200 text-ink-700 dark:bg-ink-600/70 dark:text-ink-100']
 
   return (
-    <main className="space-y-16">
+    <main className="space-y-16 relative">
+      <SakuraPetals />
       <AnimatedHero>
-        <section className="relative overflow-hidden rounded-[2.5rem] border border-ink-100 bg-white/82 p-12 shadow-[0_25px_60px_rgba(33,38,94,0.12)] backdrop-blur-xl dark:border-ink-700 dark:bg-ink-800/70 dark:shadow-[0_25px_60px_rgba(9,11,38,0.45)]">
-          <div className="absolute -top-16 right-12 h-48 w-48 rounded-full bg-ink-200/40 blur-3xl dark:bg-ink-600/40" />
-          <div className="absolute -bottom-20 left-10 h-36 w-36 rounded-full bg-ink-300/25 blur-3xl dark:bg-ink-700/35" />
+        <section className="relative overflow-hidden rounded-[2.5rem] border border-white/20 glass-card liquid-gradient p-12 shadow-[0_25px_60px_rgba(31,38,135,0.25)] backdrop-blur-2xl dark:border-white/10 dark:shadow-[0_25px_60px_rgba(31,38,135,0.45)]">
+          <div className="absolute -top-16 right-12 h-48 w-48 rounded-full bg-ink-200/40 blur-3xl dark:bg-ink-600/40 liquid-blob" />
+          <div className="absolute -bottom-20 left-10 h-36 w-36 rounded-full bg-ink-300/25 blur-3xl dark:bg-ink-700/35 liquid-blob" />
           <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="max-w-2xl space-y-5">
               <p className="text-xs uppercase tracking-[0.4em] text-ink-400 dark:text-ink-300">
@@ -77,7 +79,7 @@ export default async function Home({ searchParams }: HomeProps) {
               <p className="text-lg text-ink-600 dark:text-ink-200">{hero}</p>
               {heroCtaLabel && heroCtaLink ? (
                 <div className="flex flex-wrap gap-3">
-                  <Button asChild size="lg" className="rounded-full px-6">
+                  <Button asChild size="lg" className="glass-button">
                     {heroCtaInternal ? (
                       <PrefetchLink href={heroCtaLink}>{heroCtaLabel}</PrefetchLink>
                     ) : (
@@ -128,8 +130,8 @@ export default async function Home({ searchParams }: HomeProps) {
             <PrefetchLink
               href={{ pathname: '/', query: buildQuery({ tag: validTag }) }}
               className={cn(
-                'rounded-full border border-ink-200 bg-white/70 px-4 py-2 text-sm text-ink-600 transition hover:border-ink-400 hover:text-ink-900 dark:border-ink-700 dark:bg-ink-800/70 dark:text-ink-200 dark:hover:border-ink-500',
-                !validCategory && 'border-ink-800 bg-ink-900 text-ink-50 dark:border-ink-400 dark:bg-ink-100/10 dark:text-ink-50'
+                'glass-button border-white/20 bg-white/30 px-4 py-2 text-sm text-ink-600 transition hover:border-white/40 hover:bg-white/40 dark:border-white/10 dark:bg-white/20 dark:text-ink-200 dark:hover:border-white/20 dark:hover:bg-white/30',
+                !validCategory && 'border-white/40 bg-white/40 text-ink-900 dark:border-white/20 dark:bg-white/30 dark:text-ink-50'
               )}
             >
               Tất cả
@@ -139,9 +141,9 @@ export default async function Home({ searchParams }: HomeProps) {
                 key={category.id}
                 href={{ pathname: '/', query: buildQuery({ category: category.slug, tag: validTag }) }}
                 className={cn(
-                  'rounded-full border border-ink-200 bg-white/70 px-4 py-2 text-sm text-ink-600 transition hover:border-ink-400 hover:text-ink-900 dark:border-ink-700 dark:bg-ink-800/70 dark:text-ink-200 dark:hover:border-ink-500',
+                  'glass-button border-white/20 bg-white/30 px-4 py-2 text-sm text-ink-600 transition hover:border-white/40 hover:bg-white/40 dark:border-white/10 dark:bg-white/20 dark:text-ink-200 dark:hover:border-white/20 dark:hover:bg-white/30',
                   validCategory === category.slug &&
-                    'border-ink-800 bg-ink-900 text-ink-50 dark:border-ink-400 dark:bg-ink-100/10 dark:text-ink-50'
+                    'border-white/40 bg-white/40 text-ink-900 dark:border-white/20 dark:bg-white/30 dark:text-ink-50'
                 )}
               >
                 {category.name}
@@ -153,8 +155,8 @@ export default async function Home({ searchParams }: HomeProps) {
             <PrefetchLink
               href={{ pathname: '/', query: buildQuery({ category: validCategory }) }}
               className={cn(
-                'rounded-full border border-dashed border-ink-200 px-3 py-1 text-xs uppercase tracking-[0.25em] text-ink-500 transition hover:border-ink-400 hover:text-ink-900 dark:border-ink-700 dark:text-ink-300 dark:hover:border-ink-500',
-                !validTag && 'border-ink-800 text-ink-900 dark:border-ink-400 dark:text-ink-100'
+                'glass-button border-dashed border-white/20 bg-white/20 px-3 py-1 text-xs uppercase tracking-[0.25em] text-ink-500 transition hover:border-white/40 hover:bg-white/30 dark:border-white/10 dark:bg-white/10 dark:text-ink-300 dark:hover:border-white/20 dark:hover:bg-white/20',
+                !validTag && 'border-white/40 bg-white/30 text-ink-900 dark:border-white/20 dark:bg-white/20 dark:text-ink-100'
               )}
             >
               Tất cả
@@ -167,8 +169,8 @@ export default async function Home({ searchParams }: HomeProps) {
                   query: buildQuery({ category: validCategory, tag: validTag === tag.slug ? undefined : tag.slug }),
                 }}
                 className={cn(
-                  'rounded-full border border-dashed border-ink-200 px-3 py-1 text-xs uppercase tracking-[0.25em] text-ink-500 transition hover:border-ink-400 hover:text-ink-900 dark:border-ink-700 dark:text-ink-300 dark:hover:border-ink-500',
-                  validTag === tag.slug && 'border-ink-800 text-ink-900 dark:border-ink-400 dark:text-ink-100'
+                  'glass-button border-dashed border-white/20 bg-white/20 px-3 py-1 text-xs uppercase tracking-[0.25em] text-ink-500 transition hover:border-white/40 hover:bg-white/30 dark:border-white/10 dark:bg-white/10 dark:text-ink-300 dark:hover:border-white/20 dark:hover:bg-white/20',
+                  validTag === tag.slug && 'border-white/40 bg-white/30 text-ink-900 dark:border-white/20 dark:bg-white/20 dark:text-ink-100'
                 )}
               >
                 #{tag.name}
@@ -179,7 +181,7 @@ export default async function Home({ searchParams }: HomeProps) {
         <div className="grid gap-6 md:grid-cols-2">
           {posts.map((post, index) => (
             <ScrollReveal key={post.id} delay={index * 0.1}>
-              <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white/80 shadow-[0_15px_45px_rgba(33,38,94,0.12)] transition hover:-translate-y-1 dark:border-ink-700 dark:bg-ink-800/60 dark:shadow-[0_15px_45px_rgba(9,11,38,0.45)]">
+              <article className="group glass-card glass-hover border-white/20 bg-white/30 shadow-[0_15px_45px_rgba(31,38,135,0.18)] transition hover:-translate-y-1 dark:border-white/10 dark:bg-white/5 dark:shadow-[0_15px_45px_rgba(31,38,135,0.35)] h-full flex flex-col overflow-hidden">
               {post.coverImage?.url ? (
                 <div className="relative h-60 w-full overflow-hidden">
                   <SmartImage
@@ -206,7 +208,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 <div className="mt-auto flex items-center justify-between">
                   <div className="flex flex-wrap gap-2">
                     {post.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag.tagId} className="bg-ink-100 text-ink-600 dark:bg-ink-700/80 dark:text-ink-100">
+                      <Badge key={tag.tagId} className="glass-button border-white/30 bg-white/40 text-ink-600 dark:border-white/15 dark:bg-white/20 dark:text-ink-100">
                         #{tag.tag.name}
                       </Badge>
                     ))}
@@ -223,7 +225,7 @@ export default async function Home({ searchParams }: HomeProps) {
             </ScrollReveal>
           ))}
           {posts.length === 0 ? (
-            <div className="rounded-3xl border border-ink-100 bg-white/80 p-8 text-center text-sm text-ink-500 dark:border-ink-700 dark:bg-ink-800/60 dark:text-ink-300">
+            <div className="glass-card border-white/20 bg-white/30 p-8 text-center text-sm text-ink-500 shadow-[0_8px_32px_rgba(31,38,135,0.15)] dark:border-white/10 dark:bg-white/5 dark:text-ink-300 dark:shadow-[0_8px_32px_rgba(31,38,135,0.25)">
               Chưa có bài viết nào khớp với bộ lọc hiện tại. Bạn có thể thử chọn chuyên mục hoặc thẻ khác.
             </div>
           ) : null}
