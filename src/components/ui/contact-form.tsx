@@ -1,14 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
 import { Mail, Send, CheckCircle, AlertCircle, User, MessageSquare, Briefcase } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/components/ui/cn'
 
 interface ContactFormProps {
   className?: string
-  onSubmit?: (data: ContactData) => Promise<void>
 }
 
 interface ContactData {
@@ -36,7 +34,7 @@ const projectTypes = [
   { value: 'other', label: 'Other', icon: '💭' }
 ]
 
-export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
+export function ContactForm({ className = '' }: ContactFormProps) {
   const [formData, setFormData] = useState<ContactData>({
     name: '',
     email: '',
@@ -56,29 +54,29 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
     const newErrors: FormErrors = {}
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Vui lòng nhập tên của bạn'
+      newErrors.name = 'Please enter your name'
     } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Tên phải có ít nhất 2 ký tự'
+      newErrors.name = 'Name must be at least 2 characters'
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Vui lòng nhập email'
+      newErrors.email = 'Please enter your email'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ'
+      newErrors.email = 'Invalid email address'
     }
 
     if (!formData.subject.trim()) {
-      newErrors.subject = 'Vui lòng nhập chủ đề'
+      newErrors.subject = 'Please enter a subject'
     } else if (formData.subject.trim().length < 3) {
-      newErrors.subject = 'Chủ đề phải có ít nhất 3 ký tự'
+      newErrors.subject = 'Subject must be at least 3 characters'
     }
 
     if (!formData.message.trim()) {
-      newErrors.message = 'Vui lòng nhập nội dung tin nhắn'
+      newErrors.message = 'Please enter your message'
     } else if (formData.message.trim().length < 20) {
-      newErrors.message = 'Tin nhắn phải có ít nhất 20 ký tự'
+      newErrors.message = 'Message must be at least 20 characters'
     } else if (formData.message.trim().length > 1000) {
-      newErrors.message = 'Tin nhắn không được quá 1000 ký tự'
+      newErrors.message = 'Message cannot exceed 1000 characters'
     }
 
     setErrors(newErrors)
@@ -97,13 +95,14 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000))
       
-      // Call onSubmit if provided, otherwise simulate success
-      if (onSubmit) {
-        await onSubmit(formData)
-      }
+      // Handle form submission (you can integrate with your service here)
+      console.log('Contact form submitted:', formData)
+      console.log('Here you would integrate with your preferred service:')
+      console.log('- Email service (Resend, Mailgun, SendGrid)')
+      console.log('- Form service (Formspree, Netlify Forms, Tally)')
       
       setSubmitStatus('success')
-      setSubmitMessage('Tin nhắn của bạn đã được gửi thành công! Tôi sẽ trả lời sớm nhất có thể.')
+      setSubmitMessage('Your message has been sent successfully! I\'ll get back to you soon.')
       
       // Reset form
       setFormData({
@@ -117,7 +116,7 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
       
     } catch (error) {
       setSubmitStatus('error')
-      setSubmitMessage('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.')
+      setSubmitMessage('An error occurred while sending your message. Please try again later.')
     } finally {
       setIsSubmitting(false)
     }
@@ -133,70 +132,34 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
     }
   }
 
-  const formVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.1
-      }
-    }
-  }
-
-  const fieldVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        type: "spring" as const,
-        stiffness: 100
-      }
-    }
-  }
-
   return (
-    <motion.div 
-      className={cn("glass-card border-white/20 bg-white/30 p-8 backdrop-blur-2xl dark:border-white/10 dark:bg-white/10", className)}
-      initial="hidden"
-      animate="visible"
-      variants={formVariants}
-    >
+    <div className={cn("glass-card border-white/20 bg-white/30 p-8 backdrop-blur-2xl dark:border-white/10 dark:bg-white/10", className)}>
       <div className="space-y-6">
         {/* Header */}
-        <motion.div 
-          className="text-center space-y-2"
-          variants={fieldVariants}
-        >
-          <motion.div
-            className="inline-flex items-center gap-2"
-            whileHover={{ scale: 1.05 }}
-          >
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2">
             <Mail className="h-5 w-5 text-ink-600 dark:text-ink-400" />
             <h3 className="font-display text-2xl text-ink-900 dark:text-ink-100">
               Get In Touch
             </h3>
-          </motion.div>
+          </div>
           <p className="text-ink-600 dark:text-ink-300">
             Let&apos;s build something amazing together. Drop me a message!
           </p>
-        </motion.div>
+        </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name & Email row */}
           <div className="grid gap-4 md:grid-cols-2">
-            <motion.div variants={fieldVariants}>
-              <motion.div
+            <div>
+              <div
                 className={cn(
                   "glass-input border-white/20 bg-white/20 px-4 py-3 backdrop-blur-lg transition-all duration-300",
                   "hover:border-white/30 hover:bg-white/30",
                   focusedField === 'name' && 'border-white/40 bg-white/30',
                   errors.name && 'border-red-500/50 bg-red-50/20'
                 )}
-                whileFocus={{ scale: 1.02 }}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <User className="h-4 w-4 text-ink-500 dark:text-ink-400" />
@@ -214,31 +177,23 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
                   placeholder="Your name"
                   disabled={isSubmitting}
                 />
-              </motion.div>
-              <AnimatePresence>
-                {errors.name && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex items-center gap-1 mt-1 text-xs text-red-500"
-                  >
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.name}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+              </div>
+              {errors.name && (
+                <div className="flex items-center gap-1 mt-1 text-xs text-red-500">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.name}
+                </div>
+              )}
+            </div>
 
-            <motion.div variants={fieldVariants}>
-              <motion.div
+            <div>
+              <div
                 className={cn(
                   "glass-input border-white/20 bg-white/20 px-4 py-3 backdrop-blur-lg transition-all duration-300",
                   "hover:border-white/30 hover:bg-white/30",
                   focusedField === 'email' && 'border-white/40 bg-white/30',
                   errors.email && 'border-red-500/50 bg-red-50/20'
                 )}
-                whileFocus={{ scale: 1.02 }}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Mail className="h-4 w-4 text-ink-500 dark:text-ink-400" />
@@ -256,32 +211,24 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
                   placeholder="your@email.com"
                   disabled={isSubmitting}
                 />
-              </motion.div>
-              <AnimatePresence>
-                {errors.email && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex items-center gap-1 mt-1 text-xs text-red-500"
-                  >
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.email}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+              </div>
+              {errors.email && (
+                <div className="flex items-center gap-1 mt-1 text-xs text-red-500">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.email}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Project Type */}
-          <motion.div variants={fieldVariants}>
-            <motion.div
+          <div>
+            <div
               className={cn(
                 "glass-input border-white/20 bg-white/20 px-4 py-3 backdrop-blur-lg transition-all duration-300",
                 "hover:border-white/30 hover:bg-white/30",
                 focusedField === 'projectType' && 'border-white/40 bg-white/30'
               )}
-              whileFocus={{ scale: 1.02 }}
             >
               <div className="flex items-center gap-2 mb-2">
                 <Briefcase className="h-4 w-4 text-ink-500 dark:text-ink-400" />
@@ -291,7 +238,7 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
               </div>
               <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
                 {projectTypes.map((type) => (
-                  <motion.div
+                  <div
                     key={type.value}
                     className={cn(
                       "cursor-pointer rounded-lg border px-3 py-2 text-center text-sm transition-all",
@@ -299,28 +246,25 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
                         ? "glass-button border-white/30 bg-white/40 text-ink-900 dark:border-white/20 dark:bg-white/20 dark:text-ink-50"
                         : "border-white/10 bg-white/10 text-ink-600 hover:border-white/20 hover:bg-white/20 dark:text-ink-400 dark:hover:text-ink-200"
                     )}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
                     onClick={() => handleInputChange('projectType', type.value)}
                   >
                     <span className="mr-1">{type.icon}</span>
                     {type.label}
-                  </motion.div>
+                  </div>
                 ))}
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
           {/* Subject */}
-          <motion.div variants={fieldVariants}>
-            <motion.div
+          <div>
+            <div
               className={cn(
                 "glass-input border-white/20 bg-white/20 px-4 py-3 backdrop-blur-lg transition-all duration-300",
                 "hover:border-white/30 hover:bg-white/30",
                 focusedField === 'subject' && 'border-white/40 bg-white/30',
                 errors.subject && 'border-red-500/50 bg-red-50/20'
               )}
-              whileFocus={{ scale: 1.02 }}
             >
               <div className="flex items-center gap-2 mb-1">
                 <MessageSquare className="h-4 w-4 text-ink-500 dark:text-ink-400" />
@@ -338,32 +282,24 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
                 placeholder="What's this about?"
                 disabled={isSubmitting}
               />
-            </motion.div>
-            <AnimatePresence>
-              {errors.subject && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-1 mt-1 text-xs text-red-500"
-                >
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.subject}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+            </div>
+            {errors.subject && (
+              <div className="flex items-center gap-1 mt-1 text-xs text-red-500">
+                <AlertCircle className="h-3 w-3" />
+                {errors.subject}
+              </div>
+            )}
+          </div>
 
           {/* Message */}
-          <motion.div variants={fieldVariants}>
-            <motion.div
+          <div>
+            <div
               className={cn(
                 "glass-input border-white/20 bg-white/20 px-4 py-3 backdrop-blur-lg transition-all duration-300",
                 "hover:border-white/30 hover:bg-white/30",
                 focusedField === 'message' && 'border-white/40 bg-white/30',
                 errors.message && 'border-red-500/50 bg-red-50/20'
               )}
-              whileFocus={{ scale: 1.02 }}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
@@ -389,83 +325,58 @@ export function ContactForm({ className = '', onSubmit }: ContactFormProps) {
                 placeholder="Tell me about your project, goals, or just say hi!"
                 disabled={isSubmitting}
               />
-            </motion.div>
-            <AnimatePresence>
-              {errors.message && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-1 mt-1 text-xs text-red-500"
-                >
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.message}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+            </div>
+            {errors.message && (
+              <div className="flex items-center gap-1 mt-1 text-xs text-red-500">
+                <AlertCircle className="h-3 w-3" />
+                {errors.message}
+              </div>
+            )}
+          </div>
 
           {/* Submit Status Messages */}
-          <AnimatePresence>
-            {submitStatus !== 'idle' && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className={cn(
-                  "p-4 rounded-lg flex items-center gap-2 text-sm",
-                  submitStatus === 'success' 
-                    ? "glass-card border-green-500/20 bg-green-50/20 dark:border-green-500/30 dark:bg-green-500/10 text-green-700 dark:text-green-300"
-                    : "glass-card border-red-500/20 bg-red-50/20 dark:border-red-500/30 dark:bg-red-500/10 text-red-700 dark:text-red-300"
-                )}
-              >
-                {submitStatus === 'success' ? (
-                  <CheckCircle className="h-5 w-5" />
-                ) : (
-                  <AlertCircle className="h-5 w-5" />
-                )}
-                {submitMessage}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {submitStatus !== 'idle' && (
+            <div
+              className={cn(
+                "p-4 rounded-lg flex items-center gap-2 text-sm",
+                submitStatus === 'success' 
+                  ? "glass-card border-green-500/20 bg-green-50/20 dark:border-green-500/30 dark:bg-green-500/10 text-green-700 dark:text-green-300"
+                  : "glass-card border-red-500/20 bg-red-50/20 dark:border-red-500/30 dark:bg-red-500/10 text-red-700 dark:text-red-300"
+              )}
+            >
+              {submitStatus === 'success' ? (
+                <CheckCircle className="h-5 w-5" />
+              ) : (
+                <AlertCircle className="h-5 w-5" />
+              )}
+              {submitMessage}
+            </div>
+          )}
 
           {/* Submit Button */}
-          <motion.div 
-              className="flex justify-center"
-              variants={fieldVariants}
+          <div className="flex justify-center">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="glass-button border-white/20 bg-white/20 px-8 py-3 text-base backdrop-blur-lg hover:border-white/30 hover:bg-white/30 disabled:opacity-50 dark:border-white/10 dark:bg-white/10 dark:hover:border-white/20 dark:hover:bg-white/20"
             >
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="glass-button border-white/20 bg-white/20 px-8 py-3 text-base backdrop-blur-lg hover:border-white/30 hover:bg-white/30 disabled:opacity-50 dark:border-white/10 dark:bg-white/10 dark:hover:border-white/20 dark:hover:bg-white/20"
-                >
-                <motion.div
-                  className="flex items-center gap-2"
-                  animate={isSubmitting ? { rotate: 360 } : {}}
-                  transition={{ duration: 2, repeat: isSubmitting ? Infinity : 0, ease: "linear" }}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="h-4 w-4 border-2 border-ink-600 border-t-transparent rounded-full" />
-                      <span>Sending...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4" />
-                      <span>Send Message</span>
-                    </>
-                  )}
-                </motion.div>
-              </Button>
-              </motion.div>
-            </motion.div>
-          </motion.div>
+              <div className="flex items-center gap-2">
+                {isSubmitting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-ink-600 border-t-transparent rounded-full" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    <span>Send Message</span>
+                  </>
+                )}
+              </div>
+            </Button>
+          </div>
         </form>
       </div>
-    </motion.div>
+    </div>
   )
 }

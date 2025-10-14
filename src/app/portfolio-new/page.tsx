@@ -162,15 +162,7 @@ export default async function EnhancedPortfolioPage() {
             Have a project in mind? Let&apos;s collaborate and create something amazing together.
           </p>
         </div>
-        <ContactForm 
-          onSubmit={async (data) => {
-            console.log('Contact form submitted:', data)
-            // Here you would integrate with your preferred service:
-            // - Email service (Resend, Mailgun, SendGrid)
-            // - Form service (Formspree, Netlify Forms, Tally)
-            // - Custom API endpoint
-          }}
-        />
+        <ContactForm />
       </section>
 
       {/* Quick Contact */}

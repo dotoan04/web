@@ -12,7 +12,7 @@ const nextConfig = {
       '*': ['**/Application Data/**'],
     },
     // Optimize package imports
-    optimizePackageImports: ['@/components', '@/lib', 'lucide-react', 'framer-motion'],
+    optimizePackageImports: ['@/components', '@/lib', 'lucide-react'],
   },
   // Optimize font loading for production builds
   optimizeFonts: true,
