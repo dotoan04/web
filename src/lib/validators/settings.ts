@@ -35,6 +35,7 @@ export const siteSettingsSchema = z.object({
     .nullable()
     .optional(),
   snowEffectEnabled: z.boolean().optional(),
+  sakuraEffectEnabled: z.boolean().optional(),
 })
 
 export type SiteSettingsInput = z.infer<typeof siteSettingsSchema>

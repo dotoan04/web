@@ -24,6 +24,7 @@ type Props = {
   seoDescription?: string
   faviconUrl?: string | null
   snowEffectEnabled?: boolean
+  sakuraEffectEnabled?: boolean
 }
 
 export const SettingsForm = ({
@@ -43,6 +44,7 @@ export const SettingsForm = ({
   seoDescription,
   faviconUrl,
   snowEffectEnabled,
+  sakuraEffectEnabled,
 }: Props) => {
   const [values, setValues] = useState({
     siteName,
@@ -64,6 +66,7 @@ export const SettingsForm = ({
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [snowEnabled, setSnowEnabled] = useState(Boolean(snowEffectEnabled))
+  const [sakuraEnabled, setSakuraEnabled] = useState(Boolean(sakuraEffectEnabled))
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -102,6 +105,7 @@ export const SettingsForm = ({
         seoDescription: values.seoDescription.trim() || undefined,
         faviconUrl: values.faviconUrl.trim() ? values.faviconUrl.trim() : null,
         snowEffectEnabled: snowEnabled,
+        sakuraEffectEnabled: sakuraEnabled,
       }
 
       const response = await fetch('/api/settings', {
@@ -316,16 +320,34 @@ export const SettingsForm = ({
               />
             </div>
           </div>
-          <label className="flex items-center gap-3 text-sm font-medium text-ink-600" htmlFor="snowEffect">
-            <input
-              id="snowEffect"
-              type="checkbox"
-              checked={snowEnabled}
-              onChange={(event) => setSnowEnabled(event.target.checked)}
-              className="h-4 w-4 rounded border-ink-300 text-ink-600 focus:ring-ink-500"
-            />
-            Bật hiệu ứng hạt rơi trên giao diện
-          </label>
+          <div className="space-y-3 rounded-3xl border border-ink-100 bg-white/80 p-4 shadow-sm dark:border-ink-700 dark:bg-ink-900/30">
+            <p className="text-sm font-semibold text-ink-600 dark:text-ink-200">Hiệu ứng trang</p>
+            <p className="text-xs text-ink-400 dark:text-ink-400">
+              Bạn có thể bật riêng lẻ hoặc kết hợp nhiều hiệu ứng để tạo không khí sinh động cho trang.
+            </p>
+            <div className="flex flex-col gap-3 md:flex-row">
+              <label className="flex items-center gap-3 text-sm font-medium text-ink-600 dark:text-ink-200" htmlFor="snowEffect">
+                <input
+                  id="snowEffect"
+                  type="checkbox"
+                  checked={snowEnabled}
+                  onChange={(event) => setSnowEnabled(event.target.checked)}
+                  className="h-4 w-4 rounded border-ink-300 text-ink-600 focus:ring-ink-500 dark:border-ink-500 dark:bg-ink-800"
+                />
+                Bông tuyết rơi lãng mạn
+              </label>
+              <label className="flex items-center gap-3 text-sm font-medium text-ink-600 dark:text-ink-200" htmlFor="sakuraEffect">
+                <input
+                  id="sakuraEffect"
+                  type="checkbox"
+                  checked={sakuraEnabled}
+                  onChange={(event) => setSakuraEnabled(event.target.checked)}
+                  className="h-4 w-4 rounded border-ink-300 text-ink-600 focus:ring-ink-500 dark:border-ink-500 dark:bg-ink-800"
+                />
+                Cánh hoa anh đào bay
+              </label>
+            </div>
+          </div>
           <div className="flex items-center justify-between">
             {message ? <p className="text-sm text-ink-500">{message}</p> : <span />}
             <Button type="submit" disabled={loading}>
