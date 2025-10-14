@@ -15,6 +15,7 @@ const keyMap = {
   seoDescription: 'site.seo.description',
   favicon: 'site.favicon',
   snowEffect: 'site.effects.snow',
+  sakuraEffect: 'site.effects.sakura',
   owner: 'portfolio.owner',
   education: 'portfolio.education',
   certifications: 'portfolio.certifications',
@@ -43,6 +44,7 @@ export const getSiteSettings = async () => {
       'site.seo.description': null,
       'site.favicon': null,
       'site.effects.snow': false,
+      'site.effects.sakura': false,
       'portfolio.owner': {
         name: null,
         age: null,
@@ -71,6 +73,7 @@ export const updateSiteSettings = async (settings: {
   seoDescription?: string
   faviconUrl?: string | null
   snowEffectEnabled?: boolean
+  sakuraEffectEnabled?: boolean
 }) => {
   const ownerProfile = {
     name: settings.ownerName?.trim() ? settings.ownerName.trim() : null,
@@ -168,6 +171,16 @@ export const updateSiteSettings = async (settings: {
       },
     }),
     prisma.siteSetting.upsert({
+      where: { key: keyMap.sakuraEffect },
+      create: {
+        key: keyMap.sakuraEffect,
+        value: settings.sakuraEffectEnabled ?? false,
+      },
+      update: {
+        value: settings.sakuraEffectEnabled ?? false,
+      },
+    }),
+    prisma.siteSetting.upsert({
       where: { key: keyMap.owner },
       create: {
         key: keyMap.owner,
@@ -220,6 +233,7 @@ export const resolveSitePreferences = cache(async () => {
     seoDescription: (settings[keyMap.seoDescription] as string) ?? '',
     faviconUrl: typeof settings[keyMap.favicon] === 'string' ? (settings[keyMap.favicon] as string) : null,
     snowEffectEnabled: Boolean(settings[keyMap.snowEffect]),
+    sakuraEffectEnabled: Boolean(settings[keyMap.sakuraEffect]),
     owner: (settings[keyMap.owner] as { name?: string; age?: number | null; avatarUrl?: string | null }) ?? {},
     education: (settings[keyMap.education] as string) ?? '',
     certifications: (settings[keyMap.certifications] as string[]) ?? [],

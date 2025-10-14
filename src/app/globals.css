@@ -19,6 +19,20 @@
       radial-gradient(circle at 70% 0%, rgba(29, 35, 95, 0.55), transparent 60%);
   }
 
+  .theme-sakura body {
+    @apply bg-rose-50 text-rose-950;
+    background-image: radial-gradient(circle at 15% 25%, rgba(255, 210, 224, 0.75), transparent 60%),
+      radial-gradient(circle at 80% 10%, rgba(255, 186, 201, 0.55), transparent 65%),
+      radial-gradient(circle at 50% 90%, rgba(255, 239, 214, 0.6), transparent 70%);
+  }
+
+  .theme-aurora body {
+    @apply bg-slate-900 text-sky-50;
+    background-image: radial-gradient(circle at 20% 20%, rgba(14, 116, 144, 0.65), transparent 55%),
+      radial-gradient(circle at 70% 15%, rgba(67, 56, 202, 0.55), transparent 60%),
+      radial-gradient(circle at 40% 85%, rgba(8, 145, 178, 0.45), transparent 70%);
+  }
+
   h1,
   h2,
   h3,

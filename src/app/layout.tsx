@@ -6,6 +6,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 import { AnalyticsTracker } from '@/components/analytics/analytics-tracker'
+import { SakuraFall } from '@/components/effects/sakura-fall'
 import { Snowfall } from '@/components/effects/snowfall'
 import { Header } from '@/components/header'
 import { JsonLd } from '@/components/json-ld'
@@ -83,6 +84,7 @@ export default async function RootLayout({
         <SessionProvider>
           <ThemeProvider>
             {preferences.snowEffectEnabled ? <Snowfall density={1} /> : null}
+            {preferences.sakuraEffectEnabled ? <SakuraFall density={1} /> : null}
             <Suspense fallback={null}>
               <AnalyticsTracker />
             </Suspense>

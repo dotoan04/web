@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 
-import { ThemeToggle } from '@/components/theme-toggle'
+import { ThemeSwitcher } from '@/components/theme-switcher'
 import { UserMenu } from '@/components/user-menu'
 
 type HeaderProps = {
@@ -29,10 +29,10 @@ export const Header = ({ siteName }: HeaderProps) => {
           Tìm kiếm
         </Link>
         <UserMenu />
-        <ThemeToggle />
+        <ThemeSwitcher />
       </nav>
       <div className="md:hidden">
-        <ThemeToggle />
+        <ThemeSwitcher />
       </div>
     </header>
   )

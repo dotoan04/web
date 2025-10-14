@@ -36,6 +36,7 @@ export default async function SettingsPage() {
       seoDescription={settings.seoDescription}
       faviconUrl={settings.faviconUrl ?? ''}
       snowEffectEnabled={settings.snowEffectEnabled}
+      sakuraEffectEnabled={settings.sakuraEffectEnabled}
     />
   )
 }
