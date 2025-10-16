@@ -112,7 +112,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect'>('all')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showSidebar, setShowSidebar] = useState(true)
+  const [showFilterModal, setShowFilterModal] = useState(false)
   
   const QUESTIONS_PER_NAV_PAGE = 20
 
@@ -340,23 +340,23 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const isLowTime = timePercentage < 20
   const isCriticalTime = timePercentage < 10
 
-  const renderTimer = () => (
-    <div className="relative flex h-28 w-28 items-center justify-center rounded-full border-4 border-ink-200 bg-gradient-to-br from-white to-ink-50 shadow-lg dark:border-ink-700 dark:from-ink-900 dark:to-ink-800">
-      <div 
-        className={`absolute inset-2 rounded-full border-4 transition-colors ${
-          isCriticalTime 
-            ? 'border-rose-500 dark:border-rose-400' 
-            : isLowTime 
-            ? 'border-orange-400 dark:border-orange-300'
-            : 'border-indigo-400/70 dark:border-indigo-500/40'
-        }`}
-        style={{
-          background: `conic-gradient(${isCriticalTime ? 'rgb(244 63 94)' : isLowTime ? 'rgb(251 146 60)' : 'rgb(99 102 241)'} ${timePercentage * 3.6}deg, transparent 0deg)`
-        }}
-      />
-      <div className="absolute inset-3 rounded-full bg-white dark:bg-ink-900" />
-      <div className="relative text-center">
-        <span className={`font-display text-2xl font-bold transition-colors ${
+  const renderCompactTimer = () => (
+    <div className="flex items-center gap-2">
+      <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink-200 bg-white dark:border-ink-700 dark:bg-ink-900">
+        <div 
+          className={`absolute inset-0.5 rounded-full border-2 transition-colors ${
+            isCriticalTime 
+              ? 'border-rose-500 dark:border-rose-400' 
+              : isLowTime 
+              ? 'border-orange-400 dark:border-orange-300'
+              : 'border-indigo-400/70 dark:border-indigo-500/40'
+          }`}
+          style={{
+            background: `conic-gradient(${isCriticalTime ? 'rgb(244 63 94)' : isLowTime ? 'rgb(251 146 60)' : 'rgb(99 102 241)'} ${timePercentage * 3.6}deg, transparent 0deg)`
+          }}
+        />
+        <div className="absolute inset-1 rounded-full bg-white dark:bg-ink-900" />
+        <span className={`relative text-xs font-bold transition-colors ${
           isCriticalTime 
             ? 'text-rose-600 dark:text-rose-400' 
             : isLowTime 
@@ -365,12 +365,10 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         }`}>
           {formatDuration(progress.remainingSeconds)}
         </span>
-        {isLowTime && !progress.completed && (
-          <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-rose-500">
-            Cẩn thận!
-          </p>
-        )}
       </div>
+      {isLowTime && !progress.completed && (
+        <span className="text-xs font-semibold text-rose-500">Cẩn thận!</span>
+      )}
     </div>
   )
 
@@ -379,63 +377,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const navEndIndex = Math.min(navStartIndex + QUESTIONS_PER_NAV_PAGE, quiz.questions.length)
   const visibleQuestions = quiz.questions.slice(navStartIndex, navEndIndex)
 
-  const renderQuestionNavigator = () => (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        {visibleQuestions.map((question, relativeIndex) => {
-          const index = navStartIndex + relativeIndex
-          const selected = currentQuestionIndex === index
-          const answered = Array.isArray(progress.answers[question.id]) && progress.answers[question.id].length > 0
-          return (
-            <button
-              key={question.id}
-              type="button"
-              onClick={() => setCurrentQuestionIndex(index)}
-              className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm font-medium transition hover:scale-110 ${selected ? 'border-indigo-500 bg-indigo-500 text-white shadow-sm' : answered ? 'border-emerald-400 bg-emerald-50 text-emerald-600 dark:border-emerald-500/60 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-ink-200 bg-white text-ink-500 hover:border-ink-300 dark:border-ink-700 dark:bg-ink-800/60 dark:text-ink-300'}`}
-            >
-              {index + 1}
-            </button>
-          )
-        })}
-      </div>
-      {totalNavPages > 1 && (
-        <div className="flex items-center justify-between gap-2 rounded-lg bg-ink-50 px-3 py-2 text-xs dark:bg-ink-800/40">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setNavPage((p) => Math.max(0, p - 1))}
-            disabled={navPage === 0}
-            className="h-7 px-2 text-xs"
-          >
-            ← Trước
-          </Button>
-          <span className="text-ink-500 dark:text-ink-400">
-            Câu {navStartIndex + 1}–{navEndIndex} / {quiz.questions.length}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setNavPage((p) => Math.min(totalNavPages - 1, p + 1))}
-            disabled={navPage === totalNavPages - 1}
-            className="h-7 px-2 text-xs"
-          >
-            Sau →
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-
   const renderOptions = () => (
-    <div className="mt-6 space-y-3">
-      <div className="hidden rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300 lg:flex lg:items-center lg:gap-4">
-        <span className="font-semibold">💡 Hotkeys:</span>
-        <span>Bấm <kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">Enter</kbd> hoặc <kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">↓</kbd> để câu tiếp</span>
-        <span>•</span>
-        <span><kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">↑</kbd> câu trước</span>
-      </div>
+    <div className="space-y-3">
       {currentQuestion.options.map((option, optionIdx) => {
         const state = getOptionState(currentQuestion, option)
         const isMulti = isMultipleChoice(currentQuestion)
@@ -483,225 +426,240 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     </div>
   )
 
-  const renderControls = () => (
-    <div className="mt-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}
-          disabled={currentQuestionIndex === 0}
-        >
-          ← Câu trước
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))}
-          disabled={currentQuestionIndex === quiz.questions.length - 1}
-        >
-          Câu tiếp →
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setShowSidebar(!showSidebar)}
-        >
-          {showSidebar ? 'Ẩn sidebar' : 'Hiện sidebar'}
-        </Button>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        {!progress.completed ? (
-          <>
-            <span className="text-sm text-ink-500 dark:text-ink-300">
-              Đã trả lời {answeredCount}/{quiz.questions.length}
-            </span>
-            <Button type="button" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? 'Đang nộp...' : 'Nộp bài'}
-            </Button>
-          </>
-        ) : (
-          <>
-            <div className="flex items-baseline gap-2">
-              <p className="text-sm text-ink-500 dark:text-ink-300">Kết quả:</p>
-              <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
-                {progress.score}/{progress.totalPoints}
-              </p>
+  const renderFilterModal = () => {
+    if (!showFilterModal || !progress.completed) return null
+    
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowFilterModal(false)}>
+        <div className="max-h-[80vh] w-full max-w-md overflow-hidden rounded-2xl border-2 border-ink-200 bg-white shadow-2xl dark:border-ink-800 dark:bg-ink-900" onClick={(e) => e.stopPropagation()}>
+          <div className="border-b border-ink-200 p-4 dark:border-ink-700">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-ink-800 dark:text-ink-100">Danh sách câu hỏi</h3>
+              <button
+                type="button"
+                onClick={() => setShowFilterModal(false)}
+                className="rounded-full p-1 text-ink-400 transition hover:bg-ink-100 hover:text-ink-600 dark:hover:bg-ink-800 dark:hover:text-ink-300"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <Button type="button" variant="subtle" onClick={handleReset}>
-              Làm lại
-            </Button>
-          </>
-        )}
-      </div>
-    </div>
-  )
-
-  const renderHistory = () => (
-    <div className="rounded-3xl border-2 border-ink-200 bg-white p-6 shadow-xl dark:border-ink-800 dark:bg-ink-900">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-ink-800 dark:text-ink-100">Lịch sử làm bài</h3>
-        {history.length ? (
-          <button
-            type="button"
-            className="text-xs font-medium text-ink-400 underline-offset-4 hover:underline dark:text-ink-500"
-            onClick={() => setHistory(() => [])}
-          >
-            Xoá lịch sử
-          </button>
-        ) : null}
-      </div>
-      <p className="mt-1 text-sm text-ink-500 dark:text-ink-300">
-        Lưu cục bộ trên thiết bị để bạn có thể xem lại kết quả.
-      </p>
-      <div className="mt-4 space-y-3">
-        {history.length === 0 ? (
-          <p className="text-sm text-ink-400 dark:text-ink-500">Chưa có lượt làm nào.</p>
-        ) : (
-          history.map((entry) => (
-            <div
-              key={entry.submissionId}
-              className="rounded-xl border border-ink-200 bg-white px-4 py-3 text-sm dark:border-ink-800 dark:bg-ink-900/60"
-            >
-              <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                <p className="font-medium text-ink-700 dark:text-ink-200">
-                  {new Date(entry.submittedAt).toLocaleString('vi-VN')}
-                </p>
-                <p className="text-emerald-600 dark:text-emerald-400">
-                  {entry.score}/{entry.totalPoints} điểm
-                </p>
-              </div>
-              <p className="mt-2 text-xs text-ink-400 dark:text-ink-500">
-                Đáp án đã chọn: {Object.values(entry.answers).filter((val) => Array.isArray(val) ? val.length > 0 : Boolean(val)).length} / {quiz.questions.length}
-              </p>
+            <div className="mt-3 flex gap-2">
+              {[
+                { key: 'all', label: 'Tất cả' },
+                { key: 'correct', label: 'Đúng' },
+                { key: 'incorrect', label: 'Sai' },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setFilter(item.key as typeof filter)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${filter === item.key ? 'bg-indigo-500 text-white' : 'bg-ink-100 text-ink-500 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-300 dark:hover:bg-ink-700'}`}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
-          ))
-        )}
+          </div>
+          <div className="max-h-96 space-y-2 overflow-y-auto p-4">
+            {filteredQuestions.map((question) => {
+              const selected = progress.answers[question.id] ?? []
+              const correctIds = question.options
+                .filter((o) => o.isCorrect)
+                .map((o) => o.id)
+                .sort()
+              const selectedIds = [...selected].sort()
+              const isCorrectAnswer =
+                correctIds.length === selectedIds.length &&
+                correctIds.every((id, i) => id === selectedIds[i])
+              return (
+                <button
+                  key={question.id}
+                  type="button"
+                  onClick={() => {
+                    goToQuestion(quiz.questions.findIndex((item) => item.id === question.id))
+                    setShowFilterModal(false)
+                  }}
+                  className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition hover:scale-[1.02] ${isCorrectAnswer ? 'border-emerald-300 bg-emerald-50 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-rose-300 bg-rose-50 text-rose-500 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300'}`}
+                >
+                  <span className="text-sm font-medium text-ink-700 dark:text-ink-200">
+                    Câu {quiz.questions.findIndex((item) => item.id === question.id) + 1}
+                  </span>
+                  <span className="text-xs uppercase tracking-[0.2em] text-ink-400 dark:text-ink-500">
+                    {isCorrectAnswer ? 'Đúng' : 'Sai'}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 p-4 md:p-6 lg:p-8">
-      <section className={`grid gap-6 ${showSidebar ? 'lg:grid-cols-[minmax(0,7fr) minmax(0,1fr)]' : 'grid-cols-1'} lg:gap-8`}>
-        <div className="flex flex-col items-center gap-5 lg:items-start">
-          {renderTimer()}
-          <div className="text-center lg:text-left">
-            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-indigo-500 dark:text-indigo-400">Làm bài</p>
-            <h1 className="font-display text-2xl font-bold text-ink-900 dark:text-ink-100 lg:text-3xl">{quiz.title}</h1>
-            {quiz.description ? (
-              <p className="mt-2 text-sm leading-relaxed text-ink-600 dark:text-ink-300">{quiz.description}</p>
-            ) : null}
-          </div>
-        </div>
-        <div className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border-2 border-ink-200 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900/70">
-              <p className="text-xs font-medium uppercase tracking-[0.3em] text-ink-400 dark:text-ink-500">Thời lượng</p>
-              <p className="mt-2 text-2xl font-bold text-ink-800 dark:text-ink-100">
-                {Math.round(quiz.durationSeconds / 60)} phút
+    <div className="mx-auto min-h-screen max-w-7xl p-4 md:p-6">
+      {renderFilterModal()}
+      
+      {/* Compact Header */}
+      <header className="sticky top-0 z-10 mb-4 rounded-xl border-2 border-ink-200 bg-white/95 p-3 shadow-sm backdrop-blur-sm dark:border-ink-700 dark:bg-ink-900/95">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {renderCompactTimer()}
+            <div className="h-8 w-px bg-ink-200 dark:bg-ink-700" />
+            <div>
+              <h1 className="text-sm font-bold text-ink-800 dark:text-ink-100">{quiz.title}</h1>
+              <p className="text-xs text-ink-500 dark:text-ink-400">
+                {quiz.questions.length} câu · {answeredCount} đã trả lời
               </p>
             </div>
-            <div className="rounded-2xl border-2 border-ink-200 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900/70">
-              <p className="text-xs font-medium uppercase tracking-[0.3em] text-ink-400 dark:text-ink-500">Số câu hỏi</p>
-              <p className="mt-2 text-2xl font-bold text-ink-800 dark:text-ink-100">{quiz.questions.length}</p>
-            </div>
           </div>
-          <div className="rounded-2xl border-2 border-ink-200 bg-white p-4 shadow-sm dark:border-ink-700 dark:bg-ink-900/70">
-            <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-ink-400 dark:text-ink-500">Danh sách câu hỏi</p>
-            {renderQuestionNavigator()}
-          </div>
-        </div>
-      </section>
-
-      <section className={`grid gap-6 ${showSidebar ? 'lg:grid-cols-[minmax(0,5fr)_minmax(0,2fr)]' : 'grid-cols-1'} lg:gap-8`}>
-        <div className="space-y-6">
-          <article className="rounded-3xl border-2 border-ink-200 bg-white p-4 shadow-xl dark:border-ink-800 dark:bg-ink-900 md:p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.4em] text-indigo-500 dark:text-indigo-400">
-                  Câu hỏi {currentQuestionIndex + 1} / {quiz.questions.length}
-                </p>
-                <h2 className="font-display text-2xl font-bold leading-snug text-ink-900 dark:text-ink-100 md:text-3xl">{currentQuestion.title}</h2>
-              </div>
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-sm font-bold text-white shadow-lg dark:from-indigo-400 dark:to-indigo-500">
-                {currentQuestion.points}
-              </span>
-            </div>
-            {currentQuestion.content ? (
-              <p className="mt-4 text-sm leading-relaxed text-ink-600 dark:text-ink-300">{currentQuestion.content}</p>
-            ) : null}
-            {renderOptions()}
-            {progress.completed && currentQuestion.explanation ? (
-              <div className="mt-6 rounded-2xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-5 shadow-lg dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-emerald-500/5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">💡</span>
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">Giải thích</p>
-                </div>
-                <p className="mt-3 text-sm leading-relaxed text-emerald-800 dark:text-emerald-200">{currentQuestion.explanation}</p>
-              </div>
-            ) : null}
-            {renderControls()}
-            {error ? <p className="mt-4 text-sm text-rose-500 dark:text-rose-300">{error}</p> : null}
-          </article>
-        </div>
-        {showSidebar && (
-          <div className="space-y-6">
+          
+          <div className="flex items-center gap-2">
             {progress.completed && (
-              <div className="rounded-3xl border-2 border-ink-200 bg-white p-6 shadow-xl dark:border-ink-800 dark:bg-ink-900">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-ink-800 dark:text-ink-100">Lọc kết quả</h3>
-                <div className="flex gap-2">
-                  {[
-                    { key: 'all', label: 'Tất cả' },
-                    { key: 'correct', label: 'Đúng' },
-                    { key: 'incorrect', label: 'Sai' },
-                  ].map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => setFilter(item.key as typeof filter)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${filter === item.key ? 'bg-indigo-500 text-white' : 'bg-ink-100 text-ink-500 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-300 dark:hover:bg-ink-700'}`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-4 space-y-2 text-xs text-ink-500 dark:text-ink-300">
-                {filteredQuestions.map((question) => {
-                  const selected = progress.answers[question.id] ?? []
-                  const correctIds = question.options
-                    .filter((o) => o.isCorrect)
-                    .map((o) => o.id)
-                    .sort()
-                  const selectedIds = [...selected].sort()
-                  const isCorrectAnswer =
-                    correctIds.length === selectedIds.length &&
-                    correctIds.every((id, i) => id === selectedIds[i])
-                  return (
-                    <button
-                      key={question.id}
-                      type="button"
-                      onClick={() => goToQuestion(quiz.questions.findIndex((item) => item.id === question.id))}
-                      className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition hover:scale-[1.02] ${isCorrectAnswer ? 'border-emerald-300 bg-emerald-50 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-rose-300 bg-rose-50 text-rose-500 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300'}`}
-                    >
-                      <span className="text-sm font-medium text-ink-700 dark:text-ink-200">
-                        Câu {quiz.questions.findIndex((item) => item.id === question.id) + 1}
-                      </span>
-                      <span className="text-xs uppercase tracking-[0.2em] text-ink-400 dark:text-ink-500">
-                        {isCorrectAnswer ? 'Đúng' : 'Sai'}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowFilterModal(true)}
+                className="text-xs"
+              >
+                <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Lọc câu hỏi
+              </Button>
             )}
-            {renderHistory()}
+            {!progress.completed ? (
+              <Button type="button" size="sm" onClick={handleSubmit} disabled={submitting}>
+                {submitting ? 'Đang nộp...' : 'Nộp bài'}
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                  {progress.score}/{progress.totalPoints}
+                </span>
+                <Button type="button" size="sm" variant="subtle" onClick={handleReset}>
+                  Làm lại
+                </Button>
+              </div>
+            )}
           </div>
-        )}
-      </section>
+        </div>
+        
+        {/* Question Navigator */}
+        <div className="mt-3 border-t border-ink-100 pt-3 dark:border-ink-800">
+          <div className="flex flex-wrap gap-2">
+            {visibleQuestions.map((question, relativeIndex) => {
+              const index = navStartIndex + relativeIndex
+              const selected = currentQuestionIndex === index
+              const answered = Array.isArray(progress.answers[question.id]) && progress.answers[question.id].length > 0
+              return (
+                <button
+                  key={question.id}
+                  type="button"
+                  onClick={() => setCurrentQuestionIndex(index)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-medium transition hover:scale-105 ${selected ? 'border-indigo-500 bg-indigo-500 text-white shadow-sm' : answered ? 'border-emerald-400 bg-emerald-50 text-emerald-600 dark:border-emerald-500/60 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-ink-200 bg-white text-ink-500 hover:border-ink-300 dark:border-ink-700 dark:bg-ink-800/60 dark:text-ink-300'}`}
+                >
+                  {index + 1}
+                </button>
+              )
+            })}
+          </div>
+          {totalNavPages > 1 && (
+            <div className="mt-2 flex items-center justify-between text-xs text-ink-500 dark:text-ink-400">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setNavPage((p) => Math.max(0, p - 1))}
+                disabled={navPage === 0}
+                className="h-6 px-2 text-xs"
+              >
+                ← Trước
+              </Button>
+              <span>
+                Câu {navStartIndex + 1}–{navEndIndex} / {quiz.questions.length}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setNavPage((p) => Math.min(totalNavPages - 1, p + 1))}
+                disabled={navPage === totalNavPages - 1}
+                className="h-6 px-2 text-xs"
+              >
+                Sau →
+              </Button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Main Question Area */}
+      <main className="mx-auto max-w-4xl">
+        <article className="rounded-2xl border-2 border-ink-200 bg-white p-6 shadow-lg dark:border-ink-800 dark:bg-ink-900 md:p-8">
+          <div className="mb-6 flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">
+                Câu hỏi {currentQuestionIndex + 1} / {quiz.questions.length}
+              </p>
+              <h2 className="mt-2 font-display text-2xl font-bold leading-tight text-ink-900 dark:text-ink-100 md:text-3xl">
+                {currentQuestion.title}
+              </h2>
+            </div>
+            <span className="ml-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-sm font-bold text-white shadow-lg dark:from-indigo-400 dark:to-indigo-500">
+              {currentQuestion.points}
+            </span>
+          </div>
+
+          {currentQuestion.content && (
+            <p className="mb-6 text-base leading-relaxed text-ink-600 dark:text-ink-300">
+              {currentQuestion.content}
+            </p>
+          )}
+
+          {renderOptions()}
+
+          {progress.completed && currentQuestion.explanation && (
+            <div className="mt-6 rounded-xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-5 shadow-md dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-emerald-500/5">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-xl">💡</span>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  Giải thích
+                </p>
+              </div>
+              <p className="text-sm leading-relaxed text-emerald-800 dark:text-emerald-200">
+                {currentQuestion.explanation}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-8 flex items-center justify-between border-t border-ink-100 pt-6 dark:border-ink-800">
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}
+                disabled={currentQuestionIndex === 0}
+              >
+                ← Câu trước
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))}
+                disabled={currentQuestionIndex === quiz.questions.length - 1}
+              >
+                Câu tiếp →
+              </Button>
+            </div>
+          </div>
+
+          {error && <p className="mt-4 text-sm text-rose-500 dark:text-rose-300">{error}</p>}
+        </article>
+      </main>
     </div>
   )
 }
