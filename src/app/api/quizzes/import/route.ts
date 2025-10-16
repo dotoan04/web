@@ -45,7 +45,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Vui lòng cung cấp tập tin hoặc nội dung văn bản.' }, { status: 400 })
     }
 
-    const buffer = base64File ? Buffer.from(base64File, 'base64') : undefined
+    let buffer: ArrayBuffer | undefined
+    if (base64File) {
+      const buf = Buffer.from(base64File, 'base64')
+      buffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+    }
     const questions = await parseQuizContent({ buffer, text })
     return NextResponse.json({ questions: sanitizeParsedQuestions(questions) })
   } catch (error) {
