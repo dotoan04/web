@@ -118,6 +118,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     timerProgress.current = progress.remainingSeconds / quiz.durationSeconds
   }, [progress.remainingSeconds, quiz.durationSeconds])
 
+  const currentQuestion = quiz.questions[currentQuestionIndex]
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (progress.completed) return
@@ -188,8 +190,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       setProgress((prev) => ({ ...prev, submittedAt: entry.submittedAt }))
     }
   }, [progress.answers, progress.completed, progress.score, progress.totalPoints, progress.submittedAt, quiz.id, setHistory, setProgress])
-
-  const currentQuestion = quiz.questions[currentQuestionIndex]
 
   const answeredCount = useMemo(
     () => Object.values(progress.answers).filter((value) => value !== null).length,
