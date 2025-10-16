@@ -119,6 +119,34 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }, [progress.remainingSeconds, quiz.durationSeconds])
 
   useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (progress.completed) return
+      
+      const key = event.key.toLowerCase()
+      
+      if (key === 'enter') {
+        event.preventDefault()
+        goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))
+      } else if (key === 'arrowup') {
+        event.preventDefault()
+        goToQuestion(Math.max(0, currentQuestionIndex - 1))
+      } else if (key === 'arrowdown') {
+        event.preventDefault()
+        goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))
+      } else if (['1', '2', '3', '4'].includes(key)) {
+        event.preventDefault()
+        const optionIndex = parseInt(key) - 1
+        if (optionIndex < currentQuestion.options.length) {
+          handleSelectOption(currentQuestion.id, currentQuestion.options[optionIndex].id)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [progress.completed, currentQuestion, currentQuestionIndex, handleSelectOption, goToQuestion, quiz.questions.length])
+
+  useEffect(() => {
     if (progress.completed) {
       if (timerRef.current) {
         clearInterval(timerRef.current)
@@ -354,7 +382,15 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   const renderOptions = () => (
     <div className="mt-6 space-y-3">
-      {currentQuestion.options.map((option) => {
+      <div className="hidden rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300 lg:flex lg:items-center lg:gap-4">
+        <span className="font-semibold">💡 Hotkeys:</span>
+        <span>Bấm <kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">1-4</kbd> để chọn đáp án</span>
+        <span>•</span>
+        <span>Bấm <kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">Enter</kbd> hoặc <kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">↓</kbd> để câu tiếp</span>
+        <span>•</span>
+        <span><kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">↑</kbd> câu trước</span>
+      </div>
+      {currentQuestion.options.map((option, optionIdx) => {
         const state = isOptionCorrect(currentQuestion, option)
         const selected = progress.answers[currentQuestion.id] === option.id
         return (
@@ -365,8 +401,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             disabled={progress.completed}
             className={`group flex w-full items-center gap-4 rounded-xl border-2 px-5 py-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:hover:scale-100 ${state === true ? 'border-emerald-400 bg-emerald-50 text-emerald-700 shadow-md dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-300' : state === false ? 'border-rose-400 bg-rose-50 text-rose-700 shadow-md dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-300' : selected ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-md dark:border-indigo-500/50 dark:bg-indigo-500/10 dark:text-indigo-300' : 'border-ink-200 bg-white text-ink-600 hover:border-ink-300 hover:shadow-sm dark:border-ink-700 dark:bg-ink-900/60 dark:text-ink-200 dark:hover:border-ink-600'}`}
           >
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${selected && !state ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-current/30 bg-current/5'}`}>
-              {option.order + 1}
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${selected && !state ? 'border-indigo-500 bg-indigo-500 text-white shadow-lg' : 'border-current/30 bg-current/5'}`}>
+              {optionIdx + 1}
             </span>
             <span className="flex-1 text-base font-medium leading-relaxed">{option.text}</span>
             {state !== null ? (
@@ -384,7 +420,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     setCurrentQuestionIndex(newIndex)
     const newNavPage = Math.floor(newIndex / QUESTIONS_PER_NAV_PAGE)
     setNavPage(newNavPage)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [QUESTIONS_PER_NAV_PAGE])
 
   const renderControls = () => (
@@ -513,7 +548,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8">
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,2fr)] lg:gap-8">
         <div className="space-y-6">
           <article className="rounded-3xl border-2 border-ink-200 bg-white p-6 shadow-xl dark:border-ink-800 dark:bg-ink-900 md:p-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">

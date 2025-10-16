@@ -237,6 +237,10 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [preview, setPreview] = useState<ImportedQuestion[]>([])
+  const [showAllPreview, setShowAllPreview] = useState(false)
+  
+  const PREVIEW_LIMIT = 5
+  const displayedPreview = showAllPreview ? preview : preview.slice(0, PREVIEW_LIMIT)
 
   useEffect(() => {
     if (slugLocked) return
@@ -542,14 +546,14 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
               <div className="mt-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-ink-600 dark:text-ink-200">
-                    Preview ({preview.length} câu hỏi)
+                    Preview ({displayedPreview.length} / {preview.length} câu hỏi)
                   </h4>
                   <Button type="button" size="sm" onClick={() => applyImportedQuestions(preview)}>
                     Áp dụng vào form
                   </Button>
                 </div>
-                <div className="grid gap-3">
-                  {preview.map((question) => (
+                <div className="grid gap-3 max-h-96 overflow-y-auto rounded-lg border border-ink-200 p-3 dark:border-ink-700">
+                  {displayedPreview.map((question) => (
                     <article key={question.id} className="rounded-2xl border border-ink-200/70 bg-white p-4 text-sm dark:border-ink-700 dark:bg-ink-900">
                       <h5 className="font-semibold text-ink-700 dark:text-ink-100">{question.title}</h5>
                       <ul className="mt-2 space-y-1">
@@ -573,6 +577,15 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                     </article>
                   ))}
                 </div>
+                {preview.length > PREVIEW_LIMIT && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllPreview(!showAllPreview)}
+                    className="w-full rounded-lg border border-ink-200 py-2 text-xs font-semibold text-ink-600 transition hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800/50"
+                  >
+                    {showAllPreview ? '↑ Thu gọn' : '↓ Xem thêm'} ({preview.length - PREVIEW_LIMIT} câu nữa)
+                  </button>
+                )}
               </div>
             ) : null}
           </section>
