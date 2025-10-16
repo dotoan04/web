@@ -176,7 +176,7 @@ export const listQuizzes = () =>
 export const createSubmission = async (input: {
   quizId: string
   participant?: string
-  answers: Record<string, string>
+  answers: Record<string, string | string[]>
 }) => {
   const quiz = await prisma.quiz.findUnique({
     where: { id: input.quizId },
@@ -198,8 +198,23 @@ export const createSubmission = async (input: {
 
   quiz.questions.forEach((question) => {
     totalPoints += question.points
-    const correctOption = question.options.find((option) => option.isCorrect)
-    if (correctOption && input.answers[question.id] === correctOption.id) {
+    
+    // Get all correct option IDs
+    const correctOptionIds = question.options
+      .filter((option) => option.isCorrect)
+      .map((option) => option.id)
+      .sort()
+    
+    // Normalize submitted answer to array
+    const submittedAnswer = input.answers[question.id]
+    const submittedIds = (Array.isArray(submittedAnswer) ? submittedAnswer : submittedAnswer ? [submittedAnswer] : []).sort()
+    
+    // Check if submitted answers match exactly all correct answers
+    const isCorrect =
+      correctOptionIds.length === submittedIds.length &&
+      correctOptionIds.every((id, index) => id === submittedIds[index])
+    
+    if (isCorrect) {
       score += question.points
     }
   })

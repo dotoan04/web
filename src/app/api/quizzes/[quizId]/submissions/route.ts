@@ -5,7 +5,7 @@ import { createSubmission, getQuizBySlug } from '@/server/quizzes'
 
 const submissionSchema = z.object({
   participant: z.string().max(120).optional(),
-  answers: z.record(z.string(), z.string()).optional().default({}),
+  answers: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional().default({}),
 })
 
 type Params = {

@@ -118,6 +118,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mounted = useRef(false)
+  const normalized = useRef(false)
 
   const timerProgress = useRef(1)
 
@@ -129,6 +130,21 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     timerProgress.current = progress.remainingSeconds / quiz.durationSeconds
   }, [progress.remainingSeconds, quiz.durationSeconds])
 
+  // Normalize legacy localStorage data (convert null to empty arrays)
+  useEffect(() => {
+    if (normalized.current) return
+    const needsNormalization = Object.values(progress.answers).some((value) => !Array.isArray(value))
+    if (needsNormalization) {
+      normalized.current = true
+      setProgress((prev) => ({
+        ...prev,
+        answers: Object.fromEntries(
+          Object.entries(prev.answers).map(([key, value]) => [key, Array.isArray(value) ? value : []])
+        ),
+      }))
+    }
+  }, [progress.answers, setProgress])
+  
   const currentQuestion = quiz.questions[currentQuestionIndex]
 
   const handleToggleOption = useCallback(
@@ -231,7 +247,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }, [progress.answers, progress.completed, progress.score, progress.totalPoints, progress.submittedAt, quiz.id, setHistory, setProgress])
 
   const answeredCount = useMemo(
-    () => Object.values(progress.answers).filter((value) => value.length > 0).length,
+    () => Object.values(progress.answers).filter((value) => Array.isArray(value) && value.length > 0).length,
     [progress.answers],
   )
 
@@ -369,7 +385,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         {visibleQuestions.map((question, relativeIndex) => {
           const index = navStartIndex + relativeIndex
           const selected = currentQuestionIndex === index
-          const answered = Boolean(progress.answers[question.id])
+          const answered = Array.isArray(progress.answers[question.id]) && progress.answers[question.id].length > 0
           return (
             <button
               key={question.id}
