@@ -2,12 +2,25 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { FileText, Upload, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { slugify } from '@/lib/utils'
+
+type ImportedQuestion = {
+  id: string
+  title: string
+  options: Array<{
+    id: string
+    text: string
+    isCorrect: boolean
+    order: number
+  }>
+  multi: boolean
+}
 
 type QuizOptionForm = {
   id?: string
@@ -75,6 +88,9 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [slugLocked, setSlugLocked] = useState(Boolean(quiz))
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [preview, setPreview] = useState<ImportedQuestion[]>([])
 
   useEffect(() => {
     if (slugLocked) return
@@ -82,6 +98,37 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     if (suggested === values.slug) return
     setValues((prev) => ({ ...prev, slug: suggested }))
   }, [slugLocked, values.title, values.slug])
+
+  const resetPreview = () => {
+    setPreview([])
+    setImportError(null)
+  }
+
+  const applyImportedQuestions = (items: ImportedQuestion[]) => {
+    const nextQuestions = items.map((item, questionIndex) => ({
+      id: item.id,
+      title: item.title,
+      content: '',
+      type: 'SINGLE_CHOICE' as const,
+      order: questionIndex,
+      points: 1,
+      explanation: '',
+      options: item.options.map((option, optionIndex) => ({
+        id: option.id,
+        text: option.text,
+        isCorrect: option.isCorrect,
+        order: optionIndex,
+      })),
+    }))
+
+    setValues((prev) => ({
+      ...prev,
+      questions: nextQuestions.length ? nextQuestions : prev.questions,
+    }))
+
+    setPreview([])
+    setImportError(null)
+  }
 
   const totalPoints = useMemo(
     () => values.questions.reduce((sum, question) => sum + Math.max(0, Number(question.points ?? 0)), 0),
@@ -97,6 +144,76 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
         questionIndex === index ? updater(question) : question,
       ),
     }))
+  }
+
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    setImportError(null)
+
+    if (!file) return
+
+    try {
+      if (!file.name.endsWith('.docx')) {
+        throw new Error('Chỉ hỗ trợ tập tin Word (.docx).')
+      }
+
+      if (file.size > 8 * 1024 * 1024) {
+        throw new Error('Tập tin quá lớn. Giới hạn 8MB.')
+      }
+
+      setImporting(true)
+      const form = new FormData()
+      form.append('file', file)
+
+      const response = await fetch('/api/quizzes/import', {
+        method: 'POST',
+        body: form,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? 'Không thể phân tích tập tin.')
+      }
+
+      setPreview((data.questions as ImportedQuestion[]) ?? [])
+    } catch (err) {
+      console.error(err)
+      setImportError((err as Error).message)
+      setPreview([])
+    } finally {
+      setImporting(false)
+      event.target.value = ''
+    }
+  }
+
+  const handlePasteText = async () => {
+    setImportError(null)
+    const text = window.prompt('Dán nội dung văn bản, mỗi dòng một nội dung.')
+    if (!text) return
+
+    try {
+      setImporting(true)
+      const response = await fetch('/api/quizzes/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? 'Không thể phân tích nội dung.')
+      }
+
+      setPreview((data.questions as ImportedQuestion[]) ?? [])
+    } catch (err) {
+      console.error(err)
+      setImportError((err as Error).message)
+      setPreview([])
+    } finally {
+      setImporting(false)
+    }
   }
 
   const addQuestion = () => {
@@ -232,6 +349,80 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
       </CardHeader>
       <CardContent>
         <form className="space-y-6" onSubmit={handleSubmit}>
+          <section className="rounded-3xl border border-ink-100 bg-white/70 p-5 shadow-inner dark:border-ink-800 dark:bg-ink-900/60">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-ink-800 dark:text-ink-100">Nhập đề từ Word</h3>
+                <p className="text-sm text-ink-500 dark:text-ink-300">
+                  Tải tập tin .docx chứa câu hỏi, đáp án bôi đỏ hoặc đánh dấu * sẽ được nhận diện tự động.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <label className="flex cursor-pointer items-center gap-2 rounded-full bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-lg transition hover:bg-indigo-400">
+                  <Upload size={16} />
+                  <span>Tải tập tin</span>
+                  <input className="hidden" type="file" accept=".docx" onChange={handleUpload} />
+                </label>
+                <Button type="button" variant="subtle" onClick={handlePasteText}>
+                  <FileText size={16} className="mr-2" /> Dán văn bản
+                </Button>
+                {preview.length ? (
+                  <Button type="button" variant="ghost" onClick={resetPreview}>
+                    <X size={16} className="mr-1" /> Xoá preview
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            {importError ? (
+              <p className="mt-3 text-sm text-rose-500 dark:text-rose-300">{importError}</p>
+            ) : null}
+            {importing ? (
+              <p className="mt-4 text-sm text-indigo-500 dark:text-indigo-300">Đang phân tích tập tin…</p>
+            ) : null}
+            {preview.length ? (
+              <div className="mt-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-ink-700 dark:text-ink-200">
+                    Preview ({preview.length} câu hỏi)
+                  </h4>
+                  <Button type="button" size="sm" onClick={() => applyImportedQuestions(preview)}>
+                    Áp dụng vào form
+                  </Button>
+                </div>
+                <div className="grid gap-3">
+                  {preview.map((question) => (
+                    <article
+                      key={question.id}
+                      className="rounded-2xl border border-ink-100/70 bg-white/60 p-4 text-sm shadow-sm dark:border-ink-800 dark:bg-ink-900/70"
+                    >
+                      <h5 className="font-semibold text-ink-700 dark:text-ink-100">{question.title}</h5>
+                      <ul className="mt-2 space-y-1">
+                        {question.options.map((option) => (
+                          <li
+                            key={option.id}
+                            className={`flex items-center gap-2 ${
+                              option.isCorrect
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-ink-600 dark:text-ink-300'
+                            }`}
+                          >
+                            <span className="font-semibold">{option.order + 1}.</span>
+                            <span>{option.text}</span>
+                            {option.isCorrect ? (
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                Đúng
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="title">
