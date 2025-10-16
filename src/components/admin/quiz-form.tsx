@@ -106,7 +106,6 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
 
   const applyImportedQuestions = (items: ImportedQuestion[]) => {
     const nextQuestions = items.map((item, questionIndex) => ({
-      id: item.id,
       title: item.title,
       content: '',
       type: 'SINGLE_CHOICE' as const,
@@ -114,7 +113,6 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
       points: 1,
       explanation: '',
       options: item.options.map((option, optionIndex) => ({
-        id: option.id,
         text: option.text,
         isCorrect: option.isCorrect,
         order: optionIndex,
@@ -267,13 +265,16 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     setError(null)
 
     try {
+      const isValidCuid = (value: unknown): value is string =>
+        typeof value === 'string' && /^c[0-9a-z]{24,}$/i.test(value)
+
       const response = await fetch(quiz ? `/api/quizzes/${quiz.id}` : '/api/quizzes', {
         method: quiz ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...values,
           questions: values.questions.map((question, index) => ({
-            ...(question.id ? { id: question.id } : {}),
+            ...(isValidCuid(question.id) ? { id: question.id } : {}),
             title: question.title,
             content: question.content,
             type: question.type,
@@ -281,7 +282,7 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
             points: question.points,
             explanation: question.explanation,
             options: question.options.map((option, optionIndex) => ({
-              ...(option.id ? { id: option.id } : {}),
+              ...(isValidCuid(option.id) ? { id: option.id } : {}),
               text: option.text,
               isCorrect: option.isCorrect,
               order: optionIndex,
