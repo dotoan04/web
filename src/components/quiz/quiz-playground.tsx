@@ -112,6 +112,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect'>('all')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showSidebar, setShowSidebar] = useState(true)
   
   const QUESTIONS_PER_NAV_PAGE = 20
 
@@ -555,7 +556,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 </p>
               </div>
               <p className="mt-2 text-xs text-ink-400 dark:text-ink-500">
-                Đáp án đã chọn: {Object.values(entry.answers).filter(Boolean).length} / {quiz.questions.length}
+                Đáp án đã chọn: {Object.values(entry.answers).filter((val) => Array.isArray(val) ? val.length > 0 : Boolean(val)).length} / {quiz.questions.length}
               </p>
             </div>
           ))
@@ -563,8 +564,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       </div>
     </div>
   )
-
-  const [showSidebar, setShowSidebar] = useState(true)
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 p-4 md:p-6 lg:p-8">
@@ -599,7 +598,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,2fr)] lg:gap-8">
+      <section className={`grid gap-6 ${showSidebar ? 'lg:grid-cols-[minmax(0,5fr)_minmax(0,2fr)]' : 'grid-cols-1'} lg:gap-8`}>
         <div className="space-y-6">
           <article className="rounded-3xl border-2 border-ink-200 bg-white p-4 shadow-xl dark:border-ink-800 dark:bg-ink-900 md:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -632,9 +631,10 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </div>
         {showSidebar && (
           <div className="space-y-6">
-            <div className="rounded-3xl border-2 border-ink-200 bg-white p-6 shadow-xl dark:border-ink-800 dark:bg-ink-900">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-ink-800 dark:text-ink-100">Lọc kết quả</h3>
+            {progress.completed && (
+              <div className="rounded-3xl border-2 border-ink-200 bg-white p-6 shadow-xl dark:border-ink-800 dark:bg-ink-900">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-ink-800 dark:text-ink-100">Lọc kết quả</h3>
                 <div className="flex gap-2">
                   {[
                     { key: 'all', label: 'Tất cả' },
@@ -681,9 +681,10 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 })}
               </div>
             </div>
-          )}
-          {renderHistory()}
-        </div>
+            )}
+            {renderHistory()}
+          </div>
+        )}
       </section>
     </div>
   )
