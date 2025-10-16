@@ -610,17 +610,22 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500" htmlFor="durationSeconds">
-                  Thời lượng (giây)
+                <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500" htmlFor="durationMinutes">
+                  Thời lượng (phút)
                 </label>
                 <Input
-                  id="durationSeconds"
+                  id="durationMinutes"
                   type="number"
-                  min={30}
-                  value={values.durationSeconds}
-                  onChange={(event) => updateQuiz({ durationSeconds: Number(event.target.value) })}
+                  min={1}
+                  step={1}
+                  value={Math.round(values.durationSeconds / 60)}
+                  onChange={(event) => updateQuiz({ durationSeconds: Number(event.target.value) * 60 })}
+                  placeholder="Ví dụ: 45"
                   required
                 />
+                <p className="text-xs text-ink-400 dark:text-ink-500">
+                  = {values.durationSeconds} giây
+                </p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500" htmlFor="status">
