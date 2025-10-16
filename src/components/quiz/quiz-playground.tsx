@@ -25,6 +25,7 @@ type QuizQuestion = {
 
 type Quiz = {
   id: string
+  slug: string
   title: string
   description: string | null
   durationSeconds: number
