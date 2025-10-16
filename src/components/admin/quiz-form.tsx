@@ -273,10 +273,17 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
         body: JSON.stringify({
           ...values,
           questions: values.questions.map((question, index) => ({
-            ...question,
+            ...(question.id ? { id: question.id } : {}),
+            title: question.title,
+            content: question.content,
+            type: question.type,
             order: index,
+            points: question.points,
+            explanation: question.explanation,
             options: question.options.map((option, optionIndex) => ({
-              ...option,
+              ...(option.id ? { id: option.id } : {}),
+              text: option.text,
+              isCorrect: option.isCorrect,
               order: optionIndex,
             })),
           })),
