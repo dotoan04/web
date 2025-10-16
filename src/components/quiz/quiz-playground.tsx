@@ -35,7 +35,7 @@ type QuizPlaygroundProps = {
   quiz: Quiz
 }
 
-type AnswerState = Record<string, string | null>
+type AnswerState = Record<string, string[]>
 
 type SubmissionState = {
   quizId: string
@@ -58,7 +58,7 @@ type HistoryEntry = {
 
 const createInitialState = (quiz: Quiz): SubmissionState => ({
   quizId: quiz.id,
-  answers: Object.fromEntries(quiz.questions.map((question) => [question.id, null])),
+  answers: Object.fromEntries(quiz.questions.map((question) => [question.id, []])),
   startedAt: new Date().toISOString(),
   remainingSeconds: quiz.durationSeconds,
 })
@@ -69,15 +69,25 @@ const formatDuration = (totalSeconds: number) => {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
+const isMultipleChoice = (question: QuizQuestion) => 
+  question.options.filter((o) => o.isCorrect).length > 1
+
 const computeResult = (quiz: Quiz, answers: AnswerState) => {
   let score = 0
   let totalPoints = 0
 
   quiz.questions.forEach((question) => {
     totalPoints += question.points
-    const submitted = answers[question.id]
-    const correct = question.options.find((option) => option.isCorrect)?.id
-    if (submitted && correct && submitted === correct) {
+    const selected = answers[question.id] ?? []
+    const correctIds = question.options
+      .filter((option) => option.isCorrect)
+      .map((option) => option.id)
+      .sort()
+    const selectedIds = [...selected].sort()
+    const isCorrectAnswer =
+      correctIds.length === selectedIds.length &&
+      correctIds.every((id, i) => id === selectedIds[i])
+    if (isCorrectAnswer) {
       score += question.points
     }
   })
@@ -120,18 +130,32 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   const currentQuestion = quiz.questions[currentQuestionIndex]
 
-  const handleSelectOption = useCallback(
+  const handleToggleOption = useCallback(
     (questionId: string, optionId: string) => {
       if (progress.completed) return
-      setProgress((prev) => ({
-        ...prev,
-        answers: {
-          ...prev.answers,
-          [questionId]: optionId,
-        },
-      }))
+      setProgress((prev) => {
+        const current = prev.answers[questionId] ?? []
+        const question = quiz.questions.find((q) => q.id === questionId)
+        if (!question) return prev
+        const isMulti = isMultipleChoice(question)
+        let newSelected: string[]
+        if (isMulti) {
+          newSelected = current.includes(optionId)
+            ? current.filter((id) => id !== optionId)
+            : [...current, optionId]
+        } else {
+          newSelected = current.includes(optionId) ? [] : [optionId]
+        }
+        return {
+          ...prev,
+          answers: {
+            ...prev.answers,
+            [questionId]: newSelected,
+          },
+        }
+      })
     },
-    [progress.completed, setProgress],
+    [progress.completed, quiz.questions, setProgress],
   )
 
   const goToQuestion = useCallback((newIndex: number) => {
@@ -155,18 +179,12 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       } else if (key === 'arrowdown') {
         event.preventDefault()
         goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))
-      } else if (['1', '2', '3', '4'].includes(key)) {
-        event.preventDefault()
-        const optionIndex = parseInt(key) - 1
-        if (optionIndex < currentQuestion.options.length) {
-          handleSelectOption(currentQuestion.id, currentQuestion.options[optionIndex].id)
-        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [progress.completed, currentQuestion, currentQuestionIndex, handleSelectOption, goToQuestion, quiz.questions.length])
+  }, [progress.completed, currentQuestionIndex, goToQuestion, quiz.questions.length])
 
   useEffect(() => {
     if (progress.completed) {
@@ -212,7 +230,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }, [progress.answers, progress.completed, progress.score, progress.totalPoints, progress.submittedAt, quiz.id, setHistory, setProgress])
 
   const answeredCount = useMemo(
-    () => Object.values(progress.answers).filter((value) => value !== null).length,
+    () => Object.values(progress.answers).filter((value) => value.length > 0).length,
     [progress.answers],
   )
 
@@ -222,10 +240,16 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     }
 
     return quiz.questions.filter((question) => {
-      const submitted = progress.answers[question.id]
-      const correct = question.options.find((option) => option.isCorrect)?.id
-      if (!submitted || !correct) return false
-      return filter === 'correct' ? submitted === correct : submitted !== correct
+      const selected = progress.answers[question.id] ?? []
+      const correctIds = question.options
+        .filter((o) => o.isCorrect)
+        .map((o) => o.id)
+        .sort()
+      const selectedIds = [...selected].sort()
+      const isCorrectAnswer =
+        correctIds.length === selectedIds.length &&
+        correctIds.every((id, i) => id === selectedIds[i])
+      return filter === 'correct' ? isCorrectAnswer : !isCorrectAnswer
     })
   }, [filter, progress.answers, progress.completed, progress.score, quiz.questions])
 
@@ -237,7 +261,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
     try {
       const payloadAnswers = Object.fromEntries(
-        Object.entries(progress.answers).filter(([, value]) => value != null) as [string, string][],
+        Object.entries(progress.answers).filter(([, value]) => value.length > 0)
       )
 
       const response = await fetch(`/api/quizzes/${quiz.slug}/submissions`, {
@@ -281,14 +305,15 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     setError(null)
   }, [clearProgress, quiz, setProgress])
 
-  const isOptionCorrect = useCallback(
+  const getOptionState = useCallback(
     (question: QuizQuestion, option: QuizOption) => {
       if (!progress.completed) return null
-      const correct = question.options.find((item) => item.isCorrect)?.id
-      const submitted = progress.answers[question.id]
-      if (!correct) return null
-      if (option.id === correct) return true
-      if (submitted === option.id && option.id !== correct) return false
+      const selected = progress.answers[question.id] ?? []
+      if (selected.includes(option.id)) {
+        return option.isCorrect ? 'correct' : 'incorrect'
+      } else if (option.isCorrect) {
+        return 'missed'
+      }
       return null
     },
     [progress.answers, progress.completed],
@@ -390,33 +415,52 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     <div className="mt-6 space-y-3">
       <div className="hidden rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300 lg:flex lg:items-center lg:gap-4">
         <span className="font-semibold">💡 Hotkeys:</span>
-        <span>Bấm <kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">1-4</kbd> để chọn đáp án</span>
-        <span>•</span>
         <span>Bấm <kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">Enter</kbd> hoặc <kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">↓</kbd> để câu tiếp</span>
         <span>•</span>
         <span><kbd className="rounded bg-white px-2 py-0.5 dark:bg-ink-800">↑</kbd> câu trước</span>
       </div>
       {currentQuestion.options.map((option, optionIdx) => {
-        const state = isOptionCorrect(currentQuestion, option)
-        const selected = progress.answers[currentQuestion.id] === option.id
+        const state = getOptionState(currentQuestion, option)
+        const isMulti = isMultipleChoice(currentQuestion)
+        const checked = (progress.answers[currentQuestion.id] ?? []).includes(option.id)
         return (
-          <button
+          <label
             key={option.id}
-            type="button"
-            onClick={() => handleSelectOption(currentQuestion.id, option.id)}
-            disabled={progress.completed}
-            className={`group flex w-full items-center gap-4 rounded-xl border-2 px-5 py-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:hover:scale-100 ${state === true ? 'border-emerald-400 bg-emerald-50 text-emerald-700 shadow-md dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-300' : state === false ? 'border-rose-400 bg-rose-50 text-rose-700 shadow-md dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-300' : selected ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-md dark:border-indigo-500/50 dark:bg-indigo-500/10 dark:text-indigo-300' : 'border-ink-200 bg-white text-ink-600 hover:border-ink-300 hover:shadow-sm dark:border-ink-700 dark:bg-ink-900/60 dark:text-ink-200 dark:hover:border-ink-600'}`}
+            htmlFor={option.id}
+            className={`group flex w-full items-center gap-4 rounded-xl border-2 px-5 py-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:hover:scale-100 ${
+              state === 'correct'
+                ? 'border-emerald-400 bg-emerald-50 text-emerald-700 shadow-md dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-300'
+                : state === 'incorrect'
+                ? 'border-rose-400 bg-rose-50 text-rose-700 shadow-md dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-300'
+                : state === 'missed'
+                ? 'border-blue-400 bg-blue-50 text-blue-700 shadow-md dark:border-blue-500/50 dark:bg-blue-500/10 dark:text-blue-300'
+                : checked
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-md dark:border-indigo-500/50 dark:bg-indigo-500/10 dark:text-indigo-300'
+                : 'border-ink-200 bg-white text-ink-600 hover:border-ink-300 hover:shadow-sm dark:border-ink-700 dark:bg-ink-900/60 dark:text-ink-200 dark:hover:border-ink-600'
+            }`}
           >
-            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${selected && !state ? 'border-indigo-500 bg-indigo-500 text-white shadow-lg' : 'border-current/30 bg-current/5'}`}>
-              {optionIdx + 1}
-            </span>
+            <input
+              type={isMulti ? 'checkbox' : 'radio'}
+              id={option.id}
+              name={isMulti ? undefined : currentQuestion.id}
+              checked={checked}
+              onChange={() => handleToggleOption(currentQuestion.id, option.id)}
+              disabled={progress.completed}
+              className="h-5 w-5 rounded border-ink-300 text-indigo-600 focus:ring-indigo-500 dark:border-ink-600 dark:bg-ink-800"
+            />
             <span className="flex-1 text-base font-medium leading-relaxed">{option.text}</span>
             {state !== null ? (
-              <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${state ? 'bg-emerald-600 text-white dark:bg-emerald-500' : 'bg-rose-600 text-white dark:bg-rose-500'}`}>
-                {state ? '✓ Đúng' : '✗ Sai'}
+              <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                state === 'correct' ? 'bg-emerald-600 text-white dark:bg-emerald-500' 
+                : state === 'incorrect' ? 'bg-rose-600 text-white dark:bg-rose-500'
+                : 'bg-blue-600 text-white dark:bg-blue-500'
+              }`}>
+                {state === 'correct' ? '✓ Đúng' 
+                 : state === 'incorrect' ? '✗ Sai'
+                 : '✓ Đúng (chưa chọn)'}
               </span>
             ) : null}
-          </button>
+          </label>
         )
       })}
     </div>
@@ -440,6 +484,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           disabled={currentQuestionIndex === quiz.questions.length - 1}
         >
           Câu tiếp →
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => setShowSidebar(!showSidebar)}
+        >
+          {showSidebar ? 'Ẩn sidebar' : 'Hiện sidebar'}
         </Button>
       </div>
       <div className="flex flex-wrap items-center gap-3">
@@ -513,44 +564,44 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     </div>
   )
 
+  const [showSidebar, setShowSidebar] = useState(true)
+
   return (
     <div className="mx-auto max-w-7xl space-y-8 p-4 md:p-6 lg:p-8">
-      <section className="rounded-3xl border-2 border-ink-200 bg-gradient-to-br from-white to-ink-50/50 p-6 shadow-xl dark:border-ink-800 dark:from-ink-900 dark:to-ink-800/50 md:p-8">
-        <div className="grid gap-6 lg:grid-cols-[auto,1fr] lg:gap-8">
-          <div className="flex flex-col items-center gap-5 lg:items-start">
-            {renderTimer()}
-            <div className="text-center lg:text-left">
-              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-indigo-500 dark:text-indigo-400">Làm bài</p>
-              <h1 className="font-display text-3xl font-bold text-ink-900 dark:text-ink-100 lg:text-4xl">{quiz.title}</h1>
-              {quiz.description ? (
-                <p className="mt-2 text-sm leading-relaxed text-ink-600 dark:text-ink-300">{quiz.description}</p>
-              ) : null}
+      <section className={`grid gap-6 ${showSidebar ? 'lg:grid-cols-[minmax(0,7fr) minmax(0,1fr)]' : 'grid-cols-1'} lg:gap-8`}>
+        <div className="flex flex-col items-center gap-5 lg:items-start">
+          {renderTimer()}
+          <div className="text-center lg:text-left">
+            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-indigo-500 dark:text-indigo-400">Làm bài</p>
+            <h1 className="font-display text-2xl font-bold text-ink-900 dark:text-ink-100 lg:text-3xl">{quiz.title}</h1>
+            {quiz.description ? (
+              <p className="mt-2 text-sm leading-relaxed text-ink-600 dark:text-ink-300">{quiz.description}</p>
+            ) : null}
+          </div>
+        </div>
+        <div className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border-2 border-ink-200 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900/70">
+              <p className="text-xs font-medium uppercase tracking-[0.3em] text-ink-400 dark:text-ink-500">Thời lượng</p>
+              <p className="mt-2 text-2xl font-bold text-ink-800 dark:text-ink-100">
+                {Math.round(quiz.durationSeconds / 60)} phút
+              </p>
+            </div>
+            <div className="rounded-2xl border-2 border-ink-200 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900/70">
+              <p className="text-xs font-medium uppercase tracking-[0.3em] text-ink-400 dark:text-ink-500">Số câu hỏi</p>
+              <p className="mt-2 text-2xl font-bold text-ink-800 dark:text-ink-100">{quiz.questions.length}</p>
             </div>
           </div>
-          <div className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border-2 border-ink-200 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900/70">
-                <p className="text-xs font-medium uppercase tracking-[0.3em] text-ink-400 dark:text-ink-500">Thời lượng</p>
-                <p className="mt-2 text-2xl font-bold text-ink-800 dark:text-ink-100">
-                  {Math.round(quiz.durationSeconds / 60)} phút
-                </p>
-              </div>
-              <div className="rounded-2xl border-2 border-ink-200 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900/70">
-                <p className="text-xs font-medium uppercase tracking-[0.3em] text-ink-400 dark:text-ink-500">Số câu hỏi</p>
-                <p className="mt-2 text-2xl font-bold text-ink-800 dark:text-ink-100">{quiz.questions.length}</p>
-              </div>
-            </div>
-            <div className="rounded-2xl border-2 border-ink-200 bg-white p-4 shadow-sm dark:border-ink-700 dark:bg-ink-900/70">
-              <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-ink-400 dark:text-ink-500">Danh sách câu hỏi</p>
-              {renderQuestionNavigator()}
-            </div>
+          <div className="rounded-2xl border-2 border-ink-200 bg-white p-4 shadow-sm dark:border-ink-700 dark:bg-ink-900/70">
+            <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-ink-400 dark:text-ink-500">Danh sách câu hỏi</p>
+            {renderQuestionNavigator()}
           </div>
         </div>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,2fr)] lg:gap-8">
         <div className="space-y-6">
-          <article className="rounded-3xl border-2 border-ink-200 bg-white p-6 shadow-xl dark:border-ink-800 dark:bg-ink-900 md:p-8">
+          <article className="rounded-3xl border-2 border-ink-200 bg-white p-4 shadow-xl dark:border-ink-800 dark:bg-ink-900 md:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.4em] text-indigo-500 dark:text-indigo-400">
@@ -579,8 +630,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             {error ? <p className="mt-4 text-sm text-rose-500 dark:text-rose-300">{error}</p> : null}
           </article>
         </div>
-        <div className="space-y-6">
-          {progress.completed ? (
+        {showSidebar && (
+          <div className="space-y-6">
             <div className="rounded-3xl border-2 border-ink-200 bg-white p-6 shadow-xl dark:border-ink-800 dark:bg-ink-900">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-ink-800 dark:text-ink-100">Lọc kết quả</h3>
@@ -603,28 +654,34 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               </div>
               <div className="mt-4 space-y-2 text-xs text-ink-500 dark:text-ink-300">
                 {filteredQuestions.map((question) => {
-                  const submitted = progress.answers[question.id]
-                  const correct = question.options.find((option) => option.isCorrect)?.id
-                  const isCorrect = submitted && correct && submitted === correct
+                  const selected = progress.answers[question.id] ?? []
+                  const correctIds = question.options
+                    .filter((o) => o.isCorrect)
+                    .map((o) => o.id)
+                    .sort()
+                  const selectedIds = [...selected].sort()
+                  const isCorrectAnswer =
+                    correctIds.length === selectedIds.length &&
+                    correctIds.every((id, i) => id === selectedIds[i])
                   return (
                     <button
                       key={question.id}
                       type="button"
                       onClick={() => goToQuestion(quiz.questions.findIndex((item) => item.id === question.id))}
-                      className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition hover:scale-[1.02] ${isCorrect ? 'border-emerald-300 bg-emerald-50 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-rose-300 bg-rose-50 text-rose-500 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300'}`}
+                      className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition hover:scale-[1.02] ${isCorrectAnswer ? 'border-emerald-300 bg-emerald-50 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-rose-300 bg-rose-50 text-rose-500 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300'}`}
                     >
                       <span className="text-sm font-medium text-ink-700 dark:text-ink-200">
                         Câu {quiz.questions.findIndex((item) => item.id === question.id) + 1}
                       </span>
                       <span className="text-xs uppercase tracking-[0.2em] text-ink-400 dark:text-ink-500">
-                        {isCorrect ? 'Đúng' : 'Sai'}
+                        {isCorrectAnswer ? 'Đúng' : 'Sai'}
                       </span>
                     </button>
                   )
                 })}
               </div>
             </div>
-          ) : null}
+          )}
           {renderHistory()}
         </div>
       </section>
