@@ -120,6 +120,26 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   const currentQuestion = quiz.questions[currentQuestionIndex]
 
+  const handleSelectOption = useCallback(
+    (questionId: string, optionId: string) => {
+      if (progress.completed) return
+      setProgress((prev) => ({
+        ...prev,
+        answers: {
+          ...prev.answers,
+          [questionId]: optionId,
+        },
+      }))
+    },
+    [progress.completed, setProgress],
+  )
+
+  const goToQuestion = useCallback((newIndex: number) => {
+    setCurrentQuestionIndex(newIndex)
+    const newNavPage = Math.floor(newIndex / QUESTIONS_PER_NAV_PAGE)
+    setNavPage(newNavPage)
+  }, [QUESTIONS_PER_NAV_PAGE])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (progress.completed) return
@@ -208,20 +228,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       return filter === 'correct' ? submitted === correct : submitted !== correct
     })
   }, [filter, progress.answers, progress.completed, progress.score, quiz.questions])
-
-  const handleSelectOption = useCallback(
-    (questionId: string, optionId: string) => {
-      if (progress.completed) return
-      setProgress((prev) => ({
-        ...prev,
-        answers: {
-          ...prev.answers,
-          [questionId]: optionId,
-        },
-      }))
-    },
-    [progress.completed, setProgress],
-  )
 
   const handleSubmit = useCallback(async () => {
     if (progress.completed) return
@@ -415,12 +421,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       })}
     </div>
   )
-
-  const goToQuestion = useCallback((newIndex: number) => {
-    setCurrentQuestionIndex(newIndex)
-    const newNavPage = Math.floor(newIndex / QUESTIONS_PER_NAV_PAGE)
-    setNavPage(newNavPage)
-  }, [QUESTIONS_PER_NAV_PAGE])
 
   const renderControls = () => (
     <div className="mt-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
