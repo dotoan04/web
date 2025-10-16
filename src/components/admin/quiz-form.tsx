@@ -522,7 +522,7 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                   <span>Tải tập tin</span>
                   <input className="hidden" type="file" accept=".docx" onChange={handleUpload} />
                 </label>
-                <Button type="button" variant="outline" onClick={handlePasteText}>
+                <Button type="button" variant="subtle" onClick={handlePasteText}>
                   <FileText size={16} className="mr-2" /> Dán văn bản
                 </Button>
                 {preview.length ? (
