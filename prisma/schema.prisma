@@ -33,6 +33,15 @@ enum MediaType {
   FILE
 }
 
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum QuizQuestionType {
+  SINGLE_CHOICE
+}
+
 model User {
   id        String    @id @default(cuid())
   name      String?
@@ -172,6 +181,67 @@ model PortfolioProject {
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model Quiz {
+  id              String         @id @default(cuid())
+  title           String
+  slug            String         @unique
+  description     String?
+  status          QuizStatus     @default(DRAFT)
+  durationSeconds Int            @default(600)
+  autoReleaseAt   DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  createdById     String?
+
+  createdBy   User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  questions   QuizQuestion[]
+  submissions QuizSubmission[]
+
+  @@index([status, updatedAt])
+}
+
+model QuizQuestion {
+  id          String           @id @default(cuid())
+  quizId      String
+  title       String
+  content     String?
+  type        QuizQuestionType @default(SINGLE_CHOICE)
+  order       Int              @default(0)
+  points      Int              @default(1)
+  explanation String?
+
+  quiz    Quiz        @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options QuizOption[]
+
+  @@index([quizId, order])
+}
+
+model QuizOption {
+  id         String @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId, order])
+}
+
+model QuizSubmission {
+  id          String   @id @default(cuid())
+  quizId      String
+  participant String?
+  answers     Json
+  score       Int
+  totalPoints Int
+  submittedAt DateTime @default(now())
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, submittedAt])
 }
 
 model Account {

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuizzAI - Trắc nghiệm từ tài liệu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="max-w-6xl mx-auto px-4 py-10" id="landing">
+      <header class="text-center mb-12">
+        <h1 class="text-4xl font-bold mb-3">QuizzAI</h1>
+        <p class="text-slate-300">
+          Biến tài liệu của bạn thành bài kiểm tra trắc nghiệm chỉ trong vài bước.
+        </p>
+      </header>
+      <div class="flex flex-col md:flex-row gap-6 justify-center">
+        <button
+          id="open-login"
+          class="px-8 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition font-semibold"
+        >
+          Đăng nhập
+        </button>
+        <button
+          id="open-register"
+          class="px-8 py-3 rounded-lg border border-indigo-400 hover:bg-indigo-500/10 transition font-semibold"
+        >
+          Đăng ký
+        </button>
+      </div>
+      <section class="mt-16 grid gap-6 md:grid-cols-3">
+        <article class="bg-slate-900/60 border border-slate-800 rounded-xl p-6">
+          <h2 class="text-xl font-semibold mb-3">Nhập tài liệu</h2>
+          <p class="text-sm text-slate-300">
+            Tải lên file DOCX hoặc dán nội dung văn bản để hệ thống phân tích.
+          </p>
+        </article>
+        <article class="bg-slate-900/60 border border-slate-800 rounded-xl p-6">
+          <h2 class="text-xl font-semibold mb-3">Tùy chỉnh câu hỏi</h2>
+          <p class="text-sm text-slate-300">
+            Rà soát kết quả trích xuất, đánh dấu đáp án đúng trước khi phát hành.
+          </p>
+        </article>
+        <article class="bg-slate-900/60 border border-slate-800 rounded-xl p-6">
+          <h2 class="text-xl font-semibold mb-3">Làm bài &amp; báo cáo</h2>
+          <p class="text-sm text-slate-300">
+            Chia sẻ bài kiểm tra, làm bài trực tiếp và xem thống kê kết quả.
+          </p>
+        </article>
+      </section>
+    </div>
+
+    <main id="app" class="hidden max-w-6xl mx-auto px-4 py-10">
+      <div class="flex justify-between items-center mb-8">
+        <div>
+          <h1 class="text-3xl font-bold">Bảng điều khiển</h1>
+          <p class="text-slate-300" id="welcome-text"></p>
+        </div>
+        <button
+          id="logout-btn"
+          class="px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-lg font-semibold"
+        >
+          Đăng xuất
+        </button>
+      </div>
+
+      <section class="grid gap-8 lg:grid-cols-[2fr_1fr]">
+        <div class="space-y-8">
+          <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-6">
+            <header>
+              <h2 class="text-2xl font-semibold mb-1">1. Nhập tài liệu</h2>
+              <p class="text-slate-400 text-sm">
+                Chọn tệp DOCX hoặc dán văn bản để tạo câu hỏi tự động.
+              </p>
+            </header>
+            <form id="ingest-form" class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold mb-2">Tên bài kiểm tra</label>
+                <input
+                  type="text"
+                  id="quiz-title"
+                  class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="VD: Bài 1 - Chuyển đổi số"
+                  required
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-2">Tải tệp DOCX</label>
+                <input
+                  type="file"
+                  id="docx-input"
+                  accept=",.docx"
+                  class="w-full text-sm text-slate-300"
+                />
+                <p class="text-xs text-slate-500 mt-1">
+                  Nếu không có tệp, bạn có thể dán nội dung vào ô bên dưới.
+                </p>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-2">Hoặc dán nội dung văn bản</label>
+                <textarea
+                  id="raw-text"
+                  rows="12"
+                  class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Dán câu hỏi dạng Câu 1, A., B. ..."
+                ></textarea>
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  id="parse-btn"
+                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold"
+                >
+                  Phân tích tài liệu
+                </button>
+                <button
+                  type="button"
+                  id="clear-btn"
+                  class="px-4 py-2 border border-slate-700 hover:border-slate-500 rounded-lg"
+                >
+                  Xóa dữ liệu
+                </button>
+              </div>
+            </form>
+            <p id="ingest-feedback" class="text-sm text-amber-400 hidden"></p>
+          </section>
+
+          <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
+            <header class="flex items-center justify-between">
+              <div>
+                <h2 class="text-2xl font-semibold">2. Rà soát câu hỏi</h2>
+                <p class="text-slate-400 text-sm">
+                  Đánh dấu đáp án đúng cho mỗi câu trước khi lưu bài kiểm tra.
+                </p>
+              </div>
+              <button
+                id="save-quiz-btn"
+                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled
+              >
+                Lưu bài kiểm tra
+              </button>
+            </header>
+            <div id="question-review" class="space-y-4 max-h-[32rem] overflow-y-auto pr-2"></div>
+          </section>
+
+          <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
+            <header class="flex items-center justify-between">
+              <div>
+                <h2 class="text-2xl font-semibold">3. Lịch sử kết quả</h2>
+                <p class="text-slate-400 text-sm">Theo dõi điểm số các lần làm bài.</p>
+              </div>
+            </header>
+            <div id="results-list" class="space-y-3 text-sm"></div>
+          </section>
+        </div>
+
+        <aside class="space-y-8">
+          <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
+            <header class="flex items-center justify-between">
+              <h2 class="text-xl font-semibold">Bài kiểm tra đã lưu</h2>
+              <span id="quiz-count" class="text-sm text-slate-400"></span>
+            </header>
+            <div id="quiz-list" class="space-y-3"></div>
+          </section>
+
+          <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
+            <h2 class="text-xl font-semibold">Thông tin nhanh</h2>
+            <ul class="text-sm text-slate-300 space-y-2 list-disc list-inside">
+              <li>Đăng nhập để giữ dữ liệu trên thiết bị của bạn.</li>
+              <li>Có thể đánh dấu nhiều đáp án đúng ở mục rà soát.</li>
+              <li>Hệ thống lưu trữ cục bộ bằng localStorage.</li>
+            </ul>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <div
+      id="modal-backdrop"
+      class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50"
+    >
+      <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-6 space-y-6">
+        <div class="flex justify-between items-center">
+          <h2 id="modal-title" class="text-2xl font-semibold"></h2>
+          <button id="modal-close" class="text-slate-400 hover:text-slate-200">×</button>
+        </div>
+        <form id="auth-form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold mb-2" for="auth-username">Tên đăng nhập</label>
+            <input
+              id="auth-username"
+              type="text"
+              class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2" for="auth-password">Mật khẩu</label>
+            <input
+              id="auth-password"
+              type="password"
+              minlength="6"
+              class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              required
+            />
+          </div>
+          <p id="auth-feedback" class="text-sm text-rose-400 hidden"></p>
+          <button
+            type="submit"
+            class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold"
+          ></button>
+        </form>
+      </div>
+    </div>
+
+    <div
+      id="quiz-runner"
+      class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-sm flex items-center justify-center z-50"
+    >
+      <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 space-y-6">
+        <header class="flex justify-between items-center">
+          <div>
+            <h2 id="runner-title" class="text-2xl font-semibold"></h2>
+            <p id="runner-meta" class="text-sm text-slate-400"></p>
+          </div>
+          <button id="runner-close" class="text-slate-400 hover:text-slate-200">×</button>
+        </header>
+        <form id="runner-form" class="space-y-6"></form>
+        <div class="flex justify-between items-center">
+          <p class="text-sm text-slate-400" id="runner-timer"></p>
+          <button
+            id="runner-submit"
+            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-semibold"
+          >
+            Nộp bài
+          </button>
+        </div>
+        <div id="runner-feedback" class="hidden text-sm"></div>
+      </div>
+    </div>
+
+    <script src="/assets/js/storage.js" type="module"></script>
+    <script src="/assets/js/auth.js" type="module"></script>
+    <script src="/assets/js/docParser.js" type="module"></script>
+    <script src="/assets/js/quizGenerator.js" type="module"></script>
+    <script src="/assets/js/quizEngine.js" type="module"></script>
+    <script src="/assets/js/ui.js" type="module"></script>
+    <script src="/assets/js/main.js" type="module"></script>
+  </body>
+</html>

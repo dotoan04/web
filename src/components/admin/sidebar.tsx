@@ -8,6 +8,7 @@ import {
   FolderTree,
   Image as ImageIcon,
   LayoutDashboard,
+  ListChecks,
   PenSquare,
   Settings,
   Tags,
@@ -23,6 +24,7 @@ const links = [
   { href: '/admin/tags', label: 'Thẻ', icon: Tags },
   { href: '/admin/media', label: 'Thư viện hình', icon: ImageIcon },
   { href: '/admin/portfolio', label: 'Portfolio', icon: Briefcase },
+  { href: '/admin/quizzes', label: 'Quiz', icon: ListChecks },
   { href: '/admin/settings', label: 'Cài đặt', icon: Settings },
 ]
 
