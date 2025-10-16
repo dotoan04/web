@@ -59,6 +59,7 @@ model User {
   accounts     Account[]
   sessions     Session[]
   mediaUploads Media[]    @relation("UserMediaUploads")
+  createdQuizzes Quiz[]  @relation("CreatedQuizzes")
 }
 
 model Category {
@@ -195,7 +196,7 @@ model Quiz {
   updatedAt       DateTime       @updatedAt
   createdById     String?
 
-  createdBy   User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?            @relation("CreatedQuizzes", fields: [createdById], references: [id], onDelete: SetNull)
   questions   QuizQuestion[]
   submissions QuizSubmission[]
 
