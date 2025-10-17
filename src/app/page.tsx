@@ -7,7 +7,7 @@ import { PrefetchLink } from '@/components/ui/prefetch-link'
 import { SubscriptionBanner } from '@/components/subscription/subscription-banner'
 import { AnimatedHero, FloatingCircle } from '@/components/animated-hero'
 import { ScrollReveal, SlideIn } from '@/components/scroll-reveal'
-import { SakuraPetals } from '@/components/effects/sakura-petals'
+import { ParallaxCharacter } from '@/components/effects/parallax-character'
 import { createDynamicMetadata } from '@/lib/metadata'
 import { formatViDate } from '@/lib/utils'
 import { resolveSitePreferences } from '@/server/settings'
@@ -63,9 +63,11 @@ export default async function Home({ searchParams }: HomeProps) {
 
   return (
     <main className="space-y-16 relative">
-      <SakuraPetals />
       <AnimatedHero>
         <section className="relative overflow-hidden rounded-[2.5rem] border border-white/20 glass-card liquid-gradient p-12 shadow-[0_25px_60px_rgba(31,38,135,0.25)] backdrop-blur-2xl dark:border-white/10 dark:shadow-[0_25px_60px_rgba(31,38,135,0.45)]">
+          {preferences.parallaxCharacterUrl ? (
+            <ParallaxCharacter imageUrl={preferences.parallaxCharacterUrl} />
+          ) : null}
           <div className="absolute -top-16 right-12 h-48 w-48 rounded-full bg-ink-200/40 blur-3xl dark:bg-ink-600/40 liquid-blob" />
           <div className="absolute -bottom-20 left-10 h-36 w-36 rounded-full bg-ink-300/25 blur-3xl dark:bg-ink-700/35 liquid-blob" />
           <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">

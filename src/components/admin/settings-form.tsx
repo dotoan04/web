@@ -23,7 +23,8 @@ type Props = {
   seoKeywords?: string[]
   seoDescription?: string
   faviconUrl?: string | null
-  snowEffectEnabled?: boolean
+  effectType?: 'none' | 'snow' | 'sakura'
+  parallaxCharacterUrl?: string | null
 }
 
 export const SettingsForm = ({
@@ -42,7 +43,8 @@ export const SettingsForm = ({
   seoKeywords,
   seoDescription,
   faviconUrl,
-  snowEffectEnabled,
+  effectType,
+  parallaxCharacterUrl,
 }: Props) => {
   const [values, setValues] = useState({
     siteName,
@@ -60,10 +62,11 @@ export const SettingsForm = ({
     seoKeywords: seoKeywords?.join(', ') ?? '',
     seoDescription: seoDescription ?? '',
     faviconUrl: faviconUrl ?? '',
+    parallaxCharacterUrl: parallaxCharacterUrl ?? '',
   })
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [snowEnabled, setSnowEnabled] = useState(Boolean(snowEffectEnabled))
+  const [selectedEffect, setSelectedEffect] = useState<'none' | 'snow' | 'sakura'>(effectType ?? 'sakura')
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -101,7 +104,8 @@ export const SettingsForm = ({
         seoKeywords: keywordArray.length > 0 ? keywordArray : undefined,
         seoDescription: values.seoDescription.trim() || undefined,
         faviconUrl: values.faviconUrl.trim() ? values.faviconUrl.trim() : null,
-        snowEffectEnabled: snowEnabled,
+        effectType: selectedEffect,
+        parallaxCharacterUrl: values.parallaxCharacterUrl.trim() ? values.parallaxCharacterUrl.trim() : null,
       }
 
       const response = await fetch('/api/settings', {
@@ -316,16 +320,60 @@ export const SettingsForm = ({
               />
             </div>
           </div>
-          <label className="flex items-center gap-3 text-sm font-medium text-ink-600" htmlFor="snowEffect">
-            <input
-              id="snowEffect"
-              type="checkbox"
-              checked={snowEnabled}
-              onChange={(event) => setSnowEnabled(event.target.checked)}
-              className="h-4 w-4 rounded border-ink-300 text-ink-600 focus:ring-ink-500"
+          <div>
+            <label className="mb-2 block text-sm font-medium text-ink-600">
+              Hiệu ứng hạt rơi trên giao diện
+            </label>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-sm text-ink-600">
+                <input
+                  type="radio"
+                  name="effectType"
+                  value="none"
+                  checked={selectedEffect === 'none'}
+                  onChange={() => setSelectedEffect('none')}
+                  className="h-4 w-4 border-ink-300 text-ink-600 focus:ring-ink-500"
+                />
+                Không hiệu ứng
+              </label>
+              <label className="flex items-center gap-2 text-sm text-ink-600">
+                <input
+                  type="radio"
+                  name="effectType"
+                  value="snow"
+                  checked={selectedEffect === 'snow'}
+                  onChange={() => setSelectedEffect('snow')}
+                  className="h-4 w-4 border-ink-300 text-ink-600 focus:ring-ink-500"
+                />
+                Tuyết rơi
+              </label>
+              <label className="flex items-center gap-2 text-sm text-ink-600">
+                <input
+                  type="radio"
+                  name="effectType"
+                  value="sakura"
+                  checked={selectedEffect === 'sakura'}
+                  onChange={() => setSelectedEffect('sakura')}
+                  className="h-4 w-4 border-ink-300 text-ink-600 focus:ring-ink-500"
+                />
+                Hoa anh đào rơi
+              </label>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="parallaxCharacterUrl">
+              Ảnh nhân vật parallax (trang chủ)
+            </label>
+            <Input
+              id="parallaxCharacterUrl"
+              value={values.parallaxCharacterUrl}
+              onChange={(event) => setValues((prev) => ({ ...prev, parallaxCharacterUrl: event.target.value }))}
+              placeholder="https://..."
             />
-            Bật hiệu ứng hạt rơi trên giao diện
-          </label>
+            <p className="mt-1 text-xs text-ink-400">
+              Ảnh nhân vật anime sẽ hiển thị với hiệu ứng parallax ở phần hero trang chủ.
+            </p>
+          </div>
           <div className="flex items-center justify-between">
             {message ? <p className="text-sm text-ink-500">{message}</p> : <span />}
             <Button type="submit" disabled={loading}>

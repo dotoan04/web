@@ -14,7 +14,8 @@ const keyMap = {
   seoKeywords: 'site.seo.keywords',
   seoDescription: 'site.seo.description',
   favicon: 'site.favicon',
-  snowEffect: 'site.effects.snow',
+  effectType: 'site.effects.type',
+  parallaxCharacter: 'site.parallaxCharacter',
   owner: 'portfolio.owner',
   education: 'portfolio.education',
   certifications: 'portfolio.certifications',
@@ -42,7 +43,8 @@ export const getSiteSettings = async () => {
       'site.seo.keywords': [],
       'site.seo.description': null,
       'site.favicon': null,
-      'site.effects.snow': false,
+      'site.effects.type': 'sakura',
+      'site.parallaxCharacter': null,
       'portfolio.owner': {
         name: null,
         age: null,
@@ -70,7 +72,8 @@ export const updateSiteSettings = async (settings: {
   seoKeywords?: string[]
   seoDescription?: string
   faviconUrl?: string | null
-  snowEffectEnabled?: boolean
+  effectType?: 'none' | 'snow' | 'sakura'
+  parallaxCharacterUrl?: string | null
 }) => {
   const ownerProfile = {
     name: settings.ownerName?.trim() ? settings.ownerName.trim() : null,
@@ -158,13 +161,23 @@ export const updateSiteSettings = async (settings: {
       },
     }),
     prisma.siteSetting.upsert({
-      where: { key: keyMap.snowEffect },
+      where: { key: keyMap.effectType },
       create: {
-        key: keyMap.snowEffect,
-        value: settings.snowEffectEnabled ?? false,
+        key: keyMap.effectType,
+        value: settings.effectType ?? 'sakura',
       },
       update: {
-        value: settings.snowEffectEnabled ?? false,
+        value: settings.effectType ?? 'sakura',
+      },
+    }),
+    prisma.siteSetting.upsert({
+      where: { key: keyMap.parallaxCharacter },
+      create: {
+        key: keyMap.parallaxCharacter,
+        value: settings.parallaxCharacterUrl ?? Prisma.JsonNull,
+      },
+      update: {
+        value: settings.parallaxCharacterUrl ?? Prisma.JsonNull,
       },
     }),
     prisma.siteSetting.upsert({
@@ -219,7 +232,8 @@ export const resolveSitePreferences = cache(async () => {
       : [],
     seoDescription: (settings[keyMap.seoDescription] as string) ?? '',
     faviconUrl: typeof settings[keyMap.favicon] === 'string' ? (settings[keyMap.favicon] as string) : null,
-    snowEffectEnabled: Boolean(settings[keyMap.snowEffect]),
+    effectType: (settings[keyMap.effectType] as 'none' | 'snow' | 'sakura') ?? 'sakura',
+    parallaxCharacterUrl: typeof settings[keyMap.parallaxCharacter] === 'string' ? (settings[keyMap.parallaxCharacter] as string) : null,
     owner: (settings[keyMap.owner] as { name?: string; age?: number | null; avatarUrl?: string | null }) ?? {},
     education: (settings[keyMap.education] as string) ?? '',
     certifications: (settings[keyMap.certifications] as string[]) ?? [],

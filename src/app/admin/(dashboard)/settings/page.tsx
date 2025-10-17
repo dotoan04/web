@@ -35,7 +35,8 @@ export default async function SettingsPage() {
       seoKeywords={settings.seoKeywords}
       seoDescription={settings.seoDescription}
       faviconUrl={settings.faviconUrl ?? ''}
-      snowEffectEnabled={settings.snowEffectEnabled}
+      effectType={settings.effectType}
+      parallaxCharacterUrl={settings.parallaxCharacterUrl ?? ''}
     />
   )
 }

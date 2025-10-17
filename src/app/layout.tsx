@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 import { AnalyticsTracker } from '@/components/analytics/analytics-tracker'
-import { Snowfall } from '@/components/effects/snowfall'
+import { EffectWrapper } from '@/components/effects/effect-wrapper'
 import { Header } from '@/components/header'
 import { JsonLd } from '@/components/json-ld'
 import { PwaRegister } from '@/components/pwa/pwa-register'
@@ -82,7 +82,7 @@ export default async function RootLayout({
       <body className="min-h-screen bg-ink-50 font-body text-ink-800 antialiased dark:bg-ink-900 dark:text-ink-100">
         <SessionProvider>
           <ThemeProvider>
-            {preferences.snowEffectEnabled ? <Snowfall density={1} /> : null}
+            <EffectWrapper effectType={preferences.effectType} />
             <Suspense fallback={null}>
               <AnalyticsTracker />
             </Suspense>

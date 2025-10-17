@@ -34,7 +34,12 @@ export const siteSettingsSchema = z.object({
     .url('Favicon phải là đường dẫn hợp lệ')
     .nullable()
     .optional(),
-  snowEffectEnabled: z.boolean().optional(),
+  effectType: z.enum(['none', 'snow', 'sakura']).optional(),
+  parallaxCharacterUrl: z
+    .string()
+    .url('URL ảnh nhân vật phải hợp lệ')
+    .nullable()
+    .optional(),
 })
 
 export type SiteSettingsInput = z.infer<typeof siteSettingsSchema>
