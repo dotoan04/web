@@ -372,18 +372,18 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           }}
         />
         <div className="absolute inset-2 rounded-lg bg-white/60 backdrop-blur-sm dark:bg-white/10" />
-        <span className={`relative text-xs font-bold transition-colors ${
+        <span className={`relative text-xs font-bold transition-colors font-sans ${
           isCriticalTime 
             ? 'text-rose-600 dark:text-rose-400' 
             : isLowTime 
             ? 'text-orange-600 dark:text-orange-400'
-            : 'text-ink-700 dark:text-ink-200'
+            : 'text-gray-700 dark:text-gray-200'
         }`}>
           {formatDuration(progress.remainingSeconds)}
         </span>
       </div>
       {isLowTime && !progress.completed && (
-        <span className="text-xs font-semibold text-rose-500 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300">
+        <span className="text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300 font-sans">
           ⚠️ Cẩn thận!
         </span>
       )}
@@ -444,7 +444,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               className="relative z-10 h-5 w-5 rounded border border-white/30 bg-white/20 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-transparent dark:border-ink-600/50 dark:bg-ink-800/20"
             />
             
-            <span className="relative z-10 flex-1 text-base font-medium leading-relaxed">{option.text}</span>
+            <span className="relative z-10 flex-1 text-base font-medium leading-relaxed font-sans">{option.text}</span>
             
             {state !== null ? (
               <span className={`relative z-10 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider backdrop-blur-sm ${
@@ -536,25 +536,28 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl p-4 md:p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Background elements for Liquid Glass effect */}
+    <div className="mx-auto min-h-screen max-w-7xl p-4 md:p-6 relative">
+      {/* Subtle background gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 pointer-events-none" />
+      
+      {/* Very subtle background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-indigo-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-cyan-400/10 to-blue-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute -top-60 -right-60 w-96 h-96 bg-gradient-to-br from-indigo-200/8 to-purple-200/8 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-60 -left-60 w-96 h-96 bg-gradient-to-tr from-blue-200/8 to-indigo-200/8 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 left-1/4 w-80 h-80 bg-gradient-to-br from-cyan-200/6 to-blue-200/6 rounded-full blur-3xl"></div>
       </div>
       
       {renderFilterModal()}
       
-      {/* Liquid Glass Header */}
-      <header className="sticky top-0 z-10 mb-4 rounded-3xl border border-white/20 bg-white/60 p-4 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+      {/* Header */}
+      <header className="sticky top-0 z-10 mb-4 rounded-2xl border border-gray-200/60 bg-white/80 p-4 shadow-lg backdrop-blur-md dark:border-gray-700/40 dark:bg-gray-900/60 dark:shadow-black/20">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {renderCompactTimer()}
-            <div className="h-8 w-px bg-ink-200 dark:bg-ink-700" />
+            <div className="h-8 w-px bg-gray-200 dark:bg-gray-700" />
             <div>
-              <h1 className="text-sm font-bold text-ink-800 dark:text-ink-100">{quiz.title}</h1>
-              <p className="text-xs text-ink-500 dark:text-ink-400">
+              <h1 className="text-sm font-bold text-gray-900 dark:text-gray-100 font-sans">{quiz.title}</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-sans">
                 {quiz.questions.length} câu · {answeredCount} đã trả lời
               </p>
             </div>
@@ -592,8 +595,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           </div>
         </div>
         
-        {/* Liquid Glass Question Navigator */}
-        <div className="mt-4 border-t border-white/20 pt-4">
+        {/* Question Navigator */}
+        <div className="mt-4 border-t border-gray-200/50 pt-4">
           <div className="flex flex-wrap gap-2">
             {visibleQuestions.map((question, relativeIndex) => {
               const index = navStartIndex + relativeIndex
@@ -650,18 +653,18 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </div>
       </header>
 
-      {/* Liquid Glass Question Area */}
+      {/* Question Area */}
       <main className="mx-auto max-w-4xl relative">
-        <article className="relative rounded-3xl border border-white/20 bg-white/30 p-6 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-white/5 md:p-8">
-          {/* Glass overlay effect */}
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
+        <article className="relative rounded-2xl border border-gray-200/50 bg-white/90 p-6 shadow-xl backdrop-blur-sm dark:border-gray-700/30 dark:bg-gray-900/80 dark:shadow-black/30 md:p-8">
+          {/* Subtle overlay effect */}
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-transparent pointer-events-none dark:from-white/5 dark:via-white/2" />
           
           <div className="relative mb-6 flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10 rounded-full px-3 py-1 w-fit backdrop-blur-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10 rounded-full px-3 py-1 w-fit backdrop-blur-sm font-sans">
                 Câu hỏi {currentQuestionIndex + 1} / {quiz.questions.length}
               </p>
-              <h2 className="mt-3 font-display text-2xl font-bold leading-tight text-ink-800 dark:text-ink-100 md:text-3xl">
+              <h2 className="mt-3 text-2xl font-bold leading-tight text-gray-900 dark:text-gray-100 md:text-3xl font-sans">
                 {currentQuestion.title}
               </h2>
             </div>
@@ -671,7 +674,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           </div>
 
           {currentQuestion.content && (
-            <p className="relative mb-6 text-base leading-relaxed text-ink-700 dark:text-ink-200 bg-white/40 rounded-xl p-4 backdrop-blur-sm border border-white/20 dark:bg-white/5 dark:border-white/10">
+            <p className="relative mb-6 text-base leading-relaxed text-gray-700 dark:text-gray-200 bg-gray-50/60 rounded-xl p-4 backdrop-blur-sm border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30 font-sans">
               {currentQuestion.content}
             </p>
           )}
@@ -685,24 +688,24 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-100/40 to-transparent pointer-events-none" />
               <div className="relative mb-3 flex items-center gap-2">
                 <span className="text-xl">💡</span>
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-500/20 rounded-full px-3 py-1 backdrop-blur-sm">
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-500/20 rounded-full px-3 py-1 backdrop-blur-sm font-sans">
                   Giải thích
                 </p>
               </div>
-              <p className="relative text-sm leading-relaxed text-emerald-800 dark:text-emerald-200">
+              <p className="relative text-sm leading-relaxed text-emerald-800 dark:text-emerald-200 font-sans">
                 {currentQuestion.explanation}
               </p>
             </div>
           )}
 
-          <div className="relative mt-8 flex items-center justify-between border-t border-white/20 pt-6">
+          <div className="relative mt-8 flex items-center justify-between border-t border-gray-200/50 pt-6">
             <div className="flex gap-3">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}
                 disabled={currentQuestionIndex === 0}
-                className="bg-white/40 border border-white/30 backdrop-blur-sm hover:bg-white/50 hover:shadow-lg hover:shadow-white/10 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10"
+                className="bg-gray-50/60 border border-gray-200/30 backdrop-blur-sm hover:bg-gray-100/60 hover:shadow-lg hover:shadow-gray-200/20 dark:bg-gray-800/40 dark:border-gray-700/30 dark:hover:bg-gray-700/40"
               >
                 ← Câu trước
               </Button>
@@ -711,31 +714,31 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 variant="ghost"
                 onClick={() => goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))}
                 disabled={currentQuestionIndex === quiz.questions.length - 1}
-                className="bg-white/40 border border-white/30 backdrop-blur-sm hover:bg-white/50 hover:shadow-lg hover:shadow-white/10 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10"
+                className="bg-gray-50/60 border border-gray-200/30 backdrop-blur-sm hover:bg-gray-100/60 hover:shadow-lg hover:shadow-gray-200/20 dark:bg-gray-800/40 dark:border-gray-700/30 dark:hover:bg-gray-700/40"
               >
                 Câu tiếp →
               </Button>
             </div>
             
             {/* Keyboard shortcuts hint */}
-            <div className="hidden lg:flex items-center gap-2 text-xs text-ink-500 dark:text-ink-400 bg-white/30 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20 dark:bg-white/5 dark:border-white/10">
-              <span className="font-mono">1-9</span>
-              <span>chọn</span>
-              <span className="w-px h-3 bg-ink-300 dark:bg-ink-600" />
-              <span className="font-mono">Enter</span>
-              <span>tiếp theo</span>
-              <span className="w-px h-3 bg-ink-300 dark:bg-ink-600" />
-              <span className="font-mono">↑↓</span>
-              <span>di chuyển</span>
+            <div className="hidden lg:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30">
+              <span className="font-mono font-sans">1-9</span>
+              <span className="font-sans">chọn</span>
+              <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
+              <span className="font-mono font-sans">Enter</span>
+              <span className="font-sans">tiếp theo</span>
+              <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
+              <span className="font-mono font-sans">↑↓</span>
+              <span className="font-sans">di chuyển</span>
             </div>
             
             {/* Mobile keyboard hint */}
-            <div className="lg:hidden flex items-center gap-1 text-xs text-ink-500 dark:text-ink-400 bg-white/30 backdrop-blur-sm rounded-lg px-2 py-1 border border-white/20 dark:bg-white/5 dark:border-white/10">
-              <span className="font-mono">1-9</span>
-              <span>chọn</span>
-              <span className="w-px h-2 bg-ink-300 dark:bg-ink-600 mx-1" />
-              <span className="font-mono">Enter</span>
-              <span>next</span>
+            <div className="lg:hidden flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50/60 backdrop-blur-sm rounded-lg px-2 py-1 border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30">
+              <span className="font-mono font-sans">1-9</span>
+              <span className="font-sans">chọn</span>
+              <span className="w-px h-2 bg-gray-300 dark:bg-gray-600 mx-1" />
+              <span className="font-mono font-sans">Enter</span>
+              <span className="font-sans">tiếp theo</span>
             </div>
           </div>
 

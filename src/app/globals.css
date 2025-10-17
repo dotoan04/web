@@ -2,9 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Liquid Glass Theme - Glassmorphism Effects */
+/* Vietnamese Font Support */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @layer base {
-  :root {
+  /* Better Vietnamese font stack */
+  .font-sans {
+    font-family: 
+      'Inter',
+      'Segoe UI',
+      'Roboto',
+      'Helvetica Neue',
+      'Arial',
+      'Noto Sans',
+      'Noto Sans Vietnamese',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      sans-serif;
+  }
+
+  /* Better Vietnamese font rendering */
+  body {
+    @apply font-sans;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-variant-ligatures: common-ligatures;
+  }
+
+  /* Vietnamese-specific text styling */
+  .vietnamese-text {
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+    word-spacing: 0.05em;
+  }
+:root {
     color-scheme: light dark;
   }
 
