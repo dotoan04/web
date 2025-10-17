@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react'
+import { useSwipeable } from 'react-swipeable'
 
 import { Button } from '@/components/ui/button'
 import { useLocalStorage } from '@/hooks/use-local-storage'
@@ -356,11 +357,11 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const isLowTime = timePercentage < 20
   const isCriticalTime = timePercentage < 10
 
-  const renderCompactTimer = () => (
-    <div className="flex items-center gap-3">
-      <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/30 bg-white/20 backdrop-blur-xl shadow-lg shadow-white/10 dark:border-white/10 dark:bg-white/5 dark:shadow-white/5">
+  const renderCompactTimer = useMemo(() => (
+    <div className="flex items-center gap-2 sm:gap-3">
+      <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl border border-white/30 bg-white/20 backdrop-blur-xl shadow-lg shadow-white/10 dark:border-white/10 dark:bg-white/5 dark:shadow-white/5">
         <div 
-          className={`absolute inset-1 rounded-xl transition-all ${
+          className={`absolute inset-1 rounded-lg sm:rounded-xl transition-all ${
             isCriticalTime 
               ? 'border-2 border-rose-500/50' 
               : isLowTime 
@@ -371,8 +372,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             background: `conic-gradient(${isCriticalTime ? 'rgb(244 63 94)' : isLowTime ? 'rgb(251 146 60)' : 'rgb(99 102 241)'} ${timePercentage * 3.6}deg, transparent 0deg)`,
           }}
         />
-        <div className="absolute inset-2 rounded-lg bg-white/60 backdrop-blur-sm dark:bg-white/10" />
-        <span className={`relative text-xs font-bold transition-colors font-sans ${
+        <div className="absolute inset-2 rounded-md sm:rounded-lg bg-white/60 backdrop-blur-sm dark:bg-white/10" />
+        <span className={`relative text-[10px] sm:text-xs font-bold transition-colors font-sans ${
           isCriticalTime 
             ? 'text-rose-600 dark:text-rose-400' 
             : isLowTime 
@@ -383,20 +384,38 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </span>
       </div>
       {isLowTime && !progress.completed && (
-        <span className="text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300 font-sans">
+        <span className="hidden sm:inline text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300 font-sans">
           ⚠️ Cẩn thận!
         </span>
       )}
     </div>
-  )
+  ), [timePercentage, isCriticalTime, isLowTime, progress.remainingSeconds, progress.completed])
 
   const totalNavPages = Math.ceil(quiz.questions.length / QUESTIONS_PER_NAV_PAGE)
   const navStartIndex = navPage * QUESTIONS_PER_NAV_PAGE
   const navEndIndex = Math.min(navStartIndex + QUESTIONS_PER_NAV_PAGE, quiz.questions.length)
   const visibleQuestions = quiz.questions.slice(navStartIndex, navEndIndex)
 
-  const renderOptions = () => (
-    <div className="space-y-2">
+  // Swipe handlers for mobile navigation
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => {
+      if (!progress.completed && currentQuestionIndex < quiz.questions.length - 1) {
+        goToQuestion(currentQuestionIndex + 1)
+      }
+    },
+    onSwipedRight: () => {
+      if (!progress.completed && currentQuestionIndex > 0) {
+        goToQuestion(currentQuestionIndex - 1)
+      }
+    },
+    trackMouse: false,
+    trackTouch: true,
+    preventScrollOnSwipe: false,
+    delta: 50,
+  })
+
+  const renderOptions = useMemo(() => (
+    <div className="space-y-2 sm:space-y-3">
       {currentQuestion.options.map((option, optionIdx) => {
         const state = getOptionState(currentQuestion, option)
         const isMulti = isMultipleChoice(currentQuestion)
@@ -407,7 +426,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           <label
             key={option.id}
             htmlFor={option.id}
-            className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border backdrop-blur-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:hover:scale-100 ${
+            className={`group relative flex w-full items-center gap-2 sm:gap-3 md:gap-4 overflow-hidden rounded-xl sm:rounded-2xl border backdrop-blur-xl transition-all active:scale-[0.98] touch-manipulation cursor-pointer p-3 sm:p-4 ${
               state === 'correct'
                 ? 'border-emerald-400/50 bg-gradient-to-r from-emerald-50/80 to-emerald-100/60 text-emerald-700 shadow-lg shadow-emerald-500/20 dark:border-emerald-500/40 dark:from-emerald-500/20 dark:to-emerald-400/10 dark:text-emerald-300 dark:shadow-emerald-500/10'
                 : state === 'incorrect'
@@ -423,7 +442,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-white/5" />
             
             {/* Shortcut key indicator */}
-            <div className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold transition-all ${
+            <div className={`relative z-10 hidden sm:flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-lg text-[10px] md:text-xs font-bold transition-all shrink-0 ${
               checked || state !== null
                 ? state === 'correct' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
                 : state === 'incorrect' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30'
@@ -441,27 +460,34 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               checked={checked}
               onChange={() => handleToggleOption(currentQuestion.id, option.id)}
               disabled={progress.completed}
-              className="relative z-10 h-5 w-5 rounded border border-white/30 bg-white/20 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-transparent dark:border-ink-600/50 dark:bg-ink-800/20"
+              className="relative z-10 h-4 w-4 sm:h-5 sm:w-5 rounded border border-white/30 bg-white/20 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-transparent dark:border-ink-600/50 dark:bg-ink-800/20 shrink-0"
             />
             
-            <span className="relative z-10 flex-1 text-base font-medium leading-relaxed font-sans">{option.text}</span>
+            <span className="relative z-10 flex-1 text-sm sm:text-base font-medium leading-relaxed font-sans break-words">{option.text}</span>
             
             {state !== null ? (
-              <span className={`relative z-10 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider backdrop-blur-sm ${
+              <span className={`relative z-10 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider backdrop-blur-sm shrink-0 ${
                 state === 'correct' ? 'bg-emerald-500/90 text-white shadow-lg shadow-emerald-500/30' 
                 : state === 'incorrect' ? 'bg-rose-500/90 text-white shadow-lg shadow-rose-500/30'
                 : 'bg-blue-500/90 text-white shadow-lg shadow-blue-500/30'
               }`}>
-                {state === 'correct' ? '✓ Đúng' 
-                 : state === 'incorrect' ? '✗ Sai'
-                 : '✓ Đúng (chưa chọn)'}
+                <span className="hidden sm:inline">
+                  {state === 'correct' ? '✓ Đúng' 
+                   : state === 'incorrect' ? '✗ Sai'
+                   : '✓ Đúng (chưa chọn)'}
+                </span>
+                <span className="sm:hidden">
+                  {state === 'correct' ? '✓' 
+                   : state === 'incorrect' ? '✗'
+                   : '✓'}
+                </span>
               </span>
             ) : null}
           </label>
         )
       })}
     </div>
-  )
+  ), [currentQuestion, progress.answers, progress.completed, getOptionState, handleToggleOption])
 
   const renderFilterModal = () => {
     if (!showFilterModal || !progress.completed) return null
@@ -536,7 +562,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl p-4 md:p-6 relative">
+    <div className="mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6 relative">
       {/* Subtle background gradient */}
       <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 pointer-events-none" />
       
@@ -549,45 +575,46 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       
       {renderFilterModal()}
       
-      {/* Header */}
-      <header className="sticky top-0 z-10 mb-4 rounded-2xl border border-gray-200/60 bg-white/80 p-4 shadow-lg backdrop-blur-md dark:border-gray-700/40 dark:bg-gray-900/60 dark:shadow-black/20">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            {renderCompactTimer()}
-            <div className="h-8 w-px bg-gray-200 dark:bg-gray-700" />
-            <div>
-              <h1 className="text-sm font-bold text-gray-900 dark:text-gray-100 font-sans">{quiz.title}</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-sans">
+      {/* Header - Mobile Optimized */}
+      <header className="sticky top-0 z-10 mb-3 sm:mb-4 rounded-xl sm:rounded-2xl border border-gray-200/60 bg-white/80 p-3 sm:p-4 shadow-lg backdrop-blur-md dark:border-gray-700/40 dark:bg-gray-900/60 dark:shadow-black/20">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {renderCompactTimer}
+            <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 font-sans truncate">{quiz.title}</h1>
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-sans">
                 {quiz.questions.length} câu · {answeredCount} đã trả lời
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
             {progress.completed && (
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
                 onClick={() => setShowFilterModal(true)}
-                className="text-xs"
+                className="text-[10px] sm:text-xs px-2 sm:px-3"
               >
-                <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
-                Lọc câu hỏi
+                <span className="hidden sm:inline">Lọc câu hỏi</span>
+                <span className="sm:hidden">Lọc</span>
               </Button>
             )}
             {!progress.completed ? (
-              <Button type="button" size="sm" onClick={handleSubmit} disabled={submitting}>
+              <Button type="button" size="sm" onClick={handleSubmit} disabled={submitting} className="text-xs sm:text-sm">
                 {submitting ? 'Đang nộp...' : 'Nộp bài'}
               </Button>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                <span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                   {progress.score}/{progress.totalPoints}
                 </span>
-                <Button type="button" size="sm" variant="subtle" onClick={handleReset}>
+                <Button type="button" size="sm" variant="subtle" onClick={handleReset} className="text-xs sm:text-sm">
                   Làm lại
                 </Button>
               </div>
@@ -595,9 +622,9 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           </div>
         </div>
         
-        {/* Question Navigator */}
-        <div className="mt-4 border-t border-gray-200/50 pt-4">
-          <div className="flex flex-wrap gap-2">
+        {/* Question Navigator - Mobile Optimized */}
+        <div className="mt-3 sm:mt-4 border-t border-gray-200/50 pt-3 sm:pt-4">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {visibleQuestions.map((question, relativeIndex) => {
               const index = navStartIndex + relativeIndex
               const selected = currentQuestionIndex === index
@@ -607,7 +634,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   key={question.id}
                   type="button"
                   onClick={() => setCurrentQuestionIndex(index)}
-                  className={`relative flex h-8 w-8 items-center justify-center rounded-xl border text-xs font-medium transition-all hover:scale-105 hover:shadow-lg backdrop-blur-sm ${
+                  className={`relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-medium transition-all active:scale-95 touch-manipulation backdrop-blur-sm ${
                     selected 
                       ? 'border-indigo-400/50 bg-indigo-500/90 text-white shadow-lg shadow-indigo-500/30' 
                       : answered 
@@ -616,7 +643,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   }`}
                 >
                   {selected && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-lg sm:rounded-xl" />
                   )}
                   <span className="relative">{index + 1}</span>
                 </button>
@@ -624,18 +651,18 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             })}
           </div>
           {totalNavPages > 1 && (
-            <div className="mt-2 flex items-center justify-between text-xs text-ink-500 dark:text-ink-400">
+            <div className="mt-2 flex items-center justify-between text-[10px] sm:text-xs text-ink-500 dark:text-ink-400">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setNavPage((p) => Math.max(0, p - 1))}
                 disabled={navPage === 0}
-                className="h-6 px-2 text-xs"
+                className="h-5 sm:h-6 px-1.5 sm:px-2 text-[10px] sm:text-xs"
               >
-                ← Trước
+                ← <span className="hidden sm:inline">Trước</span>
               </Button>
-              <span>
+              <span className="text-[10px] sm:text-xs">
                 Câu {navStartIndex + 1}–{navEndIndex} / {quiz.questions.length}
               </span>
               <Button
@@ -644,68 +671,81 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 size="sm"
                 onClick={() => setNavPage((p) => Math.min(totalNavPages - 1, p + 1))}
                 disabled={navPage === totalNavPages - 1}
-                className="h-6 px-2 text-xs"
+                className="h-5 sm:h-6 px-1.5 sm:px-2 text-[10px] sm:text-xs"
               >
-                Sau →
+                <span className="hidden sm:inline">Sau</span> →
               </Button>
             </div>
           )}
         </div>
       </header>
 
-      {/* Question Area */}
-      <main className="mx-auto max-w-4xl relative">
-        <article className="relative rounded-2xl border border-gray-200/50 bg-white/90 p-6 shadow-xl backdrop-blur-sm dark:border-gray-700/30 dark:bg-gray-900/80 dark:shadow-black/30 md:p-8">
+      {/* Question Area with Swipe Support */}
+      <main className="mx-auto max-w-4xl relative" {...swipeHandlers}>
+        <article className="relative rounded-xl sm:rounded-2xl border border-gray-200/50 bg-white/90 p-4 sm:p-6 md:p-8 shadow-xl backdrop-blur-sm dark:border-gray-700/30 dark:bg-gray-900/80 dark:shadow-black/30">
           {/* Subtle overlay effect */}
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-transparent pointer-events-none dark:from-white/5 dark:via-white/2" />
+          <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-transparent pointer-events-none dark:from-white/5 dark:via-white/2" />
           
-          <div className="relative mb-6 flex items-start justify-between">
-            <div className="flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10 rounded-full px-3 py-1 w-fit backdrop-blur-sm font-sans">
+          {/* Swipe indicator for mobile */}
+          {!progress.completed && (
+            <div className="sm:hidden absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 text-gray-400 dark:text-gray-600 text-[10px]">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+              </svg>
+              <span>Vuốt để chuyển câu</span>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </div>
+          )}
+          
+          <div className="relative mb-4 sm:mb-6 flex items-start justify-between gap-2 sm:gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10 rounded-full px-2 sm:px-3 py-1 w-fit backdrop-blur-sm font-sans">
                 Câu hỏi {currentQuestionIndex + 1} / {quiz.questions.length}
               </p>
-              <h2 className="mt-3 text-2xl font-bold leading-tight text-gray-900 dark:text-gray-100 md:text-3xl font-sans">
+              <h2 className="mt-2 sm:mt-3 text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold leading-tight text-gray-900 dark:text-gray-100 font-sans">
                 {currentQuestion.title}
               </h2>
             </div>
-            <span className="relative ml-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/90 to-indigo-600/90 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/20 dark:from-indigo-400/90 dark:to-indigo-500/90">
+            <span className="relative flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-gradient-to-br from-indigo-500/90 to-indigo-600/90 text-xs sm:text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/20 dark:from-indigo-400/90 dark:to-indigo-500/90">
               {currentQuestion.points}
             </span>
           </div>
 
           {currentQuestion.content && (
-            <p className="relative mb-6 text-base leading-relaxed text-gray-700 dark:text-gray-200 bg-gray-50/60 rounded-xl p-4 backdrop-blur-sm border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30 font-sans">
+            <p className="relative mb-4 sm:mb-6 text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-200 bg-gray-50/60 rounded-lg sm:rounded-xl p-3 sm:p-4 backdrop-blur-sm border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30 font-sans">
               {currentQuestion.content}
             </p>
           )}
 
           <div className="relative">
-            {renderOptions()}
+            {renderOptions}
           </div>
 
           {progress.completed && currentQuestion.explanation && (
-            <div className="relative mt-6 rounded-2xl border border-emerald-400/50 bg-emerald-50/60 p-5 shadow-xl backdrop-blur-xl dark:border-emerald-500/30 dark:bg-emerald-500/10">
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-100/40 to-transparent pointer-events-none" />
-              <div className="relative mb-3 flex items-center gap-2">
-                <span className="text-xl">💡</span>
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-500/20 rounded-full px-3 py-1 backdrop-blur-sm font-sans">
+            <div className="relative mt-4 sm:mt-6 rounded-xl sm:rounded-2xl border border-emerald-400/50 bg-emerald-50/60 p-4 sm:p-5 shadow-xl backdrop-blur-xl dark:border-emerald-500/30 dark:bg-emerald-500/10">
+              <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-100/40 to-transparent pointer-events-none" />
+              <div className="relative mb-2 sm:mb-3 flex items-center gap-2">
+                <span className="text-lg sm:text-xl">💡</span>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-500/20 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 backdrop-blur-sm font-sans">
                   Giải thích
                 </p>
               </div>
-              <p className="relative text-sm leading-relaxed text-emerald-800 dark:text-emerald-200 font-sans">
+              <p className="relative text-xs sm:text-sm leading-relaxed text-emerald-800 dark:text-emerald-200 font-sans">
                 {currentQuestion.explanation}
               </p>
             </div>
           )}
 
-          <div className="relative mt-8 flex items-center justify-between border-t border-gray-200/50 pt-6">
-            <div className="flex gap-3">
+          <div className="relative mt-6 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 border-t border-gray-200/50 pt-4 sm:pt-6">
+            <div className="flex gap-2 sm:gap-3 order-2 sm:order-1">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}
                 disabled={currentQuestionIndex === 0}
-                className="bg-gray-50/60 border border-gray-200/30 backdrop-blur-sm hover:bg-gray-100/60 hover:shadow-lg hover:shadow-gray-200/20 dark:bg-gray-800/40 dark:border-gray-700/30 dark:hover:bg-gray-700/40"
+                className="flex-1 sm:flex-initial text-xs sm:text-sm bg-gray-50/60 border border-gray-200/30 backdrop-blur-sm hover:bg-gray-100/60 hover:shadow-lg hover:shadow-gray-200/20 dark:bg-gray-800/40 dark:border-gray-700/30 dark:hover:bg-gray-700/40"
               >
                 ← Câu trước
               </Button>
@@ -714,31 +754,22 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 variant="ghost"
                 onClick={() => goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))}
                 disabled={currentQuestionIndex === quiz.questions.length - 1}
-                className="bg-gray-50/60 border border-gray-200/30 backdrop-blur-sm hover:bg-gray-100/60 hover:shadow-lg hover:shadow-gray-200/20 dark:bg-gray-800/40 dark:border-gray-700/30 dark:hover:bg-gray-700/40"
+                className="flex-1 sm:flex-initial text-xs sm:text-sm bg-gray-50/60 border border-gray-200/30 backdrop-blur-sm hover:bg-gray-100/60 hover:shadow-lg hover:shadow-gray-200/20 dark:bg-gray-800/40 dark:border-gray-700/30 dark:hover:bg-gray-700/40"
               >
                 Câu tiếp →
               </Button>
             </div>
             
-            {/* Keyboard shortcuts hint */}
-            <div className="hidden lg:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30">
-              <span className="font-mono font-sans">1-9</span>
-              <span className="font-sans">chọn</span>
+            {/* Keyboard shortcuts hint - Desktop only */}
+            <div className="hidden lg:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30 order-1 sm:order-2">
+              <span className="font-mono">1-9</span>
+              <span>chọn</span>
               <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-              <span className="font-mono font-sans">Enter</span>
-              <span className="font-sans">tiếp theo</span>
+              <span className="font-mono">Enter</span>
+              <span>tiếp theo</span>
               <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-              <span className="font-mono font-sans">↑↓</span>
-              <span className="font-sans">di chuyển</span>
-            </div>
-            
-            {/* Mobile keyboard hint */}
-            <div className="lg:hidden flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50/60 backdrop-blur-sm rounded-lg px-2 py-1 border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30">
-              <span className="font-mono font-sans">1-9</span>
-              <span className="font-sans">chọn</span>
-              <span className="w-px h-2 bg-gray-300 dark:bg-gray-600 mx-1" />
-              <span className="font-mono font-sans">Enter</span>
-              <span className="font-sans">tiếp theo</span>
+              <span className="font-mono">↑↓</span>
+              <span>di chuyển</span>
             </div>
           </div>
 
