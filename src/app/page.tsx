@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { SmartImage } from '@/components/ui/smart-image'
 import { PrefetchLink } from '@/components/ui/prefetch-link'
 import { SubscriptionBanner } from '@/components/subscription/subscription-banner'
-import { AnimatedHero, FloatingCircle } from '@/components/animated-hero'
+import { AnimatedHero } from '@/components/animated-hero'
 import { ScrollReveal, SlideIn } from '@/components/scroll-reveal'
 import { ParallaxCharacter } from '@/components/effects/parallax-character'
 import { createDynamicMetadata } from '@/lib/metadata'
@@ -100,7 +100,6 @@ export default async function Home({ searchParams }: HomeProps) {
                 ))}
               </div>
             </div>
-            <FloatingCircle />
           </div>
         </section>
       </AnimatedHero>
