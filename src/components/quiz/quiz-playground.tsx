@@ -421,35 +421,44 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         const isMulti = isMultipleChoice(currentQuestion)
         const checked = (progress.answers[currentQuestion.id] ?? []).includes(option.id)
         const shortcutKey = optionIdx < 9 ? (optionIdx + 1).toString() : '0'
+        const toneClasses =
+          state === 'correct'
+            ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200'
+            : state === 'incorrect'
+            ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15 dark:text-rose-200'
+            : state === 'missed'
+            ? 'border-sky-400/60 bg-sky-100/55 text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/15 dark:text-sky-200'
+            : checked
+            ? 'border-indigo-400/60 bg-indigo-100/55 text-indigo-700 dark:border-indigo-400/30 dark:bg-indigo-500/15 dark:text-indigo-200'
+            : 'border-white/25 bg-white/45 text-slate-700 hover:border-white/40 hover:bg-white/55 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-500/60 dark:hover:bg-slate-900/55'
+        const badgeTone =
+          state === 'correct'
+            ? 'border border-transparent bg-emerald-500 text-white'
+            : state === 'incorrect'
+            ? 'border border-transparent bg-rose-500 text-white'
+            : state === 'missed'
+            ? 'border border-transparent bg-sky-500 text-white'
+            : checked
+            ? 'border border-transparent bg-indigo-500 text-white'
+            : 'border border-white/40 bg-white/45 text-slate-600 dark:border-slate-600/40 dark:bg-slate-900/60 dark:text-slate-300'
+        const statusBadgeTone =
+          state === 'correct'
+            ? 'bg-emerald-500/85 text-white'
+            : state === 'incorrect'
+            ? 'bg-rose-500/85 text-white'
+            : 'bg-sky-500/85 text-white'
         
         return (
           <label
             key={option.id}
             htmlFor={option.id}
-            className={`group relative flex w-full items-center gap-2 sm:gap-3 md:gap-4 overflow-hidden rounded-xl sm:rounded-2xl border backdrop-blur-xl transition-all active:scale-[0.98] touch-manipulation cursor-pointer p-3 sm:p-4 ${
-              state === 'correct'
-                ? 'border-emerald-400/50 bg-gradient-to-r from-emerald-50/80 to-emerald-100/60 text-emerald-700 shadow-lg shadow-emerald-500/20 dark:border-emerald-500/40 dark:from-emerald-500/20 dark:to-emerald-400/10 dark:text-emerald-300 dark:shadow-emerald-500/10'
-                : state === 'incorrect'
-                ? 'border-rose-400/50 bg-gradient-to-r from-rose-50/80 to-rose-100/60 text-rose-700 shadow-lg shadow-rose-500/20 dark:border-rose-500/40 dark:from-rose-500/20 dark:to-rose-400/10 dark:text-rose-300 dark:shadow-rose-500/10'
-                : state === 'missed'
-                ? 'border-blue-400/50 bg-gradient-to-r from-blue-50/80 to-blue-100/60 text-blue-700 shadow-lg shadow-blue-500/20 dark:border-blue-500/40 dark:from-blue-500/20 dark:to-blue-400/10 dark:text-blue-300 dark:shadow-blue-500/10'
-                : checked
-                ? 'border-indigo-500/50 bg-gradient-to-r from-indigo-50/80 to-indigo-100/60 text-indigo-700 shadow-lg shadow-indigo-500/20 dark:border-indigo-500/40 dark:from-indigo-500/20 dark:to-indigo-400/10 dark:text-indigo-300 dark:shadow-indigo-500/10'
-                : 'border-white/20 bg-gradient-to-r from-white/60 to-white/40 text-ink-700 hover:border-white/30 hover:bg-gradient-to-r hover:from-white/70 hover:to-white/50 hover:shadow-lg hover:shadow-white/10 dark:border-ink-700/50 dark:from-ink-900/60 dark:to-ink-800/40 dark:text-ink-200 dark:hover:border-ink-600/50 dark:hover:from-ink-900/70 dark:hover:to-ink-800/50'
-            }`}
+            className={`group relative flex w-full items-center gap-2 sm:gap-3 md:gap-4 overflow-hidden rounded-xl sm:rounded-2xl border backdrop-blur-xl transition-colors touch-manipulation cursor-pointer p-3 sm:p-4 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-200/60 dark:focus-within:ring-indigo-500/40 ${toneClasses}`}
           >
             {/* Glassmorphism overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-white/5" />
             
             {/* Shortcut key indicator */}
-            <div className={`relative z-10 hidden sm:flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-lg text-[10px] md:text-xs font-bold transition-all shrink-0 ${
-              checked || state !== null
-                ? state === 'correct' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                : state === 'incorrect' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30'
-                : state === 'missed' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                : 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 border border-gray-300/50 dark:from-ink-700 dark:to-ink-800 dark:text-ink-300 dark:border-ink-600/50'
-            }`}>
+            <div className={`relative z-10 hidden shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold md:text-xs sm:flex h-7 w-7 md:h-8 md:w-8 ${badgeTone}`}>
               {shortcutKey}
             </div>
             
@@ -460,17 +469,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               checked={checked}
               onChange={() => handleToggleOption(currentQuestion.id, option.id)}
               disabled={progress.completed}
-              className="relative z-10 h-4 w-4 sm:h-5 sm:w-5 rounded border border-white/30 bg-white/20 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-transparent dark:border-ink-600/50 dark:bg-ink-800/20 shrink-0"
+              className="relative z-10 h-4 w-4 shrink-0 rounded border border-white/40 bg-white/40 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0 dark:border-slate-600/50 dark:bg-slate-900/50"
             />
             
             <span className="relative z-10 flex-1 text-sm sm:text-base font-medium leading-relaxed font-sans break-words">{option.text}</span>
             
             {state !== null ? (
-              <span className={`relative z-10 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider backdrop-blur-sm shrink-0 ${
-                state === 'correct' ? 'bg-emerald-500/90 text-white shadow-lg shadow-emerald-500/30' 
-                : state === 'incorrect' ? 'bg-rose-500/90 text-white shadow-lg shadow-rose-500/30'
-                : 'bg-blue-500/90 text-white shadow-lg shadow-blue-500/30'
-              }`}>
+              <span className={`relative z-10 shrink-0 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider backdrop-blur-sm ${statusBadgeTone}`}>
                 <span className="hidden sm:inline">
                   {state === 'correct' ? '✓ Đúng' 
                    : state === 'incorrect' ? '✗ Sai'
@@ -494,14 +499,14 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowFilterModal(false)}>
-        <div className="max-h-[80vh] w-full max-w-md overflow-hidden rounded-2xl border-2 border-ink-200 bg-white shadow-2xl dark:border-ink-800 dark:bg-ink-900" onClick={(e) => e.stopPropagation()}>
-          <div className="border-b border-ink-200 p-4 dark:border-ink-700">
+        <div className="max-h-[80vh] w-full max-w-md overflow-hidden rounded-2xl border border-white/30 bg-white/70 shadow-[0_24px_60px_rgba(15,23,42,0.35)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/60 dark:shadow-[0_24px_60px_rgba(2,6,23,0.7)]" onClick={(e) => e.stopPropagation()}>
+          <div className="border-b border-white/20 p-4 dark:border-white/10">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-ink-800 dark:text-ink-100">Danh sách câu hỏi</h3>
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Danh sách câu hỏi</h3>
               <button
                 type="button"
                 onClick={() => setShowFilterModal(false)}
-                className="rounded-full p-1 text-ink-400 transition hover:bg-ink-100 hover:text-ink-600 dark:hover:bg-ink-800 dark:hover:text-ink-300"
+                className="rounded-full p-1 text-slate-500 transition-colors hover:bg-white/40 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-200"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -518,7 +523,11 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   key={item.key}
                   type="button"
                   onClick={() => setFilter(item.key as typeof filter)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${filter === item.key ? 'bg-indigo-500 text-white' : 'bg-ink-100 text-ink-500 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-300 dark:hover:bg-ink-700'}`}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                    filter === item.key
+                      ? 'bg-indigo-500 text-white'
+                      : 'bg-white/40 text-slate-600 hover:bg-white/55 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800/75'
+                  }`}
                 >
                   {item.label}
                 </button>
@@ -544,12 +553,16 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                     goToQuestion(quiz.questions.findIndex((item) => item.id === question.id))
                     setShowFilterModal(false)
                   }}
-                  className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition hover:scale-[1.02] ${isCorrectAnswer ? 'border-emerald-300 bg-emerald-50 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-rose-300 bg-rose-50 text-rose-500 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300'}`}
+                  className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors ${
+                    isCorrectAnswer
+                      ? 'border-emerald-300/70 bg-emerald-50/80 text-emerald-600 hover:bg-emerald-100/70 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/25'
+                      : 'border-rose-300/70 bg-rose-50/80 text-rose-500 hover:bg-rose-100/70 dark:border-rose-400/30 dark:bg-rose-500/15 dark:text-rose-200 dark:hover:bg-rose-500/25'
+                  }`}
                 >
-                  <span className="text-sm font-medium text-ink-700 dark:text-ink-200">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                     Câu {quiz.questions.findIndex((item) => item.id === question.id) + 1}
                   </span>
-                  <span className="text-xs uppercase tracking-[0.2em] text-ink-400 dark:text-ink-500">
+                  <span className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                     {isCorrectAnswer ? 'Đúng' : 'Sai'}
                   </span>
                 </button>
@@ -562,21 +575,21 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6 relative">
-      {/* Subtle background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 pointer-events-none" />
+    <div className="relative mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6">
+      {/* Ambient gradient to emulate liquid glass */}
+      <div className="pointer-events-none fixed inset-0 -z-20 bg-[radial-gradient(circle_at_15%_15%,rgba(195,221,255,0.6),transparent_55%),radial-gradient(circle_at_85%_10%,rgba(214,187,255,0.55),transparent_60%),radial-gradient(circle_at_50%_80%,rgba(165,243,252,0.45),transparent_65%)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(37,99,235,0.45),transparent_60%),radial-gradient(circle_at_85%_10%,rgba(109,40,217,0.5),transparent_65%),radial-gradient(circle_at_50%_80%,rgba(6,182,212,0.35),transparent_70%)]" />
       
-      {/* Very subtle background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-60 -right-60 w-96 h-96 bg-gradient-to-br from-indigo-200/8 to-purple-200/8 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-60 -left-60 w-96 h-96 bg-gradient-to-tr from-blue-200/8 to-indigo-200/8 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/3 left-1/4 w-80 h-80 bg-gradient-to-br from-cyan-200/6 to-blue-200/6 rounded-full blur-3xl"></div>
+      {/* Soft light blobs to reinforce depth without affecting layout */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-40 left-1/3 h-72 w-72 rounded-[40%] bg-white/30 blur-3xl dark:bg-white/10" />
+        <div className="absolute bottom-10 right-1/4 h-80 w-80 rounded-[45%] bg-white/20 blur-3xl dark:bg-white/5" />
+        <div className="absolute top-1/4 right-0 h-64 w-64 rounded-[38%] bg-white/15 blur-2xl dark:bg-white/5" />
       </div>
       
       {renderFilterModal()}
       
       {/* Header - Mobile Optimized */}
-      <header className="sticky top-0 z-10 mb-3 sm:mb-4 rounded-xl sm:rounded-2xl border border-gray-200/60 bg-white/80 p-3 sm:p-4 shadow-lg backdrop-blur-md dark:border-gray-700/40 dark:bg-gray-900/60 dark:shadow-black/20">
+      <header className="sticky top-0 z-10 mb-3 sm:mb-4 rounded-xl sm:rounded-2xl border border-white/40 bg-white/60 p-3 sm:p-4 shadow-[0_18px_45px_rgba(15,23,42,0.16)] ring-1 ring-white/30 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/50 dark:shadow-[0_18px_45px_rgba(2,6,23,0.55)] dark:ring-white/5">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {renderCompactTimer}
@@ -634,16 +647,16 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   key={question.id}
                   type="button"
                   onClick={() => setCurrentQuestionIndex(index)}
-                  className={`relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-medium transition-all active:scale-95 touch-manipulation backdrop-blur-sm ${
+                  className={`relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-medium transition-colors touch-manipulation backdrop-blur-sm ${
                     selected 
-                      ? 'border-indigo-400/50 bg-indigo-500/90 text-white shadow-lg shadow-indigo-500/30' 
+                      ? 'border-indigo-400/70 bg-indigo-500/85 text-white' 
                       : answered 
-                      ? 'border-emerald-400/50 bg-emerald-500/90 text-white shadow-md shadow-emerald-500/20' 
-                      : 'border-white/30 bg-white/40 text-ink-600 hover:border-white/40 hover:bg-white/50 hover:shadow-white/10 dark:border-white/10 dark:bg-white/5 dark:text-ink-200 dark:hover:border-white/20 dark:hover:bg-white/10'
+                      ? 'border-emerald-400/60 bg-emerald-500/80 text-white' 
+                      : 'border-white/30 bg-white/40 text-slate-600 hover:border-white/45 hover:bg-white/55 dark:border-white/10 dark:bg-slate-900/35 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-slate-900/55'
                   }`}
                 >
                   {selected && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-lg sm:rounded-xl" />
+                    <div className="absolute inset-0 rounded-lg sm:rounded-xl bg-white/20" />
                   )}
                   <span className="relative">{index + 1}</span>
                 </button>
@@ -681,10 +694,10 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       </header>
 
       {/* Question Area with Swipe Support */}
-      <main className="mx-auto max-w-4xl relative" {...swipeHandlers}>
-        <article className="relative rounded-xl sm:rounded-2xl border border-gray-200/50 bg-white/90 p-4 sm:p-6 md:p-8 shadow-xl backdrop-blur-sm dark:border-gray-700/30 dark:bg-gray-900/80 dark:shadow-black/30">
+      <main className="relative mx-auto max-w-4xl" {...swipeHandlers}>
+        <article className="relative rounded-xl sm:rounded-2xl border border-white/40 bg-white/65 p-4 sm:p-6 md:p-8 shadow-[0_24px_60px_rgba(15,23,42,0.18)] ring-1 ring-white/30 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/60 dark:shadow-[0_22px_55px_rgba(2,6,23,0.6)] dark:ring-white/5">
           {/* Subtle overlay effect */}
-          <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-transparent pointer-events-none dark:from-white/5 dark:via-white/2" />
+          <div className="pointer-events-none absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white/45 via-white/10 to-transparent dark:from-white/10 dark:via-white/5" />
           
           {/* Swipe indicator for mobile */}
           {!progress.completed && (
@@ -745,7 +758,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 variant="ghost"
                 onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}
                 disabled={currentQuestionIndex === 0}
-                className="flex-1 sm:flex-initial text-xs sm:text-sm bg-gray-50/60 border border-gray-200/30 backdrop-blur-sm hover:bg-gray-100/60 hover:shadow-lg hover:shadow-gray-200/20 dark:bg-gray-800/40 dark:border-gray-700/30 dark:hover:bg-gray-700/40"
+                className="flex-1 sm:flex-initial text-xs sm:text-sm border border-white/35 bg-white/45 backdrop-blur-md hover:bg-white/55 disabled:opacity-60 dark:border-white/10 dark:bg-slate-900/40 dark:hover:bg-slate-900/55"
               >
                 ← Câu trước
               </Button>
@@ -754,14 +767,14 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 variant="ghost"
                 onClick={() => goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))}
                 disabled={currentQuestionIndex === quiz.questions.length - 1}
-                className="flex-1 sm:flex-initial text-xs sm:text-sm bg-gray-50/60 border border-gray-200/30 backdrop-blur-sm hover:bg-gray-100/60 hover:shadow-lg hover:shadow-gray-200/20 dark:bg-gray-800/40 dark:border-gray-700/30 dark:hover:bg-gray-700/40"
+                className="flex-1 sm:flex-initial text-xs sm:text-sm border border-white/35 bg-white/45 backdrop-blur-md hover:bg-white/55 disabled:opacity-60 dark:border-white/10 dark:bg-slate-900/40 dark:hover:bg-slate-900/55"
               >
                 Câu tiếp →
               </Button>
             </div>
             
             {/* Keyboard shortcuts hint - Desktop only */}
-            <div className="hidden lg:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30 order-1 sm:order-2">
+            <div className="hidden lg:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 border border-white/25 bg-white/45 backdrop-blur-md rounded-lg px-3 py-2 dark:border-white/10 dark:bg-slate-900/35 order-1 sm:order-2">
               <span className="font-mono">1-9</span>
               <span>chọn</span>
               <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
