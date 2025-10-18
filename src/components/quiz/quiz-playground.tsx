@@ -17,6 +17,7 @@ type QuizQuestion = {
   id: string
   title: string
   content: string | null
+  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
   order: number
   points: number
   explanation: string | null
@@ -71,7 +72,7 @@ const formatDuration = (totalSeconds: number) => {
 }
 
 const isMultipleChoice = (question: QuizQuestion) => 
-  question.options.filter((o) => o.isCorrect).length > 1
+  question.type === 'MULTIPLE_CHOICE' || question.options.filter((o) => o.isCorrect).length > 1
 
 const computeResult = (quiz: Quiz, answers: AnswerState) => {
   let score = 0

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const quizStatusSchema = z.enum(['DRAFT', 'PUBLISHED'])
 
-export const quizQuestionTypeSchema = z.enum(['SINGLE_CHOICE'])
+export const quizQuestionTypeSchema = z.enum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE'])
 
 export const quizOptionInputSchema = z.object({
   id: z.string().cuid().optional(),

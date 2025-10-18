@@ -26,7 +26,7 @@ type UpsertQuizInput = {
     id?: string
     title: string
     content?: string
-    type?: 'SINGLE_CHOICE'
+    type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
     order: number
     points: number
     explanation?: string
