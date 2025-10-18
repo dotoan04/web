@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import prisma from '@/lib/prisma'
 import { formatViDate } from '@/lib/utils'
-import { listQuizSubmissions } from '@/server/quizzes'
 
 const formatDuration = (input: number | null) => {
   if (!input || input <= 0) return '--'
@@ -31,11 +31,22 @@ export default async function QuizHistoryPage({ params, searchParams }: PageProp
   const { id } = await params
   const { year, month, day } = await searchParams
 
-  const quiz = await listQuizSubmissions(id)
+  const quiz = await prisma.quiz.findUnique({
+    where: { id },
+    include: {
+      questions: true,
+    },
+  })
+
   if (!quiz) return notFound()
 
+  const submissions = await prisma.quizSubmission.findMany({
+    where: { quizId: id },
+    orderBy: { submittedAt: 'desc' },
+  })
+
   // Filter submissions based on date parameters
-  let filteredSubmissions = quiz.submissions
+  let filteredSubmissions = submissions
 
   if (year) {
     const yearNum = parseInt(year, 10)
@@ -53,7 +64,7 @@ export default async function QuizHistoryPage({ params, searchParams }: PageProp
   }
 
   // Get unique years, months from all submissions for filter options
-  const availableYears = Array.from(new Set(quiz.submissions.map((sub) => sub.submittedAt.getFullYear()))).sort(
+  const availableYears = Array.from(new Set(submissions.map((sub) => sub.submittedAt.getFullYear()))).sort(
     (a, b) => b - a,
   )
 
@@ -61,7 +72,7 @@ export default async function QuizHistoryPage({ params, searchParams }: PageProp
     year && availableYears.includes(parseInt(year, 10))
       ? Array.from(
           new Set(
-            quiz.submissions
+            submissions
               .filter((sub) => sub.submittedAt.getFullYear() === parseInt(year, 10))
               .map((sub) => sub.submittedAt.getMonth()),
           ),
