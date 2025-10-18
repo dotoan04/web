@@ -59,6 +59,24 @@
     backdrop-filter: blur(16px);
   }
 
+  .sunset body {
+    @apply bg-sunset-100 text-sunset-900;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(255, 181, 102, 0.35), transparent 55%),
+      radial-gradient(circle at 80% 5%, rgba(255, 155, 66, 0.28), transparent 60%),
+      linear-gradient(180deg, rgba(255, 239, 217, 0.9) 0%, rgba(255, 225, 200, 0.7) 100%);
+    backdrop-filter: blur(14px);
+  }
+
+  .countryside body {
+    @apply bg-countryside-100 text-countryside-900;
+    background-image:
+      radial-gradient(circle at 25% 15%, rgba(83, 180, 78, 0.3), transparent 55%),
+      radial-gradient(circle at 80% 5%, rgba(68, 160, 72, 0.25), transparent 60%),
+      linear-gradient(180deg, rgba(240, 252, 232, 0.92) 0%, rgba(225, 245, 215, 0.78) 100%);
+    backdrop-filter: blur(14px);
+  }
+
   h1,
   h2,
   h3,
@@ -180,6 +198,22 @@
       inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
   }
 
+  .sunset .glass-card {
+    border: 1px solid rgba(255, 220, 180, 0.35);
+    background: linear-gradient(145deg, rgba(255, 240, 220, 0.65), rgba(255, 210, 160, 0.35));
+    box-shadow:
+      0 12px 36px rgba(249, 143, 28, 0.25),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
+  }
+
+  .countryside .glass-card {
+    border: 1px solid rgba(148, 214, 120, 0.35);
+    background: linear-gradient(145deg, rgba(232, 247, 221, 0.6), rgba(196, 238, 161, 0.35));
+    box-shadow:
+      0 12px 36px rgba(92, 181, 47, 0.25),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.3);
+  }
+
   .dark .glass-card {
     @apply border-white/10 bg-white/5 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)];
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -202,6 +236,28 @@
     background: rgba(255, 255, 255, 0.1);
   }
 
+  .sunset .glass-button {
+    border: 1px solid rgba(255, 190, 120, 0.55);
+    background: linear-gradient(135deg, rgba(255, 238, 216, 0.7), rgba(255, 214, 161, 0.45));
+    color: rgba(140, 65, 18, 0.82);
+  }
+
+  .sunset .glass-button:hover {
+    background: linear-gradient(135deg, rgba(255, 235, 210, 0.85), rgba(255, 202, 126, 0.55));
+    box-shadow: 0 12px 32px rgba(249, 143, 28, 0.28);
+  }
+
+  .countryside .glass-button {
+    border: 1px solid rgba(144, 212, 124, 0.6);
+    background: linear-gradient(135deg, rgba(238, 250, 231, 0.7), rgba(196, 238, 161, 0.45));
+    color: rgba(39, 94, 30, 0.85);
+  }
+
+  .countryside .glass-button:hover {
+    background: linear-gradient(135deg, rgba(228, 245, 220, 0.85), rgba(162, 226, 115, 0.55));
+    box-shadow: 0 12px 32px rgba(92, 181, 47, 0.28);
+  }
+
   .glass-input {
     @apply rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-lg transition-all duration-300 focus:border-white/40 focus:bg-white/20;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -213,6 +269,26 @@
     @apply border-white/10 bg-white/5 focus:border-white/20 focus:bg-white/10;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.05);
+  }
+
+  .sunset .glass-input {
+    border: 1px solid rgba(255, 210, 160, 0.5);
+    background: rgba(255, 240, 220, 0.4);
+  }
+
+  .sunset .glass-input:focus {
+    border-color: rgba(255, 179, 86, 0.6);
+    background: rgba(255, 228, 192, 0.6);
+  }
+
+  .countryside .glass-input {
+    border: 1px solid rgba(168, 228, 138, 0.45);
+    background: rgba(226, 245, 210, 0.38);
+  }
+
+  .countryside .glass-input:focus {
+    border-color: rgba(119, 200, 88, 0.55);
+    background: rgba(208, 240, 192, 0.58);
   }
 
   .liquid-gradient {
@@ -231,6 +307,24 @@
       rgba(255, 255, 255, 0.08) 0%,
       rgba(255, 255, 255, 0.03) 50%,
       rgba(255, 255, 255, 0) 100%
+    );
+  }
+
+  .sunset .liquid-gradient {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 238, 215, 0.4) 0%,
+      rgba(255, 210, 160, 0.25) 45%,
+      rgba(255, 188, 120, 0.08) 100%
+    );
+  }
+
+  .countryside .liquid-gradient {
+    background: linear-gradient(
+      135deg,
+      rgba(228, 245, 215, 0.42) 0%,
+      rgba(180, 226, 142, 0.25) 45%,
+      rgba(140, 204, 102, 0.1) 100%
     );
   }
 
@@ -254,6 +348,24 @@
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     opacity: 0.6;
+  }
+
+  .sunset .frost-border::before {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 210, 160, 0.6) 0%,
+      rgba(255, 180, 110, 0.25) 50%,
+      rgba(255, 200, 140, 0.4) 100%
+    );
+  }
+
+  .countryside .frost-border::before {
+    background: linear-gradient(
+      135deg,
+      rgba(172, 230, 140, 0.6) 0%,
+      rgba(132, 200, 104, 0.26) 50%,
+      rgba(160, 220, 130, 0.4) 100%
+    );
   }
 }
 

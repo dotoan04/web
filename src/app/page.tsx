@@ -67,7 +67,11 @@ export default async function Home({ searchParams }: HomeProps) {
         <section className="relative overflow-hidden rounded-[2.5rem] border border-white/20 glass-card liquid-gradient p-12 shadow-[0_25px_60px_rgba(31,38,135,0.25)] backdrop-blur-2xl dark:border-white/10 dark:shadow-[0_25px_60px_rgba(31,38,135,0.45)]">
           {preferences.parallaxCharacterUrl ? (
             <ParallaxCharacter imageUrl={preferences.parallaxCharacterUrl} />
-          ) : null}
+          ) : (
+            <div className="pointer-events-none absolute inset-0 flex items-end justify-end">
+              <div className="aspect-[3/4] w-40 max-w-[35vw] translate-y-6 scale-100 rounded-[2rem] border border-white/30 bg-gradient-to-b from-white/70 to-white/30 opacity-50 shadow-[0_20px_45px_rgba(31,38,135,0.25)] backdrop-blur-2xl dark:border-white/15 dark:from-white/10 dark:to-white/5 dark:opacity-40 dark:shadow-[0_20px_45px_rgba(31,38,135,0.35)] sm:w-52 md:w-60" />
+            </div>
+          )}
           <div className="absolute -top-16 right-12 h-48 w-48 rounded-full bg-ink-200/40 blur-3xl dark:bg-ink-600/40 liquid-blob" />
           <div className="absolute -bottom-20 left-10 h-36 w-36 rounded-full bg-ink-300/25 blur-3xl dark:bg-ink-700/35 liquid-blob" />
           <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
