@@ -40,6 +40,7 @@ enum QuizStatus {
 
 enum QuizQuestionType {
   SINGLE_CHOICE
+  MULTIPLE_CHOICE
 }
 
 model User {

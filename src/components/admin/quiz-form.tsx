@@ -33,7 +33,7 @@ type QuizQuestionForm = {
   id?: string
   title: string
   content: string
-  type: 'SINGLE_CHOICE'
+  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
   order: number
   points: number
   explanation: string
@@ -80,6 +80,7 @@ type QuestionEditorProps = {
   onAddOption: () => void
   onRemoveOption: (optionIndex: number) => void
   onSetCorrect: (optionIndex: number) => void
+  onToggleCorrect: (optionIndex: number) => void
 }
 
 type OptionRowProps = {
@@ -88,21 +89,31 @@ type OptionRowProps = {
   optionIndex: number
   isCorrect: boolean
   disableRemove: boolean
+  questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
   onSelectCorrect: () => void
+  onToggleCorrect: () => void
   onChangeText: (value: string) => void
   onRemove: () => void
 }
 
-const OptionRow = memo(({ option, questionIndex, optionIndex, isCorrect, disableRemove, onSelectCorrect, onChangeText, onRemove }: OptionRowProps) => (
+const OptionRow = memo(({ option, questionIndex, optionIndex, isCorrect, disableRemove, questionType, onSelectCorrect, onToggleCorrect, onChangeText, onRemove }: OptionRowProps) => (
   <div className="rounded-xl border border-ink-200/60 bg-white/80 p-3 dark:border-ink-700 dark:bg-ink-800/60">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
       <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">
-        <input
-          type="radio"
-          name={`question-${questionIndex}`}
-          checked={isCorrect}
-          onChange={onSelectCorrect}
-        />
+        {questionType === 'SINGLE_CHOICE' ? (
+          <input
+            type="radio"
+            name={`question-${questionIndex}`}
+            checked={isCorrect}
+            onChange={onSelectCorrect}
+          />
+        ) : (
+          <input
+            type="checkbox"
+            checked={isCorrect}
+            onChange={onToggleCorrect}
+          />
+        )}
         Đáp án đúng
       </label>
       <Input
@@ -128,7 +139,7 @@ const OptionRow = memo(({ option, questionIndex, optionIndex, isCorrect, disable
 
 OptionRow.displayName = 'OptionRow'
 
-const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, onRemove, onAddOption, onRemoveOption, onSetCorrect }: QuestionEditorProps) => (
+const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, onRemove, onAddOption, onRemoveOption, onSetCorrect, onToggleCorrect }: QuestionEditorProps) => (
   <section className="rounded-2xl border border-ink-200/70 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900">
     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div className="flex flex-1 items-center gap-3">
@@ -164,6 +175,32 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
       </div>
     </div>
 
+    <div className="mt-4 flex items-center gap-2">
+      <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">Loại câu hỏi:</label>
+      <Button
+        type="button"
+        variant={question.type === 'SINGLE_CHOICE' ? 'primary' : 'ghost'}
+        size="sm"
+        onClick={() => {
+          onChange((current) => ({
+            ...current,
+            type: 'SINGLE_CHOICE',
+            options: current.options.map((opt, idx) => ({ ...opt, isCorrect: idx === 0 }))
+          }))
+        }}
+      >
+        Một đáp án
+      </Button>
+      <Button
+        type="button"
+        variant={question.type === 'MULTIPLE_CHOICE' ? 'primary' : 'ghost'}
+        size="sm"
+        onClick={() => onChange((current) => ({ ...current, type: 'MULTIPLE_CHOICE' }))}
+      >
+        Nhiều đáp án
+      </Button>
+    </div>
+
     <div className="mt-4 space-y-3">
       <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">Mô tả (tuỳ chọn)</label>
       <Textarea
@@ -190,7 +227,9 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
             optionIndex={optionIndex}
             isCorrect={option.isCorrect}
             disableRemove={question.options.length <= 2}
+            questionType={question.type}
             onSelectCorrect={() => onSetCorrect(optionIndex)}
+            onToggleCorrect={() => onToggleCorrect(optionIndex)}
             onChangeText={(value) =>
               onChange((current) => ({
                 ...current,
@@ -255,19 +294,22 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
   }
 
   const applyImportedQuestions = (items: ImportedQuestion[]) => {
-    const nextQuestions = items.map((item, questionIndex) => ({
-      title: item.title,
-      content: '',
-      type: 'SINGLE_CHOICE' as const,
-      order: questionIndex,
-      points: 1,
-      explanation: '',
-      options: item.options.map((option, optionIndex) => ({
-        text: option.text,
-        isCorrect: option.isCorrect,
-        order: optionIndex,
-      })),
-    }))
+    const nextQuestions = items.map((item, questionIndex) => {
+      const correctCount = item.options.filter(opt => opt.isCorrect).length
+      return {
+        title: item.title,
+        content: '',
+        type: (correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE') as 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE',
+        order: questionIndex,
+        points: 1,
+        explanation: '',
+        options: item.options.map((option, optionIndex) => ({
+          text: option.text,
+          isCorrect: option.isCorrect,
+          order: optionIndex,
+        })),
+      }
+    })
 
     setValues((prev) => ({
       ...prev,
@@ -338,6 +380,15 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
         ...option,
         isCorrect: index === optionIndex,
       })),
+    }))
+  }, [updateQuestion])
+
+  const toggleCorrectOption = useCallback((questionIndex: number, optionIndex: number) => {
+    updateQuestion(questionIndex, (question) => ({
+      ...question,
+      options: question.options.map((option, index) =>
+        index === optionIndex ? { ...option, isCorrect: !option.isCorrect } : option
+      ),
     }))
   }, [updateQuestion])
 
@@ -705,6 +756,7 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                   onAddOption={() => addOption(questionIndex)}
                   onRemoveOption={(optionIndex) => removeOption(questionIndex, optionIndex)}
                   onSetCorrect={(optionIndex) => setCorrectOption(questionIndex, optionIndex)}
+                  onToggleCorrect={(optionIndex) => toggleCorrectOption(questionIndex, optionIndex)}
                 />
               ))}
             </div>
