@@ -413,3 +413,30 @@
     }
   }
 }
+
+/* Mobile Performance Optimizations */
+@media (max-width: 767px) {
+  .glass-card,
+  .glass-button,
+  .glass-input,
+  .code-block {
+    backdrop-filter: blur(8px) !important;
+  }
+
+  .glass-card {
+    box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.1) !important;
+  }
+
+  .glass-hover {
+    @apply transition-all duration-200;
+  }
+
+  .glass-hover:active {
+    @apply scale-[0.98];
+  }
+
+  .liquid-blob {
+    animation: none !important;
+    opacity: 0.5;
+  }
+}

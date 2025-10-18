@@ -18,9 +18,17 @@ export function EffectWrapper({ effectType }: EffectWrapperProps) {
     const update = () => setIsMobile(window.matchMedia('(max-width: 767px)').matches)
     update()
 
-    const handler = () => update()
+    let resizeTimer: NodeJS.Timeout
+    const handler = () => {
+      clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(update, 200)
+    }
+    
     window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
+    return () => {
+      clearTimeout(resizeTimer)
+      window.removeEventListener('resize', handler)
+    }
   }, [])
   
   // Don't show effects on quiz pages

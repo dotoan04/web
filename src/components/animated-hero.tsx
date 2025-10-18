@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ReactNode } from 'react'
 
 type AnimatedHeroProps = {
@@ -8,11 +8,17 @@ type AnimatedHeroProps = {
 }
 
 export const AnimatedHero = ({ children }: AnimatedHeroProps) => {
+  const prefersReducedMotion = useReducedMotion()
+
+  if (prefersReducedMotion) {
+    return <section>{children}</section>
+  }
+
   return (
     <motion.section
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
     >
       {children}
     </motion.section>
