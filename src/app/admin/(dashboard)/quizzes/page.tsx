@@ -76,6 +76,12 @@ export default async function AdminQuizzesPage() {
                       <Link href={`/admin/quizzes/${quiz.id}`} className="text-sm text-primary-600 hover:underline">
                         Chỉnh sửa
                       </Link>
+                      <Link
+                        href={`/admin/quizzes/${quiz.id}/history`}
+                        className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Lịch sử làm bài
+                      </Link>
                       {quiz.status === 'PUBLISHED' ? (
                         <Link
                           href={`/doquizz/${quiz.slug}`}

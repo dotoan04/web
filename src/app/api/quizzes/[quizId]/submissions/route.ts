@@ -7,8 +7,6 @@ import { createSubmission, getQuizBySlug } from '@/server/quizzes'
 const submissionSchema = z.object({
   participant: z.string().max(120).optional(),
   durationSeconds: z.number().int().nonnegative().optional(),
-  correctCount: z.number().int().nonnegative().optional(),
-  incorrectCount: z.number().int().nonnegative().optional(),
   answers: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional().default({}),
 })
 
@@ -38,7 +36,7 @@ export async function POST(request: Request, { params }: Params) {
     const clientIp = forwardedFor.split(',')[0]?.trim() || requestHeaders.get('x-real-ip') || null
     const userAgent = requestHeaders.get('user-agent') || null
 
-    const { answers, participant, durationSeconds, correctCount, incorrectCount } = parsed.data
+    const { answers, participant, durationSeconds } = parsed.data
     const { submission, score, totalPoints } = await createSubmission({
       quizId: quiz.id,
       participantName: participant,
@@ -46,8 +44,6 @@ export async function POST(request: Request, { params }: Params) {
       durationSeconds,
       clientIp,
       userAgent,
-      correctCount,
-      incorrectCount,
     })
 
     return NextResponse.json({

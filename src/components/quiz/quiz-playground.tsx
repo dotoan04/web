@@ -62,6 +62,10 @@ type HistoryEntry = {
 
 const NAME_STORAGE_KEY = 'quiz-user-name'
 
+type SubmissionPayload = {
+  answers: Record<string, string[]>
+  durationSeconds: number
+}
 const createInitialState = (quiz: Quiz): SubmissionState => ({
   quizId: quiz.id,
   answers: Object.fromEntries(quiz.questions.map((question) => [question.id, []])),
@@ -125,13 +129,14 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [showNamePrompt, setShowNamePrompt] = useState(false)
   const [nameInput, setNameInput] = useState('')
+  const pendingSubmissionRef = useRef<{ answers: AnswerState; durationSeconds: number } | null>(null)
+  const hasPromptedRef = useRef(false)
   
   const QUESTIONS_PER_NAV_PAGE = 20
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mounted = useRef(false)
   const normalized = useRef(false)
-  const hasCompletedRef = useRef(progress.completed)
   const nameInputRef = useRef<HTMLInputElement | null>(null)
 
   const timerProgress = useRef(1)
@@ -160,11 +165,26 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }, [progress.answers, setProgress])
 
   useEffect(() => {
-    if (!hasCompletedRef.current && progress.completed && !storedName) {
-      setShowNamePrompt(true)
+    if (!progress.completed || storedName || pendingSubmissionRef.current) {
+      return
     }
-    hasCompletedRef.current = progress.completed ?? false
-  }, [progress.completed, storedName])
+
+    const answered = Object.fromEntries(
+      Object.entries(progress.answers).filter(([, value]) => value.length > 0),
+    )
+
+    const durationSeconds = Math.max(
+      0,
+      Math.min(
+        quiz.durationSeconds,
+        Math.round((Date.now() - new Date(progress.startedAt).getTime()) / 1000),
+      ),
+    )
+
+    pendingSubmissionRef.current = { answers: answered, durationSeconds }
+    setShowNamePrompt(true)
+    hasPromptedRef.current = true
+  }, [progress.answers, progress.completed, progress.startedAt, quiz.durationSeconds, storedName])
 
   useEffect(() => {
     if (!showNamePrompt) return
@@ -183,10 +203,10 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   useEffect(() => {
     if (showNamePrompt) {
-      setNameInput('')
+      setNameInput(storedName ?? '')
       requestAnimationFrame(() => nameInputRef.current?.focus())
     }
-  }, [showNamePrompt])
+  }, [showNamePrompt, storedName])
   
   const currentQuestion = quiz.questions[currentQuestionIndex]
 
@@ -329,6 +349,47 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     })
   }, [filter, progress.answers, progress.completed, progress.score, quiz.questions])
 
+  const submitQuiz = useCallback(
+    async (payload: { answers: AnswerState; durationSeconds: number; participant: string }) => {
+      const response = await fetch(`/api/quizzes/${quiz.slug}/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          answers: payload.answers,
+          durationSeconds: payload.durationSeconds,
+          participant: payload.participant,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Không thể lưu kết quả quiz')
+      }
+
+      const result = await response.json()
+      const submittedAt = new Date().toISOString()
+
+      setProgress((prev) => ({
+        ...prev,
+        completed: true,
+        submittedAt,
+        score: result.score,
+        totalPoints: result.totalPoints,
+      }))
+
+      setHistory((prev) => [
+        {
+          submissionId: result.submissionId,
+          score: result.score,
+          totalPoints: result.totalPoints,
+          submittedAt,
+          answers: payload.answers,
+        },
+        ...prev,
+      ].slice(0, 10))
+    },
+    [quiz.slug, setHistory, setProgress],
+  )
+
   const handleSubmit = useCallback(async () => {
     if (progress.completed) return
 
@@ -336,50 +397,36 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     setError(null)
 
     try {
-      const payloadAnswers = Object.fromEntries(
-        Object.entries(progress.answers).filter(([, value]) => value.length > 0)
+      const answered = Object.fromEntries(
+        Object.entries(progress.answers).filter(([, value]) => value.length > 0),
       )
 
-      const response = await fetch(`/api/quizzes/${quiz.slug}/submissions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          answers: payloadAnswers,
-          participant: storedName ?? undefined,
-          durationSeconds: Math.max(
-            0,
-            Math.min(quiz.durationSeconds, Math.round((Date.now() - new Date(progress.startedAt).getTime()) / 1000)),
-          ),
-        }),
-      })
+      const durationSeconds = Math.max(
+        0,
+        Math.min(
+          quiz.durationSeconds,
+          Math.round((Date.now() - new Date(progress.startedAt).getTime()) / 1000),
+        ),
+      )
 
-      const data = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        throw new Error(data?.error ?? 'Không thể nộp bài kiểm tra')
+      if (!storedName) {
+        pendingSubmissionRef.current = { answers: answered, durationSeconds }
+        setShowNamePrompt(true)
+        return
       }
 
-      const { score, totalPoints } =
-        data?.score != null && data?.totalPoints != null
-          ? {
-              score: data.score as number,
-              totalPoints: data.totalPoints as number,
-            }
-          : computeResult(quiz, progress.answers)
-
-      setProgress((prev) => ({
-        ...prev,
-        completed: true,
-        score,
-        totalPoints,
-      }))
+      await submitQuiz({
+        answers: answered,
+        durationSeconds,
+        participant: storedName,
+      })
     } catch (error) {
       console.error(error)
       setError((error as Error).message)
     } finally {
       setSubmitting(false)
     }
-  }, [progress.answers, progress.completed, progress.startedAt, quiz, setProgress, storedName])
+  }, [progress.answers, progress.completed, progress.startedAt, quiz.durationSeconds, storedName, submitQuiz])
 
   const handleReset = useCallback(() => {
     clearProgress()
@@ -396,11 +443,21 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     const finalName = trimmed.length > 0 ? trimmed : 'Anonymous'
     setStoredName(finalName)
     setShowNamePrompt(false)
-  }, [nameInput, setStoredName])
+    hasPromptedRef.current = true
+    if (pendingSubmissionRef.current) {
+      void submitQuiz({ ...pendingSubmissionRef.current, participant: finalName })
+      pendingSubmissionRef.current = null
+    }
+  }, [nameInput, setStoredName, submitQuiz])
 
   const handleSkipName = useCallback(() => {
     setShowNamePrompt(false)
-  }, [])
+    hasPromptedRef.current = true
+    if (pendingSubmissionRef.current) {
+      void submitQuiz({ ...pendingSubmissionRef.current, participant: 'Anonymous' })
+      pendingSubmissionRef.current = null
+    }
+  }, [submitQuiz])
 
   const getOptionState = useCallback(
     (question: QuizQuestion, option: QuizOption) => {

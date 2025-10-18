@@ -200,8 +200,7 @@ export const createSubmission = async (input: {
 
   let score = 0
   let totalPoints = 0
-
-  let correctCount = Math.max(0, input.correctCount ?? 0)
+  let correctCount = 0
 
   quiz.questions.forEach((question) => {
     totalPoints += question.points
@@ -222,18 +221,14 @@ export const createSubmission = async (input: {
       correctOptionIds.every((id, index) => id === submittedIds[index])
     
     if (isCorrect) {
-      if (input.correctCount == null) {
-        correctCount += 1
-      }
       score += question.points
+      correctCount += 1
     }
   })
 
   const normalizedCorrectCount = Math.min(correctCount, quiz.questions.length)
   const normalizedIncorrectCount =
-    input.incorrectCount != null
-      ? Math.min(Math.max(input.incorrectCount, 0), quiz.questions.length - normalizedCorrectCount)
-      : quiz.questions.length - normalizedCorrectCount
+    quiz.questions.length - normalizedCorrectCount
 
   const submission = await prisma.quizSubmission.create({
     data: {
