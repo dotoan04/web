@@ -57,12 +57,9 @@ export function ParallaxCharacter({ imageUrl }: ParallaxCharacterProps) {
     willChange: 'transform',
   }), [offsetY])
 
+  // Don't render anything on mobile/tablet
   if (!isDesktop) {
-    return (
-      <div className="pointer-events-none absolute inset-0 flex items-end justify-end">
-        <div className="aspect-[3/4] w-32 translate-y-4 rounded-3xl border border-white/20 bg-gradient-to-b from-white/60 to-white/10 opacity-50 shadow-lg backdrop-blur-sm dark:border-white/10 dark:from-white/10 dark:to-white/5 dark:opacity-30 sm:w-40 md:w-48" />
-      </div>
-    )
+    return null
   }
 
   return (

@@ -439,4 +439,30 @@
     animation: none !important;
     opacity: 0.5;
   }
+
+  /* Quiz-specific mobile optimizations */
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Reduce backdrop blur for better performance */
+  [class*="backdrop-blur-2xl"] {
+    backdrop-filter: blur(10px) !important;
+  }
+
+  [class*="backdrop-blur-xl"] {
+    backdrop-filter: blur(6px) !important;
+  }
+
+  /* Optimize button touch targets */
+  button:not([class*="w-"]):not([class*="h-"]) {
+    min-height: 44px;
+  }
+
+  /* Better text readability on small screens */
+  input[type="text"],
+  input[type="email"],
+  textarea {
+    font-size: 16px !important;
+  }
 }
