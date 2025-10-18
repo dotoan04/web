@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -5,6 +6,9 @@ import { createSubmission, getQuizBySlug } from '@/server/quizzes'
 
 const submissionSchema = z.object({
   participant: z.string().max(120).optional(),
+  durationSeconds: z.number().int().nonnegative().optional(),
+  correctCount: z.number().int().nonnegative().optional(),
+  incorrectCount: z.number().int().nonnegative().optional(),
   answers: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional().default({}),
 })
 
@@ -29,14 +33,31 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   try {
-    const { answers, participant } = parsed.data
+    const requestHeaders = headers()
+    const forwardedFor = requestHeaders.get('x-forwarded-for') ?? ''
+    const clientIp = forwardedFor.split(',')[0]?.trim() || requestHeaders.get('x-real-ip') || null
+    const userAgent = requestHeaders.get('user-agent') || null
+
+    const { answers, participant, durationSeconds, correctCount, incorrectCount } = parsed.data
     const { submission, score, totalPoints } = await createSubmission({
       quizId: quiz.id,
-      participant,
+      participantName: participant,
       answers,
+      durationSeconds,
+      clientIp,
+      userAgent,
+      correctCount,
+      incorrectCount,
     })
 
-    return NextResponse.json({ submissionId: submission.id, score, totalPoints })
+    return NextResponse.json({
+      submissionId: submission.id,
+      score,
+      totalPoints,
+      correctCount: submission.correctCount,
+      incorrectCount: submission.incorrectCount,
+      durationSeconds: submission.durationSeconds,
+    })
   } catch (error) {
     console.error('Không thể lưu kết quả quiz:', error)
     return NextResponse.json({ error: 'Không thể lưu kết quả quiz' }, { status: 500 })

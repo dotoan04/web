@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react'
 import { useSwipeable } from 'react-swipeable'
+import { createPortal } from 'react-dom'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useLocalStorage } from '@/hooks/use-local-storage'
 
 type QuizOption = {
@@ -58,6 +60,8 @@ type HistoryEntry = {
   answers: AnswerState
 }
 
+const NAME_STORAGE_KEY = 'quiz-user-name'
+
 const createInitialState = (quiz: Quiz): SubmissionState => ({
   quizId: quiz.id,
   answers: Object.fromEntries(quiz.questions.map((question) => [question.id, []])),
@@ -109,18 +113,26 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     defaultValue: [],
   })
 
+  const [storedName, setStoredName] = useLocalStorage<string | null>(NAME_STORAGE_KEY, {
+    defaultValue: null,
+  })
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [navPage, setNavPage] = useState(0)
   const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect'>('all')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showFilterModal, setShowFilterModal] = useState(false)
+  const [showNamePrompt, setShowNamePrompt] = useState(false)
+  const [nameInput, setNameInput] = useState('')
   
   const QUESTIONS_PER_NAV_PAGE = 20
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mounted = useRef(false)
   const normalized = useRef(false)
+  const hasCompletedRef = useRef(progress.completed)
+  const nameInputRef = useRef<HTMLInputElement | null>(null)
 
   const timerProgress = useRef(1)
 
@@ -146,6 +158,35 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       }))
     }
   }, [progress.answers, setProgress])
+
+  useEffect(() => {
+    if (!hasCompletedRef.current && progress.completed && !storedName) {
+      setShowNamePrompt(true)
+    }
+    hasCompletedRef.current = progress.completed ?? false
+  }, [progress.completed, storedName])
+
+  useEffect(() => {
+    if (!showNamePrompt) return
+    document.body.style.overflow = 'hidden'
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowNamePrompt(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = ''
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showNamePrompt])
+
+  useEffect(() => {
+    if (showNamePrompt) {
+      setNameInput('')
+      requestAnimationFrame(() => nameInputRef.current?.focus())
+    }
+  }, [showNamePrompt])
   
   const currentQuestion = quiz.questions[currentQuestionIndex]
 
@@ -304,6 +345,11 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           answers: payloadAnswers,
+          participant: storedName ?? undefined,
+          durationSeconds: Math.max(
+            0,
+            Math.min(quiz.durationSeconds, Math.round((Date.now() - new Date(progress.startedAt).getTime()) / 1000)),
+          ),
         }),
       })
 
@@ -313,9 +359,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         throw new Error(data?.error ?? 'Không thể nộp bài kiểm tra')
       }
 
-      const { score, totalPoints } = data?.score != null && data?.totalPoints != null
-        ? { score: data.score as number, totalPoints: data.totalPoints as number }
-        : computeResult(quiz, progress.answers)
+      const { score, totalPoints } =
+        data?.score != null && data?.totalPoints != null
+          ? {
+              score: data.score as number,
+              totalPoints: data.totalPoints as number,
+            }
+          : computeResult(quiz, progress.answers)
 
       setProgress((prev) => ({
         ...prev,
@@ -329,7 +379,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     } finally {
       setSubmitting(false)
     }
-  }, [progress.answers, progress.completed, quiz, setProgress])
+  }, [progress.answers, progress.completed, progress.startedAt, quiz, setProgress, storedName])
 
   const handleReset = useCallback(() => {
     clearProgress()
@@ -338,7 +388,19 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     setNavPage(0)
     setFilter('all')
     setError(null)
+    setShowNamePrompt(false)
   }, [clearProgress, quiz, setProgress])
+
+  const handleSaveName = useCallback(() => {
+    const trimmed = nameInput.trim()
+    const finalName = trimmed.length > 0 ? trimmed : 'Anonymous'
+    setStoredName(finalName)
+    setShowNamePrompt(false)
+  }, [nameInput, setStoredName])
+
+  const handleSkipName = useCallback(() => {
+    setShowNamePrompt(false)
+  }, [])
 
   const getOptionState = useCallback(
     (question: QuizQuestion, option: QuizOption) => {
@@ -577,6 +639,46 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   return (
     <div className="relative mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6">
+      {showNamePrompt &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={handleSkipName}
+          >
+            <div
+              className="w-full max-w-sm rounded-2xl border border-white/20 bg-white/80 p-6 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/80"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                Tên của bạn là gì?
+              </h2>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                Bạn có thể lưu lại tên của mình cho các lần nộp tiếp theo hoặc bỏ qua.
+              </p>
+              <div className="mt-4 space-y-4">
+                <Input
+                  ref={nameInputRef}
+                  value={nameInput}
+                  onChange={(event) => setNameInput(event.target.value)}
+                  placeholder="Nhập tên của bạn"
+                  autoComplete="name"
+                  className="h-11"
+                />
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button type="button" variant="ghost" onClick={handleSkipName} className="sm:flex-1">
+                    Bỏ qua
+                  </Button>
+                  <Button type="button" onClick={handleSaveName} className="sm:flex-1">
+                    Lưu tên
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
       {/* Ambient gradient to emulate liquid glass */}
       <div className="pointer-events-none fixed inset-0 -z-20 bg-[radial-gradient(circle_at_15%_15%,rgba(195,221,255,0.6),transparent_55%),radial-gradient(circle_at_85%_10%,rgba(214,187,255,0.55),transparent_60%),radial-gradient(circle_at_50%_80%,rgba(165,243,252,0.45),transparent_65%)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(37,99,235,0.45),transparent_60%),radial-gradient(circle_at_85%_10%,rgba(109,40,217,0.5),transparent_65%),radial-gradient(circle_at_50%_80%,rgba(6,182,212,0.35),transparent_70%)]" />
       

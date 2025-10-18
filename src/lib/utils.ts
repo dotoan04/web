@@ -18,3 +18,11 @@ export const estimateReadingTime = (plainText: string) => {
   const words = plainText.trim().split(/\s+/).filter(Boolean).length
   return Math.max(1, Math.round(words / 180))
 }
+
+export const detectDeviceType = (userAgent?: string | null) => {
+  if (!userAgent) return 'unknown'
+  const ua = userAgent.toLowerCase()
+  if (/mobile|android|iphone|ipad|ipod|blackberry|phone/.test(ua)) return 'mobile'
+  if (/tablet/.test(ua)) return 'tablet'
+  return 'desktop'
+}

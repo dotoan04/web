@@ -1,6 +1,6 @@
 import type { Prisma } from '@/generated/prisma'
 import prisma from '@/lib/prisma'
-import { slugify } from '@/lib/utils'
+import { detectDeviceType, slugify } from '@/lib/utils'
 
 export type QuizWithRelations = Prisma.QuizGetPayload<{
   include: {
@@ -175,8 +175,13 @@ export const listQuizzes = () =>
 
 export const createSubmission = async (input: {
   quizId: string
-  participant?: string
+  participantName?: string
   answers: Record<string, string | string[]>
+  durationSeconds?: number | null
+  clientIp?: string | null
+  userAgent?: string | null
+  correctCount?: number | null
+  incorrectCount?: number | null
 }) => {
   const quiz = await prisma.quiz.findUnique({
     where: { id: input.quizId },
@@ -195,6 +200,8 @@ export const createSubmission = async (input: {
 
   let score = 0
   let totalPoints = 0
+
+  let correctCount = Math.max(0, input.correctCount ?? 0)
 
   quiz.questions.forEach((question) => {
     totalPoints += question.points
@@ -215,17 +222,31 @@ export const createSubmission = async (input: {
       correctOptionIds.every((id, index) => id === submittedIds[index])
     
     if (isCorrect) {
+      if (input.correctCount == null) {
+        correctCount += 1
+      }
       score += question.points
     }
   })
 
+  const normalizedCorrectCount = Math.min(correctCount, quiz.questions.length)
+  const normalizedIncorrectCount =
+    input.incorrectCount != null
+      ? Math.min(Math.max(input.incorrectCount, 0), quiz.questions.length - normalizedCorrectCount)
+      : quiz.questions.length - normalizedCorrectCount
+
   const submission = await prisma.quizSubmission.create({
     data: {
       quizId: quiz.id,
-      participant: input.participant ?? null,
+      participantName: input.participantName ?? null,
       answers: input.answers,
       score,
       totalPoints,
+      correctCount: normalizedCorrectCount,
+      incorrectCount: normalizedIncorrectCount,
+      durationSeconds: input.durationSeconds ?? null,
+      deviceType: detectDeviceType(input.userAgent ?? undefined),
+      clientIp: input.clientIp ?? null,
     },
   })
 

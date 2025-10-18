@@ -44,23 +44,23 @@ enum QuizQuestionType {
 }
 
 model User {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String?
-  email     String    @unique
+  email     String   @unique
   password  String
-  role      UserRole  @default(READER)
+  role      UserRole @default(READER)
   bio       String?
   avatarUrl String?
   website   String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  posts        Post[]
-  revisions    PostRevision[]
-  accounts     Account[]
-  sessions     Session[]
-  mediaUploads Media[]    @relation("UserMediaUploads")
-  createdQuizzes Quiz[]  @relation("CreatedQuizzes")
+  posts          Post[]
+  revisions      PostRevision[]
+  accounts       Account[]
+  sessions       Session[]
+  mediaUploads   Media[]        @relation("UserMediaUploads")
+  createdQuizzes Quiz[]         @relation("CreatedQuizzes")
 }
 
 model Category {
@@ -100,25 +100,25 @@ model Media {
 }
 
 model Post {
-  id            String      @id @default(cuid())
-  title         String
-  slug          String      @unique
-  excerpt       String?
-  content       Json
-  status        PostStatus  @default(DRAFT)
-  readingTime   Int?
-  publishedAt   DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  authorId      String?
-  categoryId    String?
-  coverImageId  String?
+  id           String     @id @default(cuid())
+  title        String
+  slug         String     @unique
+  excerpt      String?
+  content      Json
+  status       PostStatus @default(DRAFT)
+  readingTime  Int?
+  publishedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  authorId     String?
+  categoryId   String?
+  coverImageId String?
 
-  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  category    Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  coverImage  Media?      @relation("CoverImage", fields: [coverImageId], references: [id], onDelete: SetNull)
-  tags        PostTag[]
-  revisions   PostRevision[]
+  author     User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  category   Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  coverImage Media?         @relation("CoverImage", fields: [coverImageId], references: [id], onDelete: SetNull)
+  tags       PostTag[]
+  revisions  PostRevision[]
 
   @@index([status, publishedAt])
 }
@@ -134,15 +134,15 @@ model PostTag {
 }
 
 model PostRevision {
-  id        String     @id @default(cuid())
+  id        String   @id @default(cuid())
   postId    String
   title     String
   excerpt   String?
   content   Json
-  createdAt DateTime   @default(now())
+  createdAt DateTime @default(now())
   authorId  String?
 
-  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post   Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
   author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
 }
 
@@ -155,15 +155,15 @@ model SiteSetting {
 }
 
 model Visit {
-  id          String   @id @default(cuid())
-  path        String
-  ip          String
-  userAgent   String?
-  referrer    String?
-  source      String?
-  country     String?
-  city        String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  path      String
+  ip        String
+  userAgent String?
+  referrer  String?
+  source    String?
+  country   String?
+  city      String?
+  createdAt DateTime @default(now())
 
   @@index([createdAt])
   @@index([ip])
@@ -186,15 +186,15 @@ model PortfolioProject {
 }
 
 model Quiz {
-  id              String         @id @default(cuid())
+  id              String     @id @default(cuid())
   title           String
-  slug            String         @unique
+  slug            String     @unique
   description     String?
-  status          QuizStatus     @default(DRAFT)
-  durationSeconds Int            @default(600)
+  status          QuizStatus @default(DRAFT)
+  durationSeconds Int        @default(600)
   autoReleaseAt   DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
   createdById     String?
 
   createdBy   User?            @relation("CreatedQuizzes", fields: [createdById], references: [id], onDelete: SetNull)
@@ -214,14 +214,14 @@ model QuizQuestion {
   points      Int              @default(1)
   explanation String?
 
-  quiz    Quiz        @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
   options QuizOption[]
 
   @@index([quizId, order])
 }
 
 model QuizOption {
-  id         String @id @default(cuid())
+  id         String  @id @default(cuid())
   questionId String
   text       String
   isCorrect  Boolean @default(false)
@@ -233,13 +233,18 @@ model QuizOption {
 }
 
 model QuizSubmission {
-  id          String   @id @default(cuid())
-  quizId      String
-  participant String?
-  answers     Json
-  score       Int
-  totalPoints Int
-  submittedAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  quizId          String
+  participantName String?
+  answers         Json
+  score           Int
+  totalPoints     Int
+  correctCount    Int      @default(0)
+  incorrectCount  Int      @default(0)
+  durationSeconds Int?
+  deviceType      String?
+  clientIp        String?
+  submittedAt     DateTime @default(now())
 
   quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
@@ -247,18 +252,18 @@ model QuizSubmission {
 }
 
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?  @db.Text
-  access_token      String?  @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?  @db.Text
-  session_state     String?
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? @db.Text
+  access_token             String? @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? @db.Text
+  session_state            String?
   refresh_token_expires_in Int?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
