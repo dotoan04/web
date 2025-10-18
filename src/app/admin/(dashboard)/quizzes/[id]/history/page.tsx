@@ -82,7 +82,7 @@ export default async function QuizHistoryPage({ params, searchParams }: PageProp
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" asChild>
+        <Button variant="ghost" size="sm" asChild>
           <Link href={`/admin/quizzes/${id}`}>← Quay lại</Link>
         </Button>
       </div>
