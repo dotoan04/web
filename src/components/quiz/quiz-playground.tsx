@@ -129,6 +129,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [showNamePrompt, setShowNamePrompt] = useState(false)
   const [nameInput, setNameInput] = useState('')
+  const [loadingGifUrl, setLoadingGifUrl] = useState<string | null>(null)
   const pendingSubmissionRef = useRef<{ answers: AnswerState; durationSeconds: number } | null>(null)
   const hasPromptedRef = useRef(false)
   
@@ -207,6 +208,28 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       requestAnimationFrame(() => nameInputRef.current?.focus())
     }
   }, [showNamePrompt, storedName])
+
+  useEffect(() => {
+    if (submitting) {
+      document.body.style.overflow = 'hidden'
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [submitting])
+
+  useEffect(() => {
+    const fetchGifUrl = async () => {
+      try {
+        const response = await fetch('/api/quiz-settings')
+        const data = await response.json()
+        setLoadingGifUrl(data.loadingGifUrl)
+      } catch (error) {
+        console.error('Failed to fetch quiz settings:', error)
+      }
+    }
+    void fetchGifUrl()
+  }, [])
   
   const currentQuestion = quiz.questions[currentQuestionIndex]
 
@@ -731,6 +754,35 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   </Button>
                 </div>
               </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {submitting &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-white/90 p-8 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/90">
+              <h2 className="text-center text-2xl font-bold text-slate-900 dark:text-slate-100">
+                Chờ xíu !!
+              </h2>
+              
+              {/* Loading GIF */}
+              {loadingGifUrl && (
+                <div className="my-8 flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={loadingGifUrl} 
+                    alt="Loading..." 
+                    className="h-32 w-32 object-contain"
+                  />
+                </div>
+              )}
+              
+              <p className="text-center text-base font-medium text-slate-700 dark:text-slate-300">
+                Đang chấm điểm cho bạn
+              </p>
             </div>
           </div>,
           document.body,

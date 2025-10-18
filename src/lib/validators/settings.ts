@@ -40,6 +40,11 @@ export const siteSettingsSchema = z.object({
     .url('URL ảnh nhân vật phải hợp lệ')
     .nullable()
     .optional(),
+  quizLoadingGifUrl: z
+    .string()
+    .url('URL ảnh GIF loading phải hợp lệ')
+    .nullable()
+    .optional(),
 })
 
 export type SiteSettingsInput = z.infer<typeof siteSettingsSchema>

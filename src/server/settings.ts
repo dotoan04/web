@@ -16,6 +16,7 @@ const keyMap = {
   favicon: 'site.favicon',
   effectType: 'site.effects.type',
   parallaxCharacter: 'site.parallaxCharacter',
+  quizLoadingGif: 'quiz.loadingGif',
   owner: 'portfolio.owner',
   education: 'portfolio.education',
   certifications: 'portfolio.certifications',
@@ -45,6 +46,7 @@ export const getSiteSettings = async () => {
       'site.favicon': null,
       'site.effects.type': 'sakura',
       'site.parallaxCharacter': null,
+      'quiz.loadingGif': null,
       'portfolio.owner': {
         name: null,
         age: null,
@@ -74,6 +76,7 @@ export const updateSiteSettings = async (settings: {
   faviconUrl?: string | null
   effectType?: 'none' | 'snow' | 'sakura'
   parallaxCharacterUrl?: string | null
+  quizLoadingGifUrl?: string | null
 }) => {
   const ownerProfile = {
     name: settings.ownerName?.trim() ? settings.ownerName.trim() : null,
@@ -181,6 +184,16 @@ export const updateSiteSettings = async (settings: {
       },
     }),
     prisma.siteSetting.upsert({
+      where: { key: keyMap.quizLoadingGif },
+      create: {
+        key: keyMap.quizLoadingGif,
+        value: settings.quizLoadingGifUrl ?? Prisma.JsonNull,
+      },
+      update: {
+        value: settings.quizLoadingGifUrl ?? Prisma.JsonNull,
+      },
+    }),
+    prisma.siteSetting.upsert({
       where: { key: keyMap.owner },
       create: {
         key: keyMap.owner,
@@ -234,6 +247,7 @@ export const resolveSitePreferences = cache(async () => {
     faviconUrl: typeof settings[keyMap.favicon] === 'string' ? (settings[keyMap.favicon] as string) : null,
     effectType: (settings[keyMap.effectType] as 'none' | 'snow' | 'sakura') ?? 'sakura',
     parallaxCharacterUrl: typeof settings[keyMap.parallaxCharacter] === 'string' ? (settings[keyMap.parallaxCharacter] as string) : null,
+    quizLoadingGifUrl: typeof settings[keyMap.quizLoadingGif] === 'string' ? (settings[keyMap.quizLoadingGif] as string) : null,
     owner: (settings[keyMap.owner] as { name?: string; age?: number | null; avatarUrl?: string | null }) ?? {},
     education: (settings[keyMap.education] as string) ?? '',
     certifications: (settings[keyMap.certifications] as string[]) ?? [],

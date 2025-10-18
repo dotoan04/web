@@ -25,6 +25,7 @@ type Props = {
   faviconUrl?: string | null
   effectType?: 'none' | 'snow' | 'sakura'
   parallaxCharacterUrl?: string | null
+  quizLoadingGifUrl?: string | null
 }
 
 export const SettingsForm = ({
@@ -45,6 +46,7 @@ export const SettingsForm = ({
   faviconUrl,
   effectType,
   parallaxCharacterUrl,
+  quizLoadingGifUrl,
 }: Props) => {
   const [values, setValues] = useState({
     siteName,
@@ -63,6 +65,7 @@ export const SettingsForm = ({
     seoDescription: seoDescription ?? '',
     faviconUrl: faviconUrl ?? '',
     parallaxCharacterUrl: parallaxCharacterUrl ?? '',
+    quizLoadingGifUrl: quizLoadingGifUrl ?? '',
   })
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -106,6 +109,7 @@ export const SettingsForm = ({
         faviconUrl: values.faviconUrl.trim() ? values.faviconUrl.trim() : null,
         effectType: selectedEffect,
         parallaxCharacterUrl: values.parallaxCharacterUrl.trim() ? values.parallaxCharacterUrl.trim() : null,
+        quizLoadingGifUrl: values.quizLoadingGifUrl.trim() ? values.quizLoadingGifUrl.trim() : null,
       }
 
       const response = await fetch('/api/settings', {
@@ -372,6 +376,20 @@ export const SettingsForm = ({
             />
             <p className="mt-1 text-xs text-ink-400">
               Ảnh nhân vật anime sẽ hiển thị với hiệu ứng parallax ở phần hero trang chủ.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="quizLoadingGifUrl">
+              Ảnh GIF loading quiz
+            </label>
+            <Input
+              id="quizLoadingGifUrl"
+              value={values.quizLoadingGifUrl}
+              onChange={(event) => setValues((prev) => ({ ...prev, quizLoadingGifUrl: event.target.value }))}
+              placeholder="https://..."
+            />
+            <p className="mt-1 text-xs text-ink-400">
+              Ảnh GIF sẽ hiển thị khi đang chấm điểm quiz. Để trống nếu không muốn hiển thị GIF.
             </p>
           </div>
           <div className="flex items-center justify-between">
