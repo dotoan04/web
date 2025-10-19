@@ -449,6 +449,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         participant: storedName,
         userInfo,
       })
+      setSubmitting(false)
     } catch (error) {
       console.error(error)
       setError((error as Error).message)
@@ -482,6 +483,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       try {
         const userInfo = collectUserInfo()
         await submitQuiz({ ...pendingSubmissionRef.current, participant: finalName, userInfo })
+        setSubmitting(false)
       } catch (error) {
         console.error(error)
         setError((error as Error).message)
@@ -502,6 +504,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       try {
         const userInfo = collectUserInfo()
         await submitQuiz({ ...pendingSubmissionRef.current, participant: 'Anonymous', userInfo })
+        setSubmitting(false)
       } catch (error) {
         console.error(error)
         setError((error as Error).message)
