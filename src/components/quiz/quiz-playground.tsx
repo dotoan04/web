@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useLocalStorage } from '@/hooks/use-local-storage'
+import { collectUserInfo, type UserInfo } from '@/lib/user-info'
 
 type QuizOption = {
   id: string
@@ -65,6 +66,7 @@ const NAME_STORAGE_KEY = 'quiz-user-name'
 type SubmissionPayload = {
   answers: Record<string, string[]>
   durationSeconds: number
+  userInfo?: UserInfo
 }
 const createInitialState = (quiz: Quiz): SubmissionState => ({
   quizId: quiz.id,
@@ -166,7 +168,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }, [progress.answers, setProgress])
 
   useEffect(() => {
-    if (!progress.completed || storedName || pendingSubmissionRef.current) {
+    if (!progress.completed || storedName || pendingSubmissionRef.current || hasPromptedRef.current) {
       return
     }
 
@@ -373,7 +375,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }, [filter, progress.answers, progress.completed, progress.score, quiz.questions])
 
   const submitQuiz = useCallback(
-    async (payload: { answers: AnswerState; durationSeconds: number; participant: string }) => {
+    async (payload: { answers: AnswerState; durationSeconds: number; participant: string; userInfo?: UserInfo }) => {
       const response = await fetch(`/api/quizzes/${quiz.slug}/submissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -381,6 +383,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           answers: payload.answers,
           durationSeconds: payload.durationSeconds,
           participant: payload.participant,
+          userInfo: payload.userInfo,
         }),
       })
 
@@ -414,7 +417,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   )
 
   const handleSubmit = useCallback(async () => {
-    if (progress.completed || submitting) return
+    if (progress.completed || submitting || hasPromptedRef.current) return
 
     setError(null)
 
@@ -433,15 +436,18 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     if (!storedName) {
       pendingSubmissionRef.current = { answers: answered, durationSeconds }
       setShowNamePrompt(true)
+      hasPromptedRef.current = true
       return
     }
 
     setSubmitting(true)
     try {
+      const userInfo = collectUserInfo()
       await submitQuiz({
         answers: answered,
         durationSeconds,
         participant: storedName,
+        userInfo,
       })
     } catch (error) {
       console.error(error)
@@ -458,6 +464,9 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     setFilter('all')
     setError(null)
     setShowNamePrompt(false)
+    setSubmitting(false)
+    hasPromptedRef.current = false
+    pendingSubmissionRef.current = null
   }, [clearProgress, quiz, setProgress])
 
   const handleSaveName = useCallback(async () => {
@@ -467,16 +476,17 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     const finalName = trimmed.length > 0 ? trimmed : 'Anonymous'
     setStoredName(finalName)
     setShowNamePrompt(false)
-    hasPromptedRef.current = true
     
     if (pendingSubmissionRef.current) {
       setSubmitting(true)
       try {
-        await submitQuiz({ ...pendingSubmissionRef.current, participant: finalName })
+        const userInfo = collectUserInfo()
+        await submitQuiz({ ...pendingSubmissionRef.current, participant: finalName, userInfo })
       } catch (error) {
         console.error(error)
         setError((error as Error).message)
         setSubmitting(false)
+        hasPromptedRef.current = false
       }
       pendingSubmissionRef.current = null
     }
@@ -486,16 +496,17 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     if (submitting) return
     
     setShowNamePrompt(false)
-    hasPromptedRef.current = true
     
     if (pendingSubmissionRef.current) {
       setSubmitting(true)
       try {
-        await submitQuiz({ ...pendingSubmissionRef.current, participant: 'Anonymous' })
+        const userInfo = collectUserInfo()
+        await submitQuiz({ ...pendingSubmissionRef.current, participant: 'Anonymous', userInfo })
       } catch (error) {
         console.error(error)
         setError((error as Error).message)
         setSubmitting(false)
+        hasPromptedRef.current = false
       }
       pendingSubmissionRef.current = null
     }

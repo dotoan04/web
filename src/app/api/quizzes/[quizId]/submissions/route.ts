@@ -8,6 +8,7 @@ const submissionSchema = z.object({
   participant: z.string().max(120).optional(),
   durationSeconds: z.number().int().nonnegative().optional(),
   answers: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional().default({}),
+  userInfo: z.any().optional(),
 })
 
 type Params = {
@@ -36,7 +37,7 @@ export async function POST(request: Request, { params }: Params) {
     const clientIp = forwardedFor.split(',')[0]?.trim() || requestHeaders.get('x-real-ip') || null
     const userAgent = requestHeaders.get('user-agent') || null
 
-    const { answers, participant, durationSeconds } = parsed.data
+    const { answers, participant, durationSeconds, userInfo } = parsed.data
     const { submission, score, totalPoints } = await createSubmission({
       quizId: quiz.id,
       participantName: participant,
@@ -44,6 +45,7 @@ export async function POST(request: Request, { params }: Params) {
       durationSeconds,
       clientIp,
       userAgent,
+      userInfo,
     })
 
     return NextResponse.json({

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import prisma from '@/lib/prisma'
 import { formatViDate } from '@/lib/utils'
+import { formatUserInfoForDisplay, type UserInfo } from '@/lib/user-info'
 
 const formatDuration = (input: number | null) => {
   if (!input || input <= 0) return '--'
@@ -145,34 +146,58 @@ export default async function QuizHistoryPage({ params, searchParams }: PageProp
                     <th className="py-3">Đúng/Sai</th>
                     <th className="py-3">Thời gian</th>
                     <th className="py-3">Thiết bị</th>
+                    <th className="py-3">Thông tin kỹ thuật</th>
                     <th className="py-3">IP</th>
                     <th className="py-3">Nộp lúc</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
-                  {filteredSubmissions.map((submission) => (
-                    <tr key={submission.id} className="align-top text-ink-600 dark:text-ink-200">
-                      <td className="py-3 font-medium text-ink-800 dark:text-ink-100">
-                        {submission.participantName || 'Anonymous'}
-                      </td>
-                      <td className="py-3">
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          {submission.score}/{submission.totalPoints}
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <span className="text-emerald-600 dark:text-emerald-400">{submission.correctCount}</span>
-                        {' / '}
-                        <span className="text-rose-600 dark:text-rose-400">{submission.incorrectCount}</span>
-                      </td>
-                      <td className="py-3 text-ink-500">{formatDuration(submission.durationSeconds)}</td>
-                      <td className="py-3 text-ink-500">{formatDevice(submission.deviceType)}</td>
-                      <td className="py-3 font-mono text-xs text-ink-400">
-                        {submission.clientIp || '--'}
-                      </td>
-                      <td className="py-3 text-ink-400">{formatViDate(submission.submittedAt)}</td>
-                    </tr>
-                  ))}
+                  {filteredSubmissions.map((submission) => {
+                    const userInfo = submission.userInfo as UserInfo | null
+                    const userInfoLines = userInfo ? formatUserInfoForDisplay(userInfo) : []
+                    
+                    return (
+                      <tr key={submission.id} className="align-top text-ink-600 dark:text-ink-200">
+                        <td className="py-3 font-medium text-ink-800 dark:text-ink-100">
+                          {submission.participantName || 'Anonymous'}
+                        </td>
+                        <td className="py-3">
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                            {submission.score}/{submission.totalPoints}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <span className="text-emerald-600 dark:text-emerald-400">{submission.correctCount}</span>
+                          {' / '}
+                          <span className="text-rose-600 dark:text-rose-400">{submission.incorrectCount}</span>
+                        </td>
+                        <td className="py-3 text-ink-500">{formatDuration(submission.durationSeconds)}</td>
+                        <td className="py-3 text-ink-500">{formatDevice(submission.deviceType)}</td>
+                        <td className="py-3">
+                          {userInfoLines.length > 0 ? (
+                            <details className="cursor-pointer">
+                              <summary className="text-xs text-blue-600 hover:underline dark:text-blue-400">
+                                Xem chi tiết
+                              </summary>
+                              <div className="mt-2 space-y-1 rounded-md bg-ink-50 p-3 text-xs dark:bg-ink-800">
+                                {userInfoLines.map((line, idx) => (
+                                  <div key={idx} className="font-mono text-ink-700 dark:text-ink-300">
+                                    {line}
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          ) : (
+                            <span className="text-xs text-ink-400">Không có dữ liệu</span>
+                          )}
+                        </td>
+                        <td className="py-3 font-mono text-xs text-ink-400">
+                          {submission.clientIp || '--'}
+                        </td>
+                        <td className="py-3 text-ink-400">{formatViDate(submission.submittedAt)}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

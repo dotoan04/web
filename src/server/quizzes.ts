@@ -180,6 +180,7 @@ export const createSubmission = async (input: {
   durationSeconds?: number | null
   clientIp?: string | null
   userAgent?: string | null
+  userInfo?: any | null
   correctCount?: number | null
   incorrectCount?: number | null
 }) => {
@@ -245,6 +246,8 @@ export const createSubmission = async (input: {
       durationSeconds: input.durationSeconds ?? null,
       deviceType,
       clientIp: input.clientIp ?? null,
+      userAgent: input.userAgent ?? null,
+      userInfo: input.userInfo ?? null,
     },
   })
 

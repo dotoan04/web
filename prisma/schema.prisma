@@ -244,6 +244,8 @@ model QuizSubmission {
   durationSeconds Int?
   deviceType      String?
   clientIp        String?
+  userAgent       String?
+  userInfo        Json?
   submittedAt     DateTime @default(now())
 
   quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
