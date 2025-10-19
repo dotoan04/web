@@ -12,6 +12,7 @@ import { JsonLd } from '@/components/json-ld'
 import { PwaRegister } from '@/components/pwa/pwa-register'
 import { SessionProvider } from '@/components/providers/session-provider'
 import { ThemeProvider } from '@/components/providers/theme-provider'
+import { GoogleVerification } from '@/components/seo/google-verification'
 import { absoluteUrl, createMetadata, getMetadataOverrides, siteConfig } from '@/lib/metadata'
 import { createOrganizationJsonLd, createSiteJsonLd } from '@/lib/structured-data'
 import { resolveSitePreferences } from '@/server/settings'
@@ -75,9 +76,11 @@ export default async function RootLayout({
   return (
     <html lang={siteConfig.locales.default.split('-')[0]} suppressHydrationWarning className={`${headingFont.variable} ${bodyFont.variable}`}>
       <head>
+        <GoogleVerification />
         {siteConfig.social.webmention ? <link rel="webmention" href={siteConfig.social.webmention} /> : null}
         {siteConfig.social.pingback ? <link rel="pingback" href={siteConfig.social.pingback} /> : null}
         <link rel="icon" href={favicon} key="site-favicon" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
       </head>
       <body className="min-h-screen bg-ink-50 font-body text-ink-800 antialiased dark:bg-ink-900 dark:text-ink-100">
         <SessionProvider>
@@ -88,7 +91,7 @@ export default async function RootLayout({
             </Suspense>
             <PwaRegister />
             <div className="relative mx-auto max-w-6xl px-6 py-10 lg:px-12">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-[radial-gradient(circle_at_top,_rgba(120,129,255,0.3)_0%,_rgba(243,244,255,0)_70%)] dark:bg-[radial-gradient(circle_at_top,_rgba(92,100,236,0.28)_0%,_rgba(19,20,56,0)_75%)]" />
+              <div className="theme-ambient-glow pointer-events-none absolute inset-x-0 top-0 h-60" />
               <div className="relative z-10 flex min-h-screen flex-col gap-10">
                 <Header siteName={preferences.siteName} />
                 <main className="flex flex-1 flex-col gap-10">{children}</main>

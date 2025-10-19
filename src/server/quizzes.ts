@@ -233,15 +233,10 @@ export const createSubmission = async (input: {
   const submission = await prisma.quizSubmission.create({
     data: {
       quizId: quiz.id,
-      participantName: input.participantName ?? null,
+      participant: input.participantName ?? null,
       answers: input.answers,
       score,
       totalPoints,
-      correctCount: normalizedCorrectCount,
-      incorrectCount: normalizedIncorrectCount,
-      durationSeconds: input.durationSeconds ?? null,
-      deviceType: detectDeviceType(input.userAgent ?? undefined),
-      clientIp: input.clientIp ?? null,
     },
   })
 

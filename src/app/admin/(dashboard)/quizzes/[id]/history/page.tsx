@@ -142,10 +142,6 @@ export default async function QuizHistoryPage({ params, searchParams }: PageProp
                   <tr>
                     <th className="py-3">Tên người làm</th>
                     <th className="py-3">Điểm</th>
-                    <th className="py-3">Đúng/Sai</th>
-                    <th className="py-3">Thời gian làm</th>
-                    <th className="py-3">Thiết bị</th>
-                    <th className="py-3">IP</th>
                     <th className="py-3">Nộp lúc</th>
                   </tr>
                 </thead>
@@ -153,20 +149,12 @@ export default async function QuizHistoryPage({ params, searchParams }: PageProp
                   {filteredSubmissions.map((submission) => (
                     <tr key={submission.id} className="align-top text-ink-600 dark:text-ink-200">
                       <td className="py-3 font-medium text-ink-800 dark:text-ink-100">
-                        {submission.participantName || 'Anonymous'}
+                        {submission.participant || 'Anonymous'}
                       </td>
                       <td className="py-3">
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                           {submission.score}/{submission.totalPoints}
                         </span>
-                      </td>
-                      <td className="py-3">
-                        {submission.correctCount}/{quiz.questions.length} đúng · {submission.incorrectCount} sai
-                      </td>
-                      <td className="py-3">{formatDuration(submission.durationSeconds)}</td>
-                      <td className="py-3">{formatDevice(submission.deviceType)}</td>
-                      <td className="py-3 font-mono text-xs text-ink-500 dark:text-ink-400">
-                        {submission.clientIp || '--'}
                       </td>
                       <td className="py-3 text-ink-400">{formatViDate(submission.submittedAt)}</td>
                     </tr>

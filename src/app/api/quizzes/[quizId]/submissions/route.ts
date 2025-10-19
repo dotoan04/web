@@ -50,9 +50,6 @@ export async function POST(request: Request, { params }: Params) {
       submissionId: submission.id,
       score,
       totalPoints,
-      correctCount: submission.correctCount,
-      incorrectCount: submission.incorrectCount,
-      durationSeconds: submission.durationSeconds,
     })
   } catch (error) {
     console.error('Không thể lưu kết quả quiz:', error)
