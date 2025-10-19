@@ -233,7 +233,7 @@ export const createSubmission = async (input: {
   const submission = await prisma.quizSubmission.create({
     data: {
       quizId: quiz.id,
-      participant: input.participantName ?? null,
+      participantName: input.participantName ?? null,
       answers: input.answers,
       score,
       totalPoints,
