@@ -18,19 +18,13 @@ export const ThemeProvider = ({ children, ...props }: ThemeProviderProps) => (
       *::before,
       *::after {
         transition: 
-          background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-          border-color 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-          color 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-          box-shadow 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-          fill 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-          stroke 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-          opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        will-change: background-color, color, border-color;
+          background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+          border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+          color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       }
       
       body {
-        transition: background-color 0.8s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        will-change: background-color;
+        transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
       }
 
       .theme-transition-texture {
@@ -154,11 +148,11 @@ export const ThemeProvider = ({ children, ...props }: ThemeProviderProps) => (
         );
       }
 
-      /* Enhanced smooth element transitions */
+      /* Optimized element transitions */
       h1, h2, h3, h4, h5, h6, p, a, button, input {
-        transition: color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
-                    background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                    border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                    background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       }
     `}</style>
   </NextThemesProvider>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useTheme } from 'next-themes'
 
 interface ThemeTransition {
@@ -10,20 +10,9 @@ interface ThemeTransition {
   progress: number
 }
 
-// Spring-based easing for ultra-smooth feel
-const easeOutElastic = (t: number): number => {
-  const c4 = (2 * Math.PI) / 3
-  return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1
-}
-
-// Smooth easing function (ease-in-out-cubic)
+// Optimized easing function
 const easeInOutCubic = (t: number): number => {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-}
-
-// Smooth ease-out for natural deceleration
-const easeOutQuart = (t: number): number => {
-  return 1 - Math.pow(1 - t, 4)
 }
 
 export const ThemeTransition = () => {
@@ -49,24 +38,22 @@ export const ThemeTransition = () => {
     
     // Only trigger transition if theme actually changed (not on mount or navigation)
     if (previousThemeRef.current && previousThemeRef.current !== theme) {
-      const handleThemeChange = () => {
-        setTransition((prev) => ({
-          ...prev,
-          toTheme: theme,
-          isActive: true,
-          progress: 0,
-          fromTheme: prev.toTheme,
-        }))
+      setTransition((prev) => ({
+        ...prev,
+        toTheme: theme,
+        isActive: true,
+        progress: 0,
+        fromTheme: prev.toTheme,
+      }))
 
-      // Enhanced animation timeline with smoother easing
-      const duration = 750 // 750ms for more luxurious feel
-      const steps = 75
-      const stepDuration = duration / steps
-      let currentStep = 0
+      // Optimized animation using requestAnimationFrame
+      const duration = 600 // Reduced to 600ms for snappier feel
+      const startTime = performance.now()
+      let rafId: number
 
-      const interval = setInterval(() => {
-        currentStep++
-        const linearProgress = currentStep / steps
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTime
+        const linearProgress = Math.min(elapsed / duration, 1)
         const easedProgress = easeInOutCubic(linearProgress)
 
         setTransition((prev) => ({
@@ -74,22 +61,21 @@ export const ThemeTransition = () => {
           progress: easedProgress,
         }))
 
-        if (currentStep >= steps) {
-          clearInterval(interval)
+        if (linearProgress < 1) {
+          rafId = requestAnimationFrame(animate)
+        } else {
           setTimeout(() => {
             setTransition((prev) => ({
               ...prev,
               isActive: false,
               progress: 0,
             }))
-          }, 250)
+          }, 150)
         }
-      }, stepDuration)
-
-        return () => clearInterval(interval)
       }
 
-      handleThemeChange()
+      rafId = requestAnimationFrame(animate)
+      return () => cancelAnimationFrame(rafId)
     }
     
     // Update previous theme ref
@@ -135,184 +121,105 @@ export const ThemeTransition = () => {
   const waveScale = 1 + (0.1 * Math.sin(progress * Math.PI * 2))
   const waveOpacity = Math.max(0, Math.cos((progress - 0.3) * Math.PI * 1.5))
 
-  // Generate theme-specific particles with enhanced effects
-  const generateParticles = () => {
-    const particleCount = transition.toTheme === 'sunset' ? 24 : transition.toTheme === 'countryside' ? 20 : 12
-    const particles = []
-    const easedProgress = easeOutQuart(progress)
+  // Optimized particles generation - reduced count for better performance
+  const particles = useMemo(() => {
+    const particleCount = transition.toTheme === 'sunset' ? 10 : transition.toTheme === 'countryside' ? 8 : 6
+    const result = []
 
     for (let i = 0; i < particleCount; i++) {
       const angle = (i / particleCount) * Math.PI * 2
-      const radius = 80 + Math.random() * 180
-      const stagger = (i / particleCount) * 0.3
-      const staggeredProgress = Math.max(0, Math.min(1, progress - stagger))
+      const radius = 100 + (i % 3) * 60
       
-      let x, y, size, opacity, blur, color
+      let x, y, size, color
       
       if (transition.toTheme === 'sunset') {
-        // Sunset: Radiant sun rays with gradient colors
-        const rayProgress = easeOutElastic(staggeredProgress)
-        x = 50 + (Math.cos(angle) * radius * rayProgress)
-        y = 50 + (Math.sin(angle) * radius * rayProgress * 0.8) // Slightly flatten for horizon effect
-        size = 6 + Math.sin(progress * Math.PI) * 3
-        opacity = Math.max(0, (1 - progress) * 0.8) * (0.8 + Math.random() * 0.4)
-        blur = 6 + Math.random() * 4
-        // Alternate between warm colors
-        color = i % 3 === 0 ? colors.primary : i % 3 === 1 ? colors.secondary : colors.accent
+        x = 50 + (Math.cos(angle) * radius * progress)
+        y = 50 + (Math.sin(angle) * radius * progress * 0.7)
+        size = 5
+        color = i % 2 === 0 ? colors.primary : colors.secondary
       } else if (transition.toTheme === 'countryside') {
-        // Countryside: Organic floating leaves/butterflies
-        const drift = Math.sin(progress * Math.PI * 2 + i) * 20
-        const flutter = Math.cos(progress * Math.PI * 3 + i * 0.5) * 15
-        x = 10 + (i * 4.5) + drift
-        y = 10 + ((i * 5) % 60) + flutter + (staggeredProgress * 30)
-        size = 4 + Math.sin(progress * Math.PI + i) * 2
-        opacity = Math.max(0, (1 - progress * 1.2) * 0.7) * (0.7 + Math.random() * 0.3)
-        blur = 3 + Math.random() * 3
-        // Mix of green shades
-        color = i % 3 === 0 ? colors.primary : i % 3 === 1 ? colors.secondary : colors.accent
+        const drift = Math.sin(progress * Math.PI + i) * 15
+        x = 15 + (i * 11) + drift
+        y = 15 + ((i * 7) % 50) + (progress * 25)
+        size = 4
+        color = i % 2 === 0 ? colors.primary : colors.accent
       } else {
-        // Default particles with smooth fade
-        x = 20 + (i * 7) + Math.sin(progress * Math.PI + i) * 10
-        y = 30 + ((i * 5) % 40) + Math.cos(progress * Math.PI + i) * 10
+        x = 25 + (i * 12) + Math.sin(progress * Math.PI + i) * 8
+        y = 35 + ((i * 6) % 35) + Math.cos(progress * Math.PI + i) * 8
         size = 3
-        opacity = Math.max(0, (0.6 - progress) * 0.7)
-        blur = 4
         color = colors.primary
       }
 
-      particles.push({
-        id: i,
-        x,
-        y,
-        size,
-        opacity,
-        blur,
-        color,
-      })
+      result.push({ id: i, x, y, size, color })
     }
-    return particles
-  }
+    return result
+  }, [transition.toTheme, progress, colors])
 
-  const particles = generateParticles()
+  const particleOpacity = Math.max(0, 1 - progress * 1.4)
 
   return (
-    <>
+    <div
+      className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden"
+      style={{
+        opacity: 1 - progress * 0.8,
+        willChange: 'opacity',
+      }}
+    >
+      {/* Simplified gradient overlay */}
       <div
-        className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden"
+        className="absolute inset-0"
         style={{
-          opacity: 1 - progress * 0.7,
-          backdropFilter: `blur(${progress * 8}px)`,
-          WebkitBackdropFilter: `blur(${progress * 8}px)`,
+          background: transition.toTheme === 'sunset' 
+            ? `radial-gradient(ellipse 100% 60% at 50% 45%, ${colors.primary}30, ${colors.secondary}15, transparent 65%)`
+            : transition.toTheme === 'countryside'
+            ? `radial-gradient(circle at 50% 35%, ${colors.primary}25, ${colors.accent}12, transparent 60%)`
+            : `radial-gradient(circle at 50% 50%, ${colors.primary}22, transparent 65%)`,
+          transform: `scale(${waveScale})`,
+          opacity: waveOpacity * 0.8,
+          willChange: 'transform, opacity',
         }}
-      >
-        {/* Multi-layered gradient overlays with theme-specific styling */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: transition.toTheme === 'sunset' 
-              ? `radial-gradient(ellipse 100% 60% at 50% 45%, ${colors.accent}30, ${colors.primary}20, ${colors.secondary}10, transparent 70%)`
-              : transition.toTheme === 'countryside'
-              ? `radial-gradient(circle at 50% 30%, ${colors.secondary}25, ${colors.primary}15, ${colors.accent}10, transparent 65%)`
-              : `radial-gradient(circle at 50% 50%, ${colors.primary}20, ${colors.secondary}10, transparent 70%)`,
-            transform: `scale(${waveScale})`,
-            opacity: waveOpacity,
-            transition: 'background 0.3s ease-out',
-          }}
-        />
+      />
 
-        {/* Secondary gradient for depth and atmosphere */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: transition.toTheme === 'sunset'
-              ? `linear-gradient(to bottom, ${colors.glow}20, ${colors.secondary}15 50%, transparent 80%)`
-              : transition.toTheme === 'countryside'
-              ? `linear-gradient(to top, ${colors.accent}20, ${colors.primary}15 40%, transparent 70%)`
-              : `radial-gradient(ellipse 800px 600px at 50% 40%, ${colors.accent}15, transparent 60%)`,
-            opacity: progress * 0.5,
-          }}
-        />
+      {/* Simplified ripple - only 2 rings */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        {[1, 0.6].map((scaleMultiplier, ringIdx) => (
+          <div
+            key={ringIdx}
+            style={{
+              position: 'absolute',
+              width: `${250 + progress * 550 * scaleMultiplier}px`,
+              height: `${250 + progress * 550 * scaleMultiplier}px`,
+              borderRadius: '50%',
+              border: `2px solid ${colors.primary}`,
+              opacity: Math.max(0, (1 - progress) * (0.5 - ringIdx * 0.2)),
+              willChange: 'transform, opacity',
+            }}
+          />
+        ))}
+      </div>
 
-        {/* Tertiary gradient layer for richness */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(circle at ${30 + progress * 40}% ${40 + progress * 20}%, ${colors.glow}15, transparent 50%)`,
-            opacity: (1 - progress) * 0.3,
-          }}
-        />
-
-        {/* Animated ripple circles - enhanced with multiple rings and theme colors */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          {[1, 0.7, 0.4].map((scaleMultiplier, ringIdx) => (
+      {/* Optimized particles */}
+      {progress < 0.65 && (
+        <div className="absolute inset-0">
+          {particles.map((particle) => (
             <div
-              key={ringIdx}
+              key={particle.id}
+              className="absolute rounded-full"
               style={{
-                position: 'absolute',
-                width: `${220 + progress * 600 * scaleMultiplier}px`,
-                height: `${220 + progress * 600 * scaleMultiplier}px`,
-                borderRadius: '50%',
-                border: `${3 - ringIdx}px solid ${ringIdx === 0 ? colors.primary : ringIdx === 1 ? colors.secondary : colors.accent}`,
-                opacity: Math.max(0, (1 - progress) * (1 - scaleMultiplier * 0.4) * 0.6),
-                transform: `scale(${1 + progress * 0.4 * (1 - scaleMultiplier)})`,
-                boxShadow: `0 0 ${40 + progress * 60}px ${colors.glow}50, inset 0 0 ${20 + progress * 30}px ${colors.glow}30`,
-                filter: `blur(${ringIdx * 0.5}px)`,
+                left: `${particle.x}%`,
+                top: `${particle.y}%`,
+                width: `${particle.size}px`,
+                height: `${particle.size}px`,
+                backgroundColor: particle.color,
+                opacity: particleOpacity,
+                boxShadow: `0 0 8px ${particle.color}`,
+                willChange: 'transform, opacity',
               }}
             />
           ))}
         </div>
-
-        {/* Theme-specific particle effects with enhanced styling */}
-        {progress < 0.7 && (
-          <div className="absolute inset-0">
-            {particles.map((particle) => (
-              <div
-                key={particle.id}
-                className="absolute rounded-full"
-                style={{
-                  left: `${particle.x}%`,
-                  top: `${particle.y}%`,
-                  width: `${particle.size}px`,
-                  height: `${particle.size}px`,
-                  backgroundColor: particle.color,
-                  opacity: particle.opacity,
-                  boxShadow: `0 0 ${particle.blur * 2}px ${particle.color}${Math.round(particle.opacity * 255).toString(16).padStart(2, '0')}, 0 0 ${particle.blur}px ${particle.color}`,
-                  filter: `blur(${particle.blur * 0.5}px)`,
-                  transform: `scale(${1 + (progress * 0.3)})`,
-                  transition: 'all 0.1s ease-out',
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Ambient light shimmer for sunset/countryside */}
-        {(transition.toTheme === 'sunset' || transition.toTheme === 'countryside') && progress < 0.5 && (
-          <div
-            className="absolute inset-0"
-            style={{
-              background: transition.toTheme === 'sunset'
-                ? `linear-gradient(135deg, ${colors.accent}10, transparent 30%, ${colors.primary}10 70%, transparent)`
-                : `linear-gradient(45deg, transparent 20%, ${colors.glow}15 50%, transparent 80%)`,
-              opacity: Math.sin(progress * Math.PI) * 0.4,
-              mixBlendMode: 'screen',
-            }}
-          />
-        )}
-      </div>
-
-      {/* Enhanced background glow effect with smoother transition */}
-      <div 
-        className="theme-glow-enhanced fixed inset-0 pointer-events-none z-[9998]"
-        style={{
-          opacity: transition.isActive ? 0.5 : 0.25,
-          background: `radial-gradient(circle at 50% 50%, ${colors.primary}25, ${colors.secondary}15, transparent 50%)`,
-          filter: `blur(${transition.isActive ? 100 : 80}px)`,
-          transform: `scale(${transition.isActive ? 1.1 : 1})`,
-          transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
-      />
-    </>
+      )}
+    </div>
   )
 }
 

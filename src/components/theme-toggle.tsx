@@ -5,6 +5,7 @@ import { Palette, Leaf, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 
 import { cn } from '@/components/ui/cn'
+import { markThemeFeatureAcknowledged } from '@/components/theme-feature-notification'
 
 const themeOptions = [
   { value: 'light', label: 'Sáng', icon: Sun },
@@ -45,6 +46,8 @@ export const ThemeToggle = () => {
   const handleSelect = (value: string) => {
     setTheme(value)
     setIsOpen(false)
+    // Mark theme feature as acknowledged when user interacts with theme toggle
+    markThemeFeatureAcknowledged()
   }
 
   const ActiveIcon = activeTheme?.icon ?? Sun

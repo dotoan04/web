@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useLocalStorage } from '@/hooks/use-local-storage'
 import { collectUserInfo, type UserInfo } from '@/lib/user-info'
+import { ThemeFeatureNotification } from '@/components/theme-feature-notification'
 
 type QuizOption = {
   id: string
@@ -752,6 +753,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   return (
     <div className="relative mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6">
+      <ThemeFeatureNotification />
+      
       {showNamePrompt &&
         typeof document !== 'undefined' &&
         createPortal(
