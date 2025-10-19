@@ -48,7 +48,7 @@
     "dotenv": "^17.2.3",
     "framer-motion": "^12.23.24",
     "gray-matter": "^4.0.3",
-    "happy-dom": "^20.0.5",
+    "happy-dom": "^18.0.1",
     "jszip": "^3.10.1",
     "liquid-glass-react": "^1.1.1",
     "lowlight": "^3.3.0",
