@@ -149,7 +149,7 @@ export default async function QuizHistoryPage({ params, searchParams }: PageProp
                   {filteredSubmissions.map((submission) => (
                     <tr key={submission.id} className="align-top text-ink-600 dark:text-ink-200">
                       <td className="py-3 font-medium text-ink-800 dark:text-ink-100">
-                        {submission.participant || 'Anonymous'}
+                        {submission.participantName || 'Anonymous'}
                       </td>
                       <td className="py-3">
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">
