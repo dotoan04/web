@@ -82,8 +82,7 @@ export const ThemeTransition = () => {
     previousThemeRef.current = theme
   }, [theme, mounted])
 
-  if (!transition.isActive) return null
-
+  // Helper function to get theme colors
   const getThemeColors = (themeName: string) => {
     const themeColorMap = {
       light: {
@@ -99,30 +98,31 @@ export const ThemeTransition = () => {
         glow: '#60a5fa',
       },
       sunset: {
-        primary: '#ff6b35', // Vibrant orange-red
-        secondary: '#f7931e', // Golden orange
-        accent: '#fbbf24', // Warm yellow
-        glow: '#fb923c', // Soft orange glow
+        primary: '#ff6b35',
+        secondary: '#f7931e',
+        accent: '#fbbf24',
+        glow: '#fb923c',
       },
       countryside: {
-        primary: '#10b981', // Emerald green
-        secondary: '#34d399', // Lighter green
-        accent: '#6ee7b7', // Mint green
-        glow: '#86efac', // Soft green glow
+        primary: '#10b981',
+        secondary: '#34d399',
+        accent: '#6ee7b7',
+        glow: '#86efac',
       },
     }
     return themeColorMap[themeName as keyof typeof themeColorMap] || themeColorMap.light
   }
 
+  // Calculate all values before early return (React Hooks rules)
   const colors = getThemeColors(transition.toTheme)
   const progress = transition.progress
-
-  // Smooth wave effect using eased progress
   const waveScale = 1 + (0.1 * Math.sin(progress * Math.PI * 2))
   const waveOpacity = Math.max(0, Math.cos((progress - 0.3) * Math.PI * 1.5))
 
   // Optimized particles generation - reduced count for better performance
   const particles = useMemo(() => {
+    if (!transition.isActive) return []
+    
     const particleCount = transition.toTheme === 'sunset' ? 10 : transition.toTheme === 'countryside' ? 8 : 6
     const result = []
 
@@ -153,9 +153,12 @@ export const ThemeTransition = () => {
       result.push({ id: i, x, y, size, color })
     }
     return result
-  }, [transition.toTheme, progress, colors])
+  }, [transition.isActive, transition.toTheme, progress, colors])
 
   const particleOpacity = Math.max(0, 1 - progress * 1.4)
+
+  // Early return after all hooks are called
+  if (!transition.isActive) return null
 
   return (
     <div
