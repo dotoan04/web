@@ -230,6 +230,9 @@ export const createSubmission = async (input: {
   const normalizedIncorrectCount =
     quiz.questions.length - normalizedCorrectCount
 
+  // Detect device type from user agent
+  const deviceType = input.userAgent ? detectDeviceType(input.userAgent) : null
+
   const submission = await prisma.quizSubmission.create({
     data: {
       quizId: quiz.id,
@@ -237,6 +240,11 @@ export const createSubmission = async (input: {
       answers: input.answers,
       score,
       totalPoints,
+      correctCount: normalizedCorrectCount,
+      incorrectCount: normalizedIncorrectCount,
+      durationSeconds: input.durationSeconds ?? null,
+      deviceType,
+      clientIp: input.clientIp ?? null,
     },
   })
 

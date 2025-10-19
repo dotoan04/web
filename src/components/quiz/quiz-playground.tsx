@@ -414,30 +414,30 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   )
 
   const handleSubmit = useCallback(async () => {
-    if (progress.completed) return
+    if (progress.completed || submitting) return
 
-    setSubmitting(true)
     setError(null)
 
+    const answered = Object.fromEntries(
+      Object.entries(progress.answers).filter(([, value]) => value.length > 0),
+    )
+
+    const durationSeconds = Math.max(
+      0,
+      Math.min(
+        quiz.durationSeconds,
+        Math.round((Date.now() - new Date(progress.startedAt).getTime()) / 1000),
+      ),
+    )
+
+    if (!storedName) {
+      pendingSubmissionRef.current = { answers: answered, durationSeconds }
+      setShowNamePrompt(true)
+      return
+    }
+
+    setSubmitting(true)
     try {
-      const answered = Object.fromEntries(
-        Object.entries(progress.answers).filter(([, value]) => value.length > 0),
-      )
-
-      const durationSeconds = Math.max(
-        0,
-        Math.min(
-          quiz.durationSeconds,
-          Math.round((Date.now() - new Date(progress.startedAt).getTime()) / 1000),
-        ),
-      )
-
-      if (!storedName) {
-        pendingSubmissionRef.current = { answers: answered, durationSeconds }
-        setShowNamePrompt(true)
-        return
-      }
-
       await submitQuiz({
         answers: answered,
         durationSeconds,
@@ -446,10 +446,9 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     } catch (error) {
       console.error(error)
       setError((error as Error).message)
-    } finally {
       setSubmitting(false)
     }
-  }, [progress.answers, progress.completed, progress.startedAt, quiz.durationSeconds, storedName, submitQuiz])
+  }, [progress.answers, progress.completed, progress.startedAt, quiz.durationSeconds, storedName, submitQuiz, submitting])
 
   const handleReset = useCallback(() => {
     clearProgress()
@@ -461,26 +460,46 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     setShowNamePrompt(false)
   }, [clearProgress, quiz, setProgress])
 
-  const handleSaveName = useCallback(() => {
+  const handleSaveName = useCallback(async () => {
+    if (submitting) return
+    
     const trimmed = nameInput.trim()
     const finalName = trimmed.length > 0 ? trimmed : 'Anonymous'
     setStoredName(finalName)
     setShowNamePrompt(false)
     hasPromptedRef.current = true
+    
     if (pendingSubmissionRef.current) {
-      void submitQuiz({ ...pendingSubmissionRef.current, participant: finalName })
+      setSubmitting(true)
+      try {
+        await submitQuiz({ ...pendingSubmissionRef.current, participant: finalName })
+      } catch (error) {
+        console.error(error)
+        setError((error as Error).message)
+        setSubmitting(false)
+      }
       pendingSubmissionRef.current = null
     }
-  }, [nameInput, setStoredName, submitQuiz])
+  }, [nameInput, setStoredName, submitQuiz, submitting])
 
-  const handleSkipName = useCallback(() => {
+  const handleSkipName = useCallback(async () => {
+    if (submitting) return
+    
     setShowNamePrompt(false)
     hasPromptedRef.current = true
+    
     if (pendingSubmissionRef.current) {
-      void submitQuiz({ ...pendingSubmissionRef.current, participant: 'Anonymous' })
+      setSubmitting(true)
+      try {
+        await submitQuiz({ ...pendingSubmissionRef.current, participant: 'Anonymous' })
+      } catch (error) {
+        console.error(error)
+        setError((error as Error).message)
+        setSubmitting(false)
+      }
       pendingSubmissionRef.current = null
     }
-  }, [submitQuiz])
+  }, [submitQuiz, submitting])
 
   const getOptionState = useCallback(
     (question: QuizQuestion, option: QuizOption) => {

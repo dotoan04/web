@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useTheme } from 'next-themes'
 
 interface ThemeTransition {
@@ -34,18 +34,29 @@ export const ThemeTransition = () => {
     isActive: false,
     progress: 0,
   })
+  const [mounted, setMounted] = useState(false)
+  const previousThemeRef = useRef<string | undefined>(undefined)
+
+  // Mark as mounted after first render
+  useEffect(() => {
+    setMounted(true)
+    previousThemeRef.current = theme
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
-    if (!theme) return
-
-    const handleThemeChange = () => {
-      setTransition((prev) => ({
-        ...prev,
-        toTheme: theme,
-        isActive: true,
-        progress: 0,
-        fromTheme: prev.toTheme,
-      }))
+    if (!theme || !mounted) return
+    
+    // Only trigger transition if theme actually changed (not on mount or navigation)
+    if (previousThemeRef.current && previousThemeRef.current !== theme) {
+      const handleThemeChange = () => {
+        setTransition((prev) => ({
+          ...prev,
+          toTheme: theme,
+          isActive: true,
+          progress: 0,
+          fromTheme: prev.toTheme,
+        }))
 
       // Enhanced animation timeline with smoother easing
       const duration = 750 // 750ms for more luxurious feel
@@ -75,11 +86,15 @@ export const ThemeTransition = () => {
         }
       }, stepDuration)
 
-      return () => clearInterval(interval)
-    }
+        return () => clearInterval(interval)
+      }
 
-    handleThemeChange()
-  }, [theme])
+      handleThemeChange()
+    }
+    
+    // Update previous theme ref
+    previousThemeRef.current = theme
+  }, [theme, mounted])
 
   if (!transition.isActive) return null
 
