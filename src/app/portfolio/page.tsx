@@ -1,4 +1,4 @@
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, Calendar, MapPin } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { SkillProgress } from '@/components/portfolio/skill-progress'
 import { createDynamicMetadata } from '@/lib/metadata'
 import { resolveSitePreferences } from '@/server/settings'
 import { getPortfolioProjects } from '@/server/portfolio'
+import { getWorkExperiences } from '@/server/work-experience'
 
 export const revalidate = 60 // Revalidate every minute for faster updates
 
@@ -33,7 +34,11 @@ const formatLinkLabel = (url: string) => {
 }
 
 export default async function PortfolioPage() {
-  const [preferences, projects] = await Promise.all([resolveSitePreferences(), getPortfolioProjects()])
+  const [preferences, projects, workExperiences] = await Promise.all([
+    resolveSitePreferences(),
+    getPortfolioProjects(),
+    getWorkExperiences(),
+  ])
 
   const slogan = preferences.slogan || 'Crafting calm experiences & resilient systems.'
   const intro =
@@ -70,21 +75,28 @@ export default async function PortfolioPage() {
     },
     { label: 'Quá trình học tập', value: education },
   ]
-  const highlightCards = [
-    {
-      title: 'Trải nghiệm tinh gọn',
-      body: 'Thiết kế flow rõ ràng, ưu tiên sự thông suốt và cảm giác nhẹ nhàng khi người dùng tương tác.',
-    },
-    {
-      title: 'Kể chuyện bằng dữ liệu',
-      body: 'Kết hợp phân tích và cảm xúc để truyền tải thông điệp, giúp sản phẩm tạo được kết nối bền vững.',
-    },
-    {
-      title: 'Tư duy hệ thống',
-      body: 'Xây dựng kiến trúc có thể mở rộng, tự động hoá quy trình và duy trì chất lượng dài hạn.',
-    },
-  ]
   const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'dotoan159@gmail.com'
+  
+  // Format date range for work experience
+  const formatDateRange = (startDate: Date, endDate: Date | null, isCurrent: boolean) => {
+    const start = new Date(startDate).toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' })
+    if (isCurrent) return `${start} - Hiện tại`
+    if (!endDate) return start
+    const end = new Date(endDate).toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' })
+    return `${start} - ${end}`
+  }
+  
+  // Calculate duration
+  const calculateDuration = (startDate: Date, endDate: Date | null, isCurrent: boolean) => {
+    const start = new Date(startDate)
+    const end = isCurrent || !endDate ? new Date() : new Date(endDate)
+    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    const years = Math.floor(months / 12)
+    const remainingMonths = months % 12
+    if (years > 0 && remainingMonths > 0) return `${years} năm ${remainingMonths} tháng`
+    if (years > 0) return `${years} năm`
+    return `${remainingMonths} tháng`
+  }
 
   return (
     <main className="space-y-16">
@@ -173,21 +185,62 @@ export default async function PortfolioPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 md:grid-cols-3">
-        {highlightCards.map((item) => (
-          <Card
-            key={item.title}
-            className="border border-ink-100/70 bg-white/75 shadow-[0_18px_45px_rgba(33,38,94,0.1)] transition hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(33,38,94,0.15)] dark:border-ink-700/70 dark:bg-ink-900/60 dark:text-ink-100"
-          >
-            <CardHeader>
-              <CardTitle className="text-lg text-ink-900 dark:text-ink-50">{item.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-relaxed text-ink-600 dark:text-ink-200">{item.body}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+      {workExperiences.length > 0 && (
+        <section className="space-y-10">
+          <div className="space-y-2">
+            <h2 className="font-display text-3xl text-ink-900 dark:text-ink-50">Kinh nghiệm làm việc</h2>
+            <p className="text-sm text-ink-500 dark:text-ink-300">
+              Hành trình phát triển nghề nghiệp và những trải nghiệm quý báu đã tích lũy được.
+            </p>
+          </div>
+          <div className="space-y-6">
+            {workExperiences.map((experience) => (
+              <Card
+                key={experience.id}
+                className="border border-ink-100/70 bg-white/75 shadow-[0_18px_45px_rgba(33,38,94,0.1)] dark:border-ink-700/70 dark:bg-ink-900/60"
+              >
+                <CardHeader className="gap-3 border-b border-ink-100/70 bg-white/85 dark:border-ink-700/70 dark:bg-ink-900/60">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="font-display text-2xl text-ink-900 dark:text-ink-50">
+                        {experience.company}
+                      </CardTitle>
+                      <p className="mt-1 text-lg font-medium text-ink-700 dark:text-ink-200">
+                        {experience.position}
+                      </p>
+                    </div>
+                    {experience.isCurrent && (
+                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                        Hiện tại
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-ink-500 dark:text-ink-300">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={16} />
+                      <span>{formatDateRange(experience.startDate, experience.endDate, experience.isCurrent)}</span>
+                      <span className="text-ink-400">({calculateDuration(experience.startDate, experience.endDate, experience.isCurrent)})</span>
+                    </div>
+                    {experience.location && (
+                      <div className="flex items-center gap-2">
+                        <MapPin size={16} />
+                        <span>{experience.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+                {experience.description && (
+                  <CardContent className="bg-white/70 py-6 dark:bg-ink-900/40">
+                    <p className="text-sm leading-relaxed text-ink-600 dark:text-ink-200 whitespace-pre-line">
+                      {experience.description}
+                    </p>
+                  </CardContent>
+                )}
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-10">
         <div className="space-y-2">
