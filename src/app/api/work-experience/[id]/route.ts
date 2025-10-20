@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/lib/auth/options'
+import { authOptions } from '@/lib/auth/config'
 import { workExperienceSchema } from '@/lib/validators/work-experience'
 import {
   deleteWorkExperience,
