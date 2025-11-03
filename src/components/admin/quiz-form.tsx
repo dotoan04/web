@@ -13,11 +13,13 @@ import { slugify } from '@/lib/utils'
 type ImportedQuestion = {
   id: string
   title: string
+  imageUrl?: string
   options: Array<{
     id: string
     text: string
     isCorrect: boolean
     order: number
+    imageUrl?: string
   }>
   multi: boolean
 }
@@ -25,6 +27,7 @@ type ImportedQuestion = {
 type QuizOptionForm = {
   id?: string
   text: string
+  imageUrl?: string
   isCorrect: boolean
   order: number
 }
@@ -33,6 +36,7 @@ type QuizQuestionForm = {
   id?: string
   title: string
   content: string
+  imageUrl?: string
   type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
   order: number
   points: number
@@ -299,12 +303,14 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
       return {
         title: item.title,
         content: '',
+        imageUrl: item.imageUrl || '',
         type: (correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE') as 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE',
         order: questionIndex,
         points: 1,
         explanation: '',
         options: item.options.map((option, optionIndex) => ({
           text: option.text,
+          imageUrl: option.imageUrl || '',
           isCorrect: option.isCorrect,
           order: optionIndex,
         })),
@@ -481,6 +487,7 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
             ...(isValidCuid(question.id) ? { id: question.id } : {}),
             title: question.title,
             content: question.content,
+            imageUrl: question.imageUrl,
             type: question.type,
             order: index,
             points: question.points,
@@ -488,6 +495,7 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
             options: question.options.map((option, optionIndex) => ({
               ...(isValidCuid(option.id) ? { id: option.id } : {}),
               text: option.text,
+              imageUrl: option.imageUrl,
               isCorrect: option.isCorrect,
               order: optionIndex,
             })),
@@ -607,16 +615,28 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                   {displayedPreview.map((question) => (
                     <article key={question.id} className="rounded-2xl border border-ink-200/70 bg-white p-4 text-sm dark:border-ink-700 dark:bg-ink-900">
                       <h5 className="font-semibold text-ink-700 dark:text-ink-100">{question.title}</h5>
+                      {question.imageUrl && (
+                        <div className="mt-2">
+                          <img src={question.imageUrl} alt="Question" className="max-w-full h-auto rounded-lg border border-ink-200" />
+                        </div>
+                      )}
                       <ul className="mt-2 space-y-1">
                         {question.options.map((option) => (
                           <li
                             key={option.id}
-                            className={`flex items-center gap-2 ${
+                            className={`flex items-start gap-2 ${
                               option.isCorrect ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-600 dark:text-ink-300'
                             }`}
                           >
                             <span className="font-semibold">{option.order + 1}.</span>
-                            <span>{option.text}</span>
+                            <div className="flex-1">
+                              <span>{option.text}</span>
+                              {option.imageUrl && (
+                                <div className="mt-1">
+                                  <img src={option.imageUrl} alt="Option" className="max-w-xs h-auto rounded border border-ink-200" />
+                                </div>
+                              )}
+                            </div>
                             {option.isCorrect ? (
                               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                                 Đúng

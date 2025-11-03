@@ -223,6 +223,7 @@ model QuizQuestion {
   quizId      String
   title       String
   content     String?
+  imageUrl    String?
   type        QuizQuestionType @default(SINGLE_CHOICE)
   order       Int              @default(0)
   points      Int              @default(1)
@@ -238,6 +239,7 @@ model QuizOption {
   id         String  @id @default(cuid())
   questionId String
   text       String
+  imageUrl   String?
   isCorrect  Boolean @default(false)
   order      Int     @default(0)
 
