@@ -409,10 +409,6 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
         throw new Error('Chỉ hỗ trợ tập tin Word (.docx).')
       }
 
-      if (file.size > 8 * 1024 * 1024) {
-        throw new Error('Tập tin quá lớn. Giới hạn 8MB.')
-      }
-
       setImporting(true)
       const form = new FormData()
       form.append('file', file)

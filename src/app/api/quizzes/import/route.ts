@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server'
 
 import { parseQuizContent, sanitizeParsedQuestions } from '@/lib/quizz/word-parser'
 
-const MAX_SIZE = 8 * 1024 * 1024 // 8MB
-
 export const runtime = 'nodejs'
+export const maxDuration = 300 // 5 minutes for large files
 
 export async function POST(request: Request) {
   const contentType = request.headers.get('content-type') || ''
@@ -20,10 +19,6 @@ export async function POST(request: Request) {
       }
 
       if (file) {
-        if (file.size > MAX_SIZE) {
-          return NextResponse.json({ error: 'Tập tin quá lớn. Giới hạn 8MB.' }, { status: 413 })
-        }
-
         const arrayBuffer = await file.arrayBuffer()
         const questions = await parseQuizContent({ buffer: arrayBuffer, text: fallbackText })
         return NextResponse.json({ questions: sanitizeParsedQuestions(questions) })
