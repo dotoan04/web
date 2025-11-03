@@ -13,6 +13,10 @@ const nextConfig = {
     },
     // Optimize package imports
     optimizePackageImports: ['@/components', '@/lib', 'lucide-react'],
+    // Allow large file uploads
+    serverActions: {
+      bodySizeLimit: '100mb',
+    },
   },
   // Optimize font loading for production builds
   optimizeFonts: true,

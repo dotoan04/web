@@ -418,11 +418,17 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
         body: form,
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
+        // Handle 413 Request Entity Too Large
+        if (response.status === 413) {
+          throw new Error('Tệp quá lớn. Vui lòng thử tệp nhỏ hơn hoặc liên hệ quản trị viên để tăng giới hạn upload.')
+        }
+        
+        const data = await response.json().catch(() => ({}))
         throw new Error(data?.error ?? 'Không thể phân tích tập tin.')
       }
+
+      const data = await response.json()
 
       setPreview((data.questions as ImportedQuestion[]) ?? [])
     } catch (err) {
