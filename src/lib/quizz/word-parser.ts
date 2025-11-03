@@ -125,7 +125,7 @@ const extractParagraphs = async (xml: string, relsMap?: Map<string, string>, zip
     }
   }
 
-  for (const paragraph of paragraphs) {
+  paragraphs.forEach((paragraph) => {
     let buffer = ''
     let isColored = false
     let currentNumId: string | null = null

@@ -617,6 +617,7 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                       <h5 className="font-semibold text-ink-700 dark:text-ink-100">{question.title}</h5>
                       {question.imageUrl && (
                         <div className="mt-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={question.imageUrl} alt="Question" className="max-w-full h-auto rounded-lg border border-ink-200" />
                         </div>
                       )}
@@ -633,6 +634,7 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                               <span>{option.text}</span>
                               {option.imageUrl && (
                                 <div className="mt-1">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img src={option.imageUrl} alt="Option" className="max-w-xs h-auto rounded border border-ink-200" />
                                 </div>
                               )}
