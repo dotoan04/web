@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { ImageUploader } from '@/components/admin/image-uploader'
 import { slugify } from '@/lib/utils'
 
 type ImportedQuestion = {
@@ -97,46 +98,63 @@ type OptionRowProps = {
   onSelectCorrect: () => void
   onToggleCorrect: () => void
   onChangeText: (value: string) => void
+  onChangeImageUrl: (url: string | null) => void
   onRemove: () => void
 }
 
-const OptionRow = memo(({ option, questionIndex, optionIndex, isCorrect, disableRemove, questionType, onSelectCorrect, onToggleCorrect, onChangeText, onRemove }: OptionRowProps) => (
+const OptionRow = memo(({ option, questionIndex, optionIndex, isCorrect, disableRemove, questionType, onSelectCorrect, onToggleCorrect, onChangeText, onChangeImageUrl, onRemove }: OptionRowProps) => (
   <div className="rounded-xl border border-ink-200/60 bg-white/80 p-3 dark:border-ink-700 dark:bg-ink-800/60">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-      <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">
-        {questionType === 'SINGLE_CHOICE' ? (
-          <input
-            type="radio"
-            name={`question-${questionIndex}`}
-            checked={isCorrect}
-            onChange={onSelectCorrect}
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">
+          {questionType === 'SINGLE_CHOICE' ? (
+            <input
+              type="radio"
+              name={`question-${questionIndex}`}
+              checked={isCorrect}
+              onChange={onSelectCorrect}
+            />
+          ) : (
+            <input
+              type="checkbox"
+              checked={isCorrect}
+              onChange={onToggleCorrect}
+            />
+          )}
+          Đáp án đúng
+        </label>
+        <Input
+          value={option.text}
+          onChange={(event) => onChangeText(event.target.value)}
+          placeholder={`Phương án ${option.order + 1}`}
+          className="flex-1"
+          required
+        />
+        <div className="flex items-center gap-2">
+          <ImageUploader
+            value={option.imageUrl}
+            onChange={onChangeImageUrl}
+            compact
           />
-        ) : (
-          <input
-            type="checkbox"
-            checked={isCorrect}
-            onChange={onToggleCorrect}
-          />
-        )}
-        Đáp án đúng
-      </label>
-      <Input
-        value={option.text}
-        onChange={(event) => onChangeText(event.target.value)}
-        placeholder={`Phương án ${option.order + 1}`}
-        className="flex-1"
-        required
-      />
-      <div className="flex items-center gap-2">
-        <span className="rounded-full bg-ink-100 px-2 py-1 text-xs font-medium text-ink-500 dark:bg-ink-900/40 dark:text-ink-300">
-          {option.order + 1}
-        </span>
-        {!disableRemove ? (
-          <Button type="button" variant="ghost" onClick={onRemove} className="text-rose-500 hover:text-rose-600">
-            Xoá
-          </Button>
-        ) : null}
+          <span className="rounded-full bg-ink-100 px-2 py-1 text-xs font-medium text-ink-500 dark:bg-ink-900/40 dark:text-ink-300">
+            {option.order + 1}
+          </span>
+          {!disableRemove ? (
+            <Button type="button" variant="ghost" size="sm" onClick={onRemove} className="text-rose-500 hover:text-rose-600">
+              Xoá
+            </Button>
+          ) : null}
+        </div>
       </div>
+      {option.imageUrl && (
+        <div className="ml-8">
+          <ImageUploader
+            value={option.imageUrl}
+            onChange={onChangeImageUrl}
+            label="Ảnh đáp án"
+          />
+        </div>
+      )}
     </div>
   </div>
 ))
@@ -215,6 +233,14 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
       />
     </div>
 
+    <div className="mt-4">
+      <ImageUploader
+        value={question.imageUrl}
+        onChange={(url) => onChange((current) => ({ ...current, imageUrl: url ?? undefined }))}
+        label="Ảnh câu hỏi (tuỳ chọn)"
+      />
+    </div>
+
     <div className="mt-6 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-ink-600 dark:text-ink-200">Các phương án</p>
@@ -238,6 +264,12 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
               onChange((current) => ({
                 ...current,
                 options: current.options.map((item, idx) => (idx === optionIndex ? { ...item, text: value } : item)),
+              }))
+            }
+            onChangeImageUrl={(url) =>
+              onChange((current) => ({
+                ...current,
+                options: current.options.map((item, idx) => (idx === optionIndex ? { ...item, imageUrl: url ?? undefined } : item)),
               }))
             }
             onRemove={() => onRemoveOption(optionIndex)}

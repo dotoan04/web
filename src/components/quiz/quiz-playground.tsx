@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { SmartImage } from '@/components/ui/smart-image'
 import { useLocalStorage } from '@/hooks/use-local-storage'
 import { collectUserInfo, type UserInfo } from '@/lib/user-info'
 import { ThemeFeatureNotification } from '@/components/theme-feature-notification'
@@ -13,6 +14,7 @@ import { ThemeFeatureNotification } from '@/components/theme-feature-notificatio
 type QuizOption = {
   id: string
   text: string
+  imageUrl?: string | null
   isCorrect: boolean
   order: number
 }
@@ -21,6 +23,7 @@ type QuizQuestion = {
   id: string
   title: string
   content: string | null
+  imageUrl?: string | null
   type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
   order: number
   points: number
@@ -649,7 +652,20 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               className="relative z-10 h-4 w-4 shrink-0 rounded border border-white/40 bg-white/40 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0 dark:border-slate-600/50 dark:bg-slate-900/50"
             />
             
-            <span className="relative z-10 flex-1 text-sm sm:text-base font-medium leading-relaxed font-sans break-words">{option.text}</span>
+            <div className="relative z-10 flex-1 flex items-center gap-3">
+              {option.imageUrl && (
+                <div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-lg border-2 border-white/30 dark:border-slate-600/30">
+                  <SmartImage
+                    src={option.imageUrl}
+                    alt={option.text}
+                    fill
+                    className="object-cover"
+                    sizes="64px"
+                  />
+                </div>
+              )}
+              <span className="text-sm sm:text-base font-medium leading-relaxed font-sans break-words">{option.text}</span>
+            </div>
             
             {state !== null ? (
               <span className={`relative z-10 shrink-0 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider backdrop-blur-sm ${statusBadgeTone}`}>
@@ -973,6 +989,20 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               {currentQuestion.points}
             </span>
           </div>
+
+          {currentQuestion.imageUrl && (
+            <div className="relative mb-4 sm:mb-6">
+              <div className="relative h-48 sm:h-64 md:h-80 w-full overflow-hidden rounded-xl sm:rounded-2xl border-2 border-white/30 dark:border-slate-700/30 shadow-lg">
+                <SmartImage
+                  src={currentQuestion.imageUrl}
+                  alt={currentQuestion.title}
+                  fill
+                  className="object-contain bg-white/50 dark:bg-slate-900/50"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
+              </div>
+            </div>
+          )}
 
           {currentQuestion.content && (
             <p className="relative mb-4 sm:mb-6 text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-200 bg-gray-50/60 rounded-lg sm:rounded-xl p-3 sm:p-4 backdrop-blur-sm border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30 font-sans">
