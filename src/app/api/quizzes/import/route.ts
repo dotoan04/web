@@ -49,8 +49,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ questions: sanitizeParsedQuestions(questions) })
   } catch (error) {
     console.error('Import quiz failed:', error)
+    
+    // Provide more specific error messages
+    const errorMessage = error instanceof Error ? error.message : 'Không thể phân tích nội dung bài kiểm tra.'
+    
+    // Check if it's an image processing error
+    if (errorMessage.includes('ảnh') || errorMessage.includes('image') || errorMessage.includes('Image')) {
+      return NextResponse.json(
+        { 
+          error: `Lỗi xử lý ảnh: ${errorMessage}. Vui lòng kiểm tra file Word và đảm bảo ảnh trong file không bị hỏng.` 
+        },
+        { status: 400 },
+      )
+    }
+    
     return NextResponse.json(
-      { error: (error as Error).message || 'Không thể phân tích nội dung bài kiểm tra.' },
+      { error: errorMessage },
       { status: 400 },
     )
   }

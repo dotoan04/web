@@ -93,12 +93,43 @@ const parseRelationships = (relsXml: string): Map<string, string> => {
 }
 
 const convertImageToBase64 = (imageData: Uint8Array, extension: string): string => {
-  const base64 = Buffer.from(imageData).toString('base64')
-  const mimeType = extension === 'png' ? 'image/png' : 
-                   extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' :
-                   extension === 'gif' ? 'image/gif' :
-                   extension === 'webp' ? 'image/webp' : 'image/png'
-  return `data:${mimeType};base64,${base64}`
+  try {
+    // Ensure we have valid image data
+    if (!imageData || imageData.length === 0) {
+      throw new Error('Image data is empty')
+    }
+
+    // Convert Uint8Array to Buffer properly
+    // Handle both Uint8Array and regular array
+    const buffer = Buffer.isBuffer(imageData) 
+      ? imageData 
+      : Buffer.from(imageData.buffer, imageData.byteOffset, imageData.byteLength)
+    
+    const base64 = buffer.toString('base64')
+    
+    // Normalize extension and determine mime type
+    const normalizedExt = extension.toLowerCase().replace(/^\./, '').trim()
+    let mimeType = 'image/png' // default
+    
+    if (normalizedExt === 'png') {
+      mimeType = 'image/png'
+    } else if (normalizedExt === 'jpg' || normalizedExt === 'jpeg') {
+      mimeType = 'image/jpeg'
+    } else if (normalizedExt === 'gif') {
+      mimeType = 'image/gif'
+    } else if (normalizedExt === 'webp') {
+      mimeType = 'image/webp'
+    } else if (normalizedExt === 'bmp') {
+      mimeType = 'image/bmp'
+    } else if (normalizedExt === 'svg') {
+      mimeType = 'image/svg+xml'
+    }
+    
+    return `data:${mimeType};base64,${base64}`
+  } catch (error) {
+    console.error('Error converting image to base64:', error)
+    throw new Error(`Không thể xử lý ảnh: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`)
+  }
 }
 
 const extractParagraphs = async (xml: string, relsMap?: Map<string, string>, zip?: JSZip): Promise<ParagraphEntry[]> => {
@@ -112,15 +143,70 @@ const extractParagraphs = async (xml: string, relsMap?: Map<string, string>, zip
   if (relsMap && zip) {
     for (const [relId, target] of relsMap.entries()) {
       const imagePath = `word/${target}`
-      if (zip.files[imagePath]) {
-        try {
-          const imageData = await zip.files[imagePath].async('uint8array')
-          const extension = target.split('.').pop()?.toLowerCase() || 'png'
-          const base64Url = convertImageToBase64(imageData, extension)
-          imageCache.set(relId, base64Url)
-        } catch (error) {
-          console.error(`Failed to load image ${imagePath}:`, error)
+      
+      // Check if file exists and is not a directory
+      const zipFile = zip.files[imagePath]
+      if (!zipFile || zipFile.dir) {
+        continue
+      }
+      
+      try {
+        // Read image data as Uint8Array
+        const imageData = await zipFile.async('uint8array')
+        
+        // Validate image data
+        if (!imageData || imageData.length === 0) {
+          console.warn(`Image ${imagePath} is empty, skipping`)
+          continue
         }
+        
+        // Extract extension from target path
+        // Handle cases where target might be like "media/image1.png" or just "image1"
+        const pathParts = target.split('/')
+        const filename = pathParts[pathParts.length - 1] || target
+        const extension = filename.includes('.') 
+          ? filename.split('.').pop()?.toLowerCase() || 'png'
+          : 'png'
+        
+        // Detect image type from file signature if extension is missing or invalid
+        let detectedExtension = extension
+        if (imageData.length >= 3) {
+          // Get first few bytes for signature detection
+          const firstBytes = Array.from(imageData.slice(0, Math.min(12, imageData.length)))
+          
+          // PNG signature: 89 50 4E 47
+          if (firstBytes[0] === 0x89 && firstBytes[1] === 0x50 && firstBytes[2] === 0x4E && firstBytes[3] === 0x47) {
+            detectedExtension = 'png'
+          } 
+          // JPEG signature: FF D8 FF
+          else if (firstBytes[0] === 0xFF && firstBytes[1] === 0xD8 && firstBytes[2] === 0xFF) {
+            detectedExtension = 'jpeg'
+          } 
+          // GIF signature: 47 49 46 38 (GIF8)
+          else if (firstBytes[0] === 0x47 && firstBytes[1] === 0x49 && firstBytes[2] === 0x46 && firstBytes[3] === 0x38) {
+            detectedExtension = 'gif'
+          } 
+          // RIFF signature: 52 49 46 46 (could be WebP)
+          else if (firstBytes[0] === 0x52 && firstBytes[1] === 0x49 && firstBytes[2] === 0x46 && firstBytes[3] === 0x46) {
+            // Check if it's WebP (RIFF....WEBP)
+            if (imageData.length >= 12) {
+              const webpCheck = String.fromCharCode(...imageData.slice(8, 12))
+              if (webpCheck === 'WEBP') {
+                detectedExtension = 'webp'
+              }
+            }
+          }
+          // BMP signature: 42 4D
+          else if (firstBytes[0] === 0x42 && firstBytes[1] === 0x4D) {
+            detectedExtension = 'bmp'
+          }
+        }
+        
+        const base64Url = convertImageToBase64(imageData, detectedExtension)
+        imageCache.set(relId, base64Url)
+      } catch (error) {
+        console.error(`Failed to load image ${imagePath}:`, error)
+        // Continue processing other images instead of failing completely
       }
     }
   }
