@@ -30,6 +30,7 @@ const serializeQuiz = (quiz: Awaited<ReturnType<typeof getQuizBySlug>>) => {
         id: question.id,
         title: question.title,
         content: question.content,
+        imageUrl: question.imageUrl,
         type: question.type,
         order: question.order,
         points: question.points,
@@ -39,6 +40,7 @@ const serializeQuiz = (quiz: Awaited<ReturnType<typeof getQuizBySlug>>) => {
           .map((option) => ({
             id: option.id,
             text: option.text,
+            imageUrl: option.imageUrl,
             isCorrect: option.isCorrect,
             order: option.order,
           })),

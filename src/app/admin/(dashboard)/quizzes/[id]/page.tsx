@@ -45,6 +45,7 @@ export default async function EditQuizPage({ params }: Params) {
           id: question.id,
           title: question.title,
           content: question.content ?? '',
+          imageUrl: question.imageUrl ?? undefined,
           type: question.type,
           order: question.order,
           points: question.points,
@@ -52,6 +53,7 @@ export default async function EditQuizPage({ params }: Params) {
           options: question.options.map((option) => ({
             id: option.id,
             text: option.text,
+            imageUrl: option.imageUrl ?? undefined,
             isCorrect: option.isCorrect,
             order: option.order,
           })),
