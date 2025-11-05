@@ -16,6 +16,7 @@ type ImportedQuestion = {
   title: string
   content?: string
   imageUrl?: string
+  type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
   options: Array<{
     id: string
     text: string
@@ -551,12 +552,21 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
       }
 
       const nextQuestions = processedItems.map((item, questionIndex) => {
-        const correctCount = item.options.filter((opt) => opt.isCorrect).length
+        // Determine question type
+        let questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' = 'SINGLE_CHOICE'
+        
+        if (item.type === 'MATCHING') {
+          questionType = 'MATCHING'
+        } else {
+          const correctCount = item.options.filter((opt) => opt.isCorrect).length
+          questionType = correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE'
+        }
+        
         return {
           title: item.title,
           content: item.content || '',
           imageUrl: item.imageUrl || '',
-          type: (correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE') as 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE',
+          type: questionType,
           order: questionIndex,
           // Theory questions (no options) have 0 points by default
           points: item.options.length === 0 ? 0 : 1,
@@ -1033,7 +1043,19 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                 <div className="grid gap-3 max-h-96 overflow-y-auto rounded-lg border border-ink-200 p-3 dark:border-ink-700">
                   {displayedPreview.map((question) => (
                     <article key={question.id} className="rounded-2xl border border-ink-200/70 bg-white p-4 text-sm dark:border-ink-700 dark:bg-ink-900">
-                      <h5 className="font-semibold text-ink-700 dark:text-ink-100">{question.title}</h5>
+                      <div className="flex items-start gap-2 mb-2">
+                        <h5 className="flex-1 font-semibold text-ink-700 dark:text-ink-100">{question.title}</h5>
+                        {question.type === 'MATCHING' && (
+                          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-purple-700 dark:bg-purple-500/10 dark:text-purple-300">
+                            Ghép cặp
+                          </span>
+                        )}
+                        {question.type === 'MULTIPLE_CHOICE' && (
+                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
+                            Nhiều đáp án
+                          </span>
+                        )}
+                      </div>
                       {question.content && (
                         <div className="mt-2 whitespace-pre-wrap rounded-lg bg-ink-50 p-3 text-xs text-ink-600 dark:bg-ink-800/50 dark:text-ink-300">
                           {question.content}

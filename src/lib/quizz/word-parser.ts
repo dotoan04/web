@@ -36,6 +36,7 @@ type ParsedQuestion = {
   options: Array<{ key: string; value: string; isCorrect: boolean; imageUrl?: string }>
   correct: Set<number>
   multi: boolean
+  type?: 'matching' | 'truefalse' | 'regular'
 }
 
 const getColorValue = (run: Element) => {
@@ -487,12 +488,94 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
   }
 
   items.forEach((question) => {
+    // Detect matching questions (pairs separated by |)
+    const matchingPattern = /([^|]+)\|([^|]+)/g
+    const fullText = `${question.title} ${question.content}`.trim()
+    const matches = Array.from(fullText.matchAll(matchingPattern))
+    
+    if (matches.length >= 2 && question.options.length === 0) {
+      // This is a matching question
+      question.type = 'matching'
+      
+      // Extract pairs from title/content
+      matches.forEach((match, index) => {
+        const left = match[1].trim()
+        const right = match[2].trim()
+        
+        // Add left item (even index)
+        question.options.push({
+          key: `L${index + 1}`,
+          value: left,
+          isCorrect: true,  // All pairs are correct in matching
+          imageUrl: undefined
+        })
+        
+        // Add right item (odd index)
+        question.options.push({
+          key: `R${index + 1}`,
+          value: right,
+          isCorrect: true,
+          imageUrl: undefined
+        })
+        
+        question.correct.add(index * 2)
+        question.correct.add(index * 2 + 1)
+      })
+      
+      // Clean up title (remove the pairs, keep only the question part)
+      const cleanTitle = question.title.split(/[:|](?=\s*[A-Z])/)[0].trim()
+      question.title = cleanTitle
+      question.content = ''
+      return
+    }
+    
+    // Detect true/false questions
+    if (question.options.length === 2) {
+      const hasTrue = question.options.some(opt => 
+        /^(đúng|true|yes|có|t)$/i.test(opt.value.trim())
+      )
+      const hasFalse = question.options.some(opt => 
+        /^(sai|false|no|không|f)$/i.test(opt.value.trim())
+      )
+      
+      if (hasTrue && hasFalse) {
+        question.type = 'truefalse'
+      }
+    }
+    
+    // Process numbered items in content (1) Text 2) Text)
+    if (question.content && question.options.length === 0) {
+      const numberedPattern = /(\d+)\)\s*([^0-9]+?)(?=\d+\)|$)/g
+      const numberedMatches = Array.from(question.content.matchAll(numberedPattern))
+      
+      if (numberedMatches.length >= 2) {
+        // This is likely a question with numbered options
+        numberedMatches.forEach((match, index) => {
+          const text = match[2].trim()
+          const isCorrect = /đúng|true|correct/i.test(text) || 
+                           text.toLowerCase().includes('*')
+          
+          question.options.push({
+            key: String.fromCharCode(65 + index),  // A, B, C, D
+            value: text.replace(/\*+/g, '').trim(),
+            isCorrect: isCorrect,
+            imageUrl: undefined
+          })
+        })
+        
+        // Clean content if we extracted options
+        if (question.options.length > 0) {
+          question.content = ''
+        }
+      }
+    }
+    
     question.options.forEach((option, index) => {
       if (option.isCorrect) {
         question.correct.add(index)
       }
     })
-    if (question.correct.size > 1) {
+    if (question.correct.size > 1 && question.type !== 'matching') {
       question.multi = true
     }
   })
@@ -509,6 +592,7 @@ export type SanitizedQuizQuestion = {
   title: string
   content?: string
   imageUrl?: string
+  type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
   options: Array<{
     id: string
     text: string
@@ -538,17 +622,29 @@ export const parseQuizContent = async (input: { buffer?: ArrayBuffer; text?: str
 }
 
 export const sanitizeParsedQuestions = (questions: ParsedQuizQuestion): SanitizedQuizQuestion[] =>
-  questions.map((question) => ({
-    id: question.id,
-    title: question.title,
-    content: question.content || undefined,
-    imageUrl: question.imageUrl,
-    options: question.options.map((option, index) => ({
-      id: `${question.id}-option-${index}`,
-      text: option.value,
-      isCorrect: option.isCorrect,
-      order: index,
-      imageUrl: option.imageUrl,
-    })),
-    multi: question.multi,
-  }))
+  questions.map((question) => {
+    // Determine question type
+    let questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' = 'SINGLE_CHOICE'
+    
+    if (question.type === 'matching') {
+      questionType = 'MATCHING'
+    } else if (question.multi || question.correct.size > 1) {
+      questionType = 'MULTIPLE_CHOICE'
+    }
+    
+    return {
+      id: question.id,
+      title: question.title,
+      content: question.content || undefined,
+      imageUrl: question.imageUrl,
+      type: questionType,
+      options: question.options.map((option, index) => ({
+        id: `${question.id}-option-${index}`,
+        text: option.value,
+        isCorrect: option.isCorrect,
+        order: index,
+        imageUrl: option.imageUrl,
+      })),
+      multi: question.multi,
+    }
+  })
