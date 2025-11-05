@@ -38,8 +38,11 @@ export const MediaLibrary = ({ initialItems, uploaderId }: Props) => {
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setMessage('Chỉ hỗ trợ tải ảnh lên thư viện ở thời điểm hiện tại.')
+    // Cho phép ảnh và tệp DOCX để hỗ trợ import đề lớn
+    const isImage = file.type.startsWith('image/')
+    const isDocx = file.name.toLowerCase().endsWith('.docx')
+    if (!isImage && !isDocx) {
+      setMessage('Chỉ hỗ trợ ảnh hoặc tệp Word (.docx).')
       return
     }
 

@@ -505,6 +505,27 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
         throw new Error('Chỉ hỗ trợ tập tin Word (.docx).')
       }
 
+      // Nếu tệp vượt quá ~4MB (giới hạn Vercel serverless ~4.5MB), gợi ý dùng URL
+      if (file.size > 4 * 1024 * 1024) {
+        const url = window.prompt('Tệp lớn, vui lòng tải DOCX lên thư viện media trước (cho phép .docx) hoặc nơi lưu trữ công khai rồi dán URL trực tiếp tại đây:')
+        if (url && url.startsWith('http')) {
+          setImporting(true)
+          const response = await fetch('/api/quizzes/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileUrl: url }),
+          })
+          const data = await response.json()
+          if (!response.ok) {
+            throw new Error(data?.error ?? 'Không thể phân tích từ URL.')
+          }
+          setPreview((data.questions as ImportedQuestion[]) ?? [])
+          return
+        } else {
+          throw new Error('Hãy tải DOCX lên thư viện media (/admin/media) hoặc nhập URL hợp lệ.')
+        }
+      }
+
       setImporting(true)
       const form = new FormData()
       form.append('file', file)
@@ -685,6 +706,32 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                 </label>
                 <Button type="button" variant="subtle" onClick={handlePasteText}>
                   <FileText size={16} className="mr-2" /> Dán văn bản
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={async () => {
+                    const url = window.prompt('Dán URL tới tệp DOCX (đã tải lên media hoặc lưu trữ công khai)')
+                    if (!url) return
+                    try {
+                      setImporting(true)
+                      const response = await fetch('/api/quizzes/import', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileUrl: url.trim() }),
+                      })
+                      const data = await response.json()
+                      if (!response.ok) throw new Error(data?.error ?? 'Không thể phân tích từ URL.')
+                      setPreview((data.questions as ImportedQuestion[]) ?? [])
+                    } catch (e) {
+                      console.error(e)
+                      setImportError((e as Error).message)
+                    } finally {
+                      setImporting(false)
+                    }
+                  }}
+                >
+                  Nhập từ URL
                 </Button>
                 {preview.length ? (
                   <Button type="button" variant="ghost" onClick={resetPreview}>

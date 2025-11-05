@@ -13,13 +13,24 @@ export async function POST(request: Request) {
       const formData = await request.formData()
       const file = formData.get('file') as File | null
       const fallbackText = (formData.get('text') as string | null) || undefined
+      const fileUrl = (formData.get('fileUrl') as string | null) || undefined
 
-      if (!file && !fallbackText) {
-        return NextResponse.json({ error: 'Vui lòng chọn tập tin hoặc nhập nội dung văn bản.' }, { status: 400 })
+      if (!file && !fileUrl && !fallbackText) {
+        return NextResponse.json({ error: 'Vui lòng chọn tập tin, nhập URL hoặc nhập nội dung văn bản.' }, { status: 400 })
       }
 
       if (file) {
         const arrayBuffer = await file.arrayBuffer()
+        const questions = await parseQuizContent({ buffer: arrayBuffer, text: fallbackText })
+        return NextResponse.json({ questions: sanitizeParsedQuestions(questions) })
+      }
+
+      if (fileUrl) {
+        const res = await fetch(fileUrl)
+        if (!res.ok) {
+          return NextResponse.json({ error: 'Không thể tải tệp từ URL cung cấp.' }, { status: 400 })
+        }
+        const arrayBuffer = await res.arrayBuffer()
         const questions = await parseQuizContent({ buffer: arrayBuffer, text: fallbackText })
         return NextResponse.json({ questions: sanitizeParsedQuestions(questions) })
       }
@@ -34,16 +45,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Dữ liệu gửi lên không hợp lệ.' }, { status: 400 })
     }
 
-    const { base64File, text } = body as { base64File?: string; text?: string }
+    const { base64File, text, fileUrl } = body as { base64File?: string; text?: string; fileUrl?: string }
 
-    if (!base64File && !text) {
-      return NextResponse.json({ error: 'Vui lòng cung cấp tập tin hoặc nội dung văn bản.' }, { status: 400 })
+    if (!base64File && !fileUrl && !text) {
+      return NextResponse.json({ error: 'Vui lòng cung cấp tập tin, URL hoặc nội dung văn bản.' }, { status: 400 })
     }
 
     let buffer: ArrayBuffer | undefined
     if (base64File) {
       const buf = Buffer.from(base64File, 'base64')
       buffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+    }
+    if (!buffer && fileUrl) {
+      const res = await fetch(fileUrl)
+      if (!res.ok) {
+        return NextResponse.json({ error: 'Không thể tải tệp từ URL cung cấp.' }, { status: 400 })
+      }
+      buffer = await res.arrayBuffer()
     }
     const questions = await parseQuizContent({ buffer, text })
     return NextResponse.json({ questions: sanitizeParsedQuestions(questions) })
