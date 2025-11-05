@@ -671,12 +671,18 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
       const isValidCuid = (value: unknown): value is string =>
         typeof value === 'string' && /^c[0-9a-z]{24,}$/i.test(value)
 
+      // Remove empty options (no text and no image)
+      const normalizedQuestions = values.questions.map((question) => ({
+        ...question,
+        options: question.options.filter((opt) => (opt.text && opt.text.trim()) || opt.imageUrl),
+      }))
+
       const response = await fetch(quiz ? `/api/quizzes/${quiz.id}` : '/api/quizzes', {
         method: quiz ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...values,
-          questions: values.questions.map((question, index) => ({
+          questions: normalizedQuestions.map((question, index) => ({
             ...(isValidCuid(question.id) ? { id: question.id } : {}),
             title: question.title,
             content: question.content,
@@ -685,7 +691,9 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
             order: index,
             points: question.points,
             explanation: question.explanation,
-            options: question.options.map((option, optionIndex) => ({
+            options: question.options
+              .filter((opt) => (opt.text && opt.text.trim()) || opt.imageUrl)
+              .map((option, optionIndex) => ({
               ...(isValidCuid(option.id) ? { id: option.id } : {}),
               text: option.text,
               imageUrl: option.imageUrl,
