@@ -25,8 +25,9 @@ export async function POST(request: Request) {
       Conditions: [
         ['content-length-range', 0, 50 * 1024 * 1024],
         { 'Content-Type': contentType },
+        ['eq', '$acl', 'public-read'],
       ],
-      Fields: { 'Content-Type': contentType },
+      Fields: { 'Content-Type': contentType, acl: 'public-read' },
       Expires: 60, // seconds
     })
 
