@@ -82,7 +82,7 @@ export const upsertQuiz = async (input: UpsertQuizInput) => {
             explanation: question.explanation ?? null,
             options: {
               create: question.options.map((option) => ({
-                text: option.text,
+                text: option.text || '',
                 imageUrl: option.imageUrl ?? null,
                 isCorrect: option.isCorrect,
                 order: option.order,
@@ -121,7 +121,7 @@ export const upsertQuiz = async (input: UpsertQuizInput) => {
           explanation: question.explanation ?? null,
           options: {
             create: question.options.map((option) => ({
-              text: option.text,
+              text: option.text || '',
               imageUrl: option.imageUrl ?? null,
               isCorrect: option.isCorrect,
               order: option.order,

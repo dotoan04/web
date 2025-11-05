@@ -238,7 +238,7 @@ model QuizQuestion {
 model QuizOption {
   id         String  @id @default(cuid())
   questionId String
-  text       String
+  text       String  @default("")
   imageUrl   String?
   isCorrect  Boolean @default(false)
   order      Int     @default(0)

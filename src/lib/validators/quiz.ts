@@ -6,11 +6,16 @@ export const quizQuestionTypeSchema = z.enum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE'
 
 export const quizOptionInputSchema = z.object({
   id: z.string().cuid().optional(),
-  text: z.string().optional().transform((v) => v ?? ''),
+  text: z.string().default(''),
   imageUrl: z.string().optional(),
   isCorrect: z.boolean(),
   order: z.number().int().min(0).default(0),
-}).refine((opt) => Boolean((opt.text && opt.text.trim()) || opt.imageUrl), {
+}).refine((opt) => {
+  // Must have either text or image
+  const hasText = opt.text && opt.text.trim().length > 0
+  const hasImage = opt.imageUrl && opt.imageUrl.trim().length > 0
+  return hasText || hasImage
+}, {
   message: 'Cần nội dung hoặc ảnh cho phương án',
 })
 
