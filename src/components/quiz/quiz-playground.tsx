@@ -654,13 +654,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             
             <div className="relative z-10 flex-1 flex items-center gap-3">
               {option.imageUrl && (
-                <div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-lg border-2 border-white/30 dark:border-slate-600/30">
+                <div className="relative shrink-0 overflow-hidden rounded-lg border border-white/30 dark:border-slate-600/30 bg-white/40 dark:bg-slate-900/40 w-20 h-14 sm:w-24 sm:h-16">
                   <SmartImage
                     src={option.imageUrl}
-                    alt={option.text}
+                    alt={option.text || 'option image'}
                     fill
-                    className="object-cover"
-                    sizes="64px"
+                    className="object-contain"
+                    sizes="(max-width: 768px) 40vw, 160px"
                   />
                 </div>
               )}
@@ -992,13 +992,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
           {currentQuestion.imageUrl && (
             <div className="relative mb-4 sm:mb-6">
-              <div className="relative h-48 sm:h-64 md:h-80 w-full overflow-hidden rounded-xl sm:rounded-2xl border-2 border-white/30 dark:border-slate-700/30 shadow-lg">
+              <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl border border-white/30 dark:border-slate-700/30 shadow-lg bg-white/40 dark:bg-slate-900/40" style={{ minHeight: '220px' }}>
                 <SmartImage
                   src={currentQuestion.imageUrl}
                   alt={currentQuestion.title}
                   fill
-                  className="object-contain bg-white/50 dark:bg-slate-900/50"
-                  sizes="(max-width: 768px) 100vw, 800px"
+                  className="object-contain"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 800px"
                 />
               </div>
             </div>
