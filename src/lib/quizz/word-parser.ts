@@ -468,7 +468,9 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
     }
   })
 
-  return items.filter((item) => item.options.length >= 2)
+  // Allow questions without options (theory questions)
+  // Only filter out questions that have exactly 1 option (incomplete)
+  return items.filter((item) => item.options.length !== 1)
 }
 
 export type ParsedQuizQuestion = ReturnType<typeof groupQuestions>

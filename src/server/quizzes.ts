@@ -50,9 +50,13 @@ export const upsertQuiz = async (input: UpsertQuizInput) => {
   }
 
   input.questions.forEach((question) => {
-    const correctCount = question.options.filter((option) => option.isCorrect).length
-    if (correctCount === 0) {
-      throw new Error(`Câu hỏi "${question.title}" cần ít nhất một đáp án đúng`)
+    // If question has options, it must have at least one correct answer
+    // If no options (theory question), no validation needed
+    if (question.options.length > 0) {
+      const correctCount = question.options.filter((option) => option.isCorrect).length
+      if (correctCount === 0) {
+        throw new Error(`Câu hỏi "${question.title}" cần ít nhất một đáp án đúng`)
+      }
     }
   })
 

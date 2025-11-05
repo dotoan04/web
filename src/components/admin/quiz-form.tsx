@@ -76,6 +76,16 @@ const createEmptyQuestion = (order: number): QuizQuestionForm => ({
   options: [createEmptyOption(0), createEmptyOption(1)],
 })
 
+const createTheoryQuestion = (order: number): QuizQuestionForm => ({
+  title: '',
+  content: '',
+  type: 'SINGLE_CHOICE',
+  order,
+  points: 0,
+  explanation: '',
+  options: [],
+})
+
 type QuestionEditorProps = {
   question: QuizQuestionForm
   index: number
@@ -240,42 +250,53 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
       />
     </div>
 
-    <div className="mt-6 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-ink-600 dark:text-ink-200">Các phương án</p>
+    {question.options.length > 0 ? (
+      <div className="mt-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-ink-600 dark:text-ink-200">Các phương án</p>
+          <Button type="button" variant="subtle" onClick={onAddOption}>
+            + Thêm phương án
+          </Button>
+        </div>
+        <div className="space-y-3">
+          {question.options.map((option, optionIndex) => (
+            <OptionRow
+              key={option.id ?? `${question.id ?? 'new'}-${optionIndex}`}
+              option={option}
+              questionIndex={index}
+              optionIndex={optionIndex}
+              isCorrect={option.isCorrect}
+              disableRemove={question.options.length <= 2 && question.options.length > 0}
+              questionType={question.type}
+              onSelectCorrect={() => onSetCorrect(optionIndex)}
+              onToggleCorrect={() => onToggleCorrect(optionIndex)}
+              onChangeText={(value) =>
+                onChange((current) => ({
+                  ...current,
+                  options: current.options.map((item, idx) => (idx === optionIndex ? { ...item, text: value } : item)),
+                }))
+              }
+              onChangeImageUrl={(url) =>
+                onChange((current) => ({
+                  ...current,
+                  options: current.options.map((item, idx) => (idx === optionIndex ? { ...item, imageUrl: url ?? undefined } : item)),
+                }))
+              }
+              onRemove={() => onRemoveOption(optionIndex)}
+            />
+          ))}
+        </div>
+      </div>
+    ) : (
+      <div className="mt-6 rounded-lg border-2 border-dashed border-ink-200 bg-ink-50 p-6 text-center dark:border-ink-700 dark:bg-ink-800/50">
+        <p className="mb-3 text-sm text-ink-500 dark:text-ink-400">
+          Câu hỏi lý thuyết (không có phương án trả lời)
+        </p>
         <Button type="button" variant="subtle" onClick={onAddOption}>
-          + Thêm phương án
+          + Thêm phương án đầu tiên
         </Button>
       </div>
-      <div className="space-y-3">
-        {question.options.map((option, optionIndex) => (
-          <OptionRow
-            key={option.id ?? `${question.id ?? 'new'}-${optionIndex}`}
-            option={option}
-            questionIndex={index}
-            optionIndex={optionIndex}
-            isCorrect={option.isCorrect}
-            disableRemove={question.options.length <= 2}
-            questionType={question.type}
-            onSelectCorrect={() => onSetCorrect(optionIndex)}
-            onToggleCorrect={() => onToggleCorrect(optionIndex)}
-            onChangeText={(value) =>
-              onChange((current) => ({
-                ...current,
-                options: current.options.map((item, idx) => (idx === optionIndex ? { ...item, text: value } : item)),
-              }))
-            }
-            onChangeImageUrl={(url) =>
-              onChange((current) => ({
-                ...current,
-                options: current.options.map((item, idx) => (idx === optionIndex ? { ...item, imageUrl: url ?? undefined } : item)),
-              }))
-            }
-            onRemove={() => onRemoveOption(optionIndex)}
-          />
-        ))}
-      </div>
-    </div>
+    )}
 
     <div className="mt-6 space-y-2">
       <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">Giải thích (tuỳ chọn)</label>
@@ -400,7 +421,8 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
           imageUrl: item.imageUrl || '',
           type: (correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE') as 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE',
           order: questionIndex,
-          points: 1,
+          // Theory questions (no options) have 0 points by default
+          points: item.options.length === 0 ? 0 : 1,
           explanation: '',
           options: item.options.map((option, optionIndex) => ({
             text: option.text,
@@ -471,6 +493,13 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     setValues((prev) => ({
       ...prev,
       questions: [...prev.questions, createEmptyQuestion(prev.questions.length)],
+    }))
+  }, [])
+
+  const addTheoryQuestion = useCallback(() => {
+    setValues((prev) => ({
+      ...prev,
+      questions: [...prev.questions, createTheoryQuestion(prev.questions.length)],
     }))
   }, [])
 
@@ -672,10 +701,14 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
         typeof value === 'string' && /^c[0-9a-z]{24,}$/i.test(value)
 
       // Remove empty options (no text and no image)
-      const normalizedQuestions = values.questions.map((question) => ({
-        ...question,
-        options: question.options.filter((opt) => (opt.text && opt.text.trim()) || opt.imageUrl),
-      }))
+      // If only 1 option remains after filtering, convert to theory question (0 options)
+      const normalizedQuestions = values.questions.map((question) => {
+        const validOptions = question.options.filter((opt) => (opt.text && opt.text.trim()) || opt.imageUrl)
+        return {
+          ...question,
+          options: validOptions.length === 1 ? [] : validOptions,
+        }
+      })
 
       const response = await fetch(quiz ? `/api/quizzes/${quiz.id}` : '/api/quizzes', {
         method: quiz ? 'PUT' : 'POST',
@@ -1003,9 +1036,14 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                   Tổng điểm hiện tại: <span className="font-medium text-emerald-600 dark:text-emerald-400">{totalPoints}</span>
                 </p>
               </div>
-              <Button type="button" variant="subtle" onClick={addQuestion}>
-                + Thêm câu hỏi
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="subtle" onClick={addQuestion}>
+                  + Thêm câu hỏi
+                </Button>
+                <Button type="button" variant="ghost" onClick={addTheoryQuestion}>
+                  + Câu lý thuyết
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-5">

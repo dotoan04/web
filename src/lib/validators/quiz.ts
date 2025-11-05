@@ -23,7 +23,11 @@ export const quizQuestionInputSchema = z.object({
   order: z.number().int().min(0).default(0),
   points: z.number().int().min(0).default(1),
   explanation: z.string().optional(),
-  options: z.array(quizOptionInputSchema).min(2, 'Cần ít nhất 2 phương án'),
+  // Allow 0 options for theory questions, or 2+ for regular questions
+  options: z.array(quizOptionInputSchema).refine(
+    (opts) => opts.length === 0 || opts.length >= 2,
+    { message: 'Cần 0 phương án (câu lý thuyết) hoặc ít nhất 2 phương án' }
+  ),
 })
 
 export const quizInputSchema = z.object({
