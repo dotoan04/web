@@ -110,6 +110,7 @@ export const upsertQuiz = async (input: UpsertQuizInput) => {
         create: input.questions.map((question) => ({
           title: question.title,
           content: question.content ?? null,
+          imageUrl: question.imageUrl ?? null,
           type: question.type ?? 'SINGLE_CHOICE',
           order: question.order,
           points: question.points,
@@ -117,6 +118,7 @@ export const upsertQuiz = async (input: UpsertQuizInput) => {
           options: {
             create: question.options.map((option) => ({
               text: option.text,
+              imageUrl: option.imageUrl ?? null,
               isCorrect: option.isCorrect,
               order: option.order,
             })),
