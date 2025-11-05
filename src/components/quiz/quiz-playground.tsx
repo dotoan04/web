@@ -899,7 +899,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         })}
       </div>
     )
-  }, [currentQuestion, progress.answers, progress.completed, getOptionState, handleToggleOption])
+  }, [currentQuestion, progress.answers, progress.completed, getOptionState, handleToggleOption, renderMatchingQuestion])
 
   const renderFilterModal = () => {
     if (!showFilterModal || !progress.completed) return null

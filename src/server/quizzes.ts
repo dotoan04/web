@@ -27,7 +27,7 @@ type UpsertQuizInput = {
     title: string
     content?: string
     imageUrl?: string
-    type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
+    type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
     order: number
     points: number
     explanation?: string
