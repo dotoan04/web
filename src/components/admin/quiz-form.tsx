@@ -558,6 +558,56 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     }
   }
 
+  const uploadDocxToSpaces = async () => {
+    try {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.docx'
+      const picked = await new Promise<File | null>((resolve) => {
+        input.onchange = () => resolve(input.files?.[0] ?? null)
+        input.click()
+      })
+      if (!picked) return
+      if (!picked.name.endsWith('.docx')) throw new Error('Chỉ chọn tệp .docx')
+
+      setImporting(true)
+
+      const ext = 'docx'
+      const presignRes = await fetch('/api/storage/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', extension: ext }),
+      })
+      const presign = await presignRes.json()
+      if (!presignRes.ok) throw new Error(presign?.error ?? 'Không thể tạo URL upload')
+
+      const form = new FormData()
+      Object.entries(presign.fields as Record<string, string>).forEach(([k, v]) => form.append(k, v))
+      form.append('file', picked)
+
+      const uploadRes = await fetch(presign.url, { method: 'POST', body: form })
+      if (!uploadRes.ok) throw new Error('Upload lên Spaces thất bại')
+
+      // Construct public URL
+      const publicBase = (process.env.NEXT_PUBLIC_SPACES_PUBLIC_BASE_URL || '').replace(/\/$/, '')
+      const fileUrl = publicBase ? `${publicBase}/${presign.fields.key || presign.key}` : `${presign.url}/${presign.fields.key || presign.key}`
+
+      const response = await fetch('/api/quizzes/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileUrl }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data?.error ?? 'Không thể phân tích DOCX đã upload')
+      setPreview((data.questions as ImportedQuestion[]) ?? [])
+    } catch (e) {
+      console.error(e)
+      setImportError((e as Error).message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const handlePasteText = async () => {
     setImportError(null)
     const text = window.prompt('Dán nội dung văn bản, mỗi dòng một nội dung.')
@@ -706,6 +756,9 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                 </label>
                 <Button type="button" variant="subtle" onClick={handlePasteText}>
                   <FileText size={16} className="mr-2" /> Dán văn bản
+                </Button>
+                <Button type="button" variant="ghost" onClick={uploadDocxToSpaces}>
+                  Tải lên Spaces
                 </Button>
                 <Button
                   type="button"
