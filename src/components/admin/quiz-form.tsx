@@ -313,6 +313,8 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
   const [importError, setImportError] = useState<string | null>(null)
   const [preview, setPreview] = useState<ImportedQuestion[]>([])
   const [showAllPreview, setShowAllPreview] = useState(false)
+  const [applying, setApplying] = useState(false)
+  const [applyProgress, setApplyProgress] = useState<{ processed: number; total: number }>({ processed: 0, total: 0 })
   
   const PREVIEW_LIMIT = 5
   const displayedPreview = showAllPreview ? preview : preview.slice(0, PREVIEW_LIMIT)
@@ -329,33 +331,95 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     setImportError(null)
   }
 
-  const applyImportedQuestions = (items: ImportedQuestion[]) => {
-    const nextQuestions = items.map((item, questionIndex) => {
-      const correctCount = item.options.filter(opt => opt.isCorrect).length
-      return {
-        title: item.title,
-        content: '',
-        imageUrl: item.imageUrl || '',
-        type: (correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE') as 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE',
-        order: questionIndex,
-        points: 1,
-        explanation: '',
-        options: item.options.map((option, optionIndex) => ({
-          text: option.text,
-          imageUrl: option.imageUrl || '',
-          isCorrect: option.isCorrect,
-          order: optionIndex,
-        })),
+  const isDataUrl = (url?: string) => !!url && url.startsWith('data:')
+
+  const uploadDataUrl = async (dataUrl: string): Promise<string> => {
+    const [header, base64] = dataUrl.split(',')
+    const mimeMatch = /data:(.*);base64/.exec(header)
+    const mime = (mimeMatch?.[1] || 'image/png').toLowerCase()
+    // Convert base64 to binary
+    const binary = atob(base64)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    const ext = mime.split('/')[1] || 'png'
+    const file = new File([bytes], `import-${Date.now()}.${ext}`, { type: mime })
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch('/api/media/upload', { method: 'POST', body: form })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data?.error ?? 'Upload ảnh thất bại')
+    return data.url as string
+  }
+
+  const applyImportedQuestions = async (items: ImportedQuestion[]) => {
+    try {
+      setApplying(true)
+      // Count total images
+      const total = items.reduce((sum, q) => sum + (isDataUrl(q.imageUrl) ? 1 : 0) + q.options.filter((o) => isDataUrl(o.imageUrl)).length, 0)
+      setApplyProgress({ processed: 0, total })
+
+      const processOption = async (opt: ImportedQuestion['options'][number]) => {
+        let imageUrl = opt.imageUrl
+        if (isDataUrl(imageUrl)) {
+          try {
+            imageUrl = await uploadDataUrl(imageUrl!)
+          } finally {
+            setApplyProgress((p) => ({ processed: p.processed + 1, total: p.total }))
+          }
+        }
+        return { ...opt, imageUrl }
       }
-    })
 
-    setValues((prev) => ({
-      ...prev,
-      questions: nextQuestions.length ? nextQuestions : prev.questions,
-    }))
+      const processedItems: ImportedQuestion[] = []
+      for (const q of items) {
+        let qImage = q.imageUrl
+        if (isDataUrl(qImage)) {
+          try {
+            qImage = await uploadDataUrl(qImage!)
+          } finally {
+            setApplyProgress((p) => ({ processed: p.processed + 1, total: p.total }))
+          }
+        }
+        const processedOptions: ImportedQuestion['options'] = []
+        for (const opt of q.options) {
+          processedOptions.push(await processOption(opt))
+        }
+        processedItems.push({ ...q, imageUrl: qImage, options: processedOptions })
+      }
 
-    setPreview([])
-    setImportError(null)
+      const nextQuestions = processedItems.map((item, questionIndex) => {
+        const correctCount = item.options.filter((opt) => opt.isCorrect).length
+        return {
+          title: item.title,
+          content: '',
+          imageUrl: item.imageUrl || '',
+          type: (correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE') as 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE',
+          order: questionIndex,
+          points: 1,
+          explanation: '',
+          options: item.options.map((option, optionIndex) => ({
+            text: option.text,
+            imageUrl: option.imageUrl || '',
+            isCorrect: option.isCorrect,
+            order: optionIndex,
+          })),
+        }
+      })
+
+      setValues((prev) => ({
+        ...prev,
+        questions: nextQuestions.length ? nextQuestions : prev.questions,
+      }))
+
+      setPreview([])
+      setImportError(null)
+    } catch (err) {
+      console.error('Apply imported questions failed:', err)
+      setImportError((err as Error).message)
+    } finally {
+      setApplying(false)
+      setApplyProgress({ processed: 0, total: 0 })
+    }
   }
 
   const totalPoints = useMemo(
@@ -641,9 +705,16 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                   <h4 className="text-sm font-semibold text-ink-600 dark:text-ink-200">
                     Preview ({displayedPreview.length} / {preview.length} câu hỏi)
                   </h4>
-                  <Button type="button" size="sm" onClick={() => applyImportedQuestions(preview)}>
-                    Áp dụng vào form
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {applying && (
+                      <span className="text-xs text-ink-500 dark:text-ink-400">
+                        Đang xử lý ảnh… {applyProgress.processed}/{applyProgress.total}
+                      </span>
+                    )}
+                    <Button type="button" size="sm" onClick={() => applyImportedQuestions(preview)} disabled={applying}>
+                      {applying ? 'Đang áp dụng…' : 'Áp dụng vào form'}
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid gap-3 max-h-96 overflow-y-auto rounded-lg border border-ink-200 p-3 dark:border-ink-700">
                   {displayedPreview.map((question) => (
