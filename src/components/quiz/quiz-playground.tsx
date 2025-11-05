@@ -652,19 +652,21 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               className="relative z-10 h-4 w-4 shrink-0 rounded border border-white/40 bg-white/40 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0 dark:border-slate-600/50 dark:bg-slate-900/50"
             />
             
-            <div className="relative z-10 flex-1 flex items-center gap-3">
+            <div className="relative z-10 flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
               {option.imageUrl && (
-                <div className="relative shrink-0 overflow-hidden rounded-lg border border-white/30 dark:border-slate-600/30 bg-white/40 dark:bg-slate-900/40 w-20 h-14 sm:w-24 sm:h-16">
+                <div className="relative w-full sm:w-48 overflow-hidden rounded-lg border border-white/30 dark:border-slate-600/30 bg-white/55 dark:bg-slate-900/45 aspect-[4/3]">
                   <SmartImage
                     src={option.imageUrl}
                     alt={option.text || 'option image'}
                     fill
                     className="object-contain"
-                    sizes="(max-width: 768px) 40vw, 160px"
+                    sizes="(max-width: 640px) 85vw, (max-width: 1024px) 45vw, 220px"
                   />
                 </div>
               )}
-              <span className="text-sm sm:text-base font-medium leading-relaxed font-sans break-words">{option.text}</span>
+              {option.text ? (
+                <span className="text-sm sm:text-base font-medium leading-relaxed font-sans break-words">{option.text}</span>
+              ) : null}
             </div>
             
             {state !== null ? (
@@ -992,13 +994,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
           {currentQuestion.imageUrl && (
             <div className="relative mb-4 sm:mb-6">
-              <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl border border-white/30 dark:border-slate-700/30 shadow-lg bg-white/40 dark:bg-slate-900/40" style={{ minHeight: '220px' }}>
+              <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl border border-white/30 dark:border-slate-700/40 shadow-lg bg-white/60 dark:bg-slate-900/40 aspect-[4/3] max-h-[420px]">
                 <SmartImage
                   src={currentQuestion.imageUrl}
                   alt={currentQuestion.title}
                   fill
                   className="object-contain"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 800px"
+                  sizes="(max-width: 640px) 95vw, (max-width: 1024px) 85vw, 960px"
                 />
               </div>
             </div>
