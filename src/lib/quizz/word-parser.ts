@@ -31,6 +31,7 @@ type ParsedQuestion = {
   id: string
   raw: string
   title: string
+  content: string  // Content/body for theory questions
   imageUrl?: string
   options: Array<{ key: string; value: string; isCorrect: boolean; imageUrl?: string }>
   correct: Set<number>
@@ -360,6 +361,7 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
   const labelPattern = /^(Chọn\s*\d+\s*(?:đáp\s*án|phương\s*án)\s*đúng)/i
   const multiPattern = /(Chọn\s*\d+\s*đáp\s*án\s*đúng|Chọn\s*\d+\s*phương\s*án)/i
   const trueFalsePattern = /^(Đúng|Sai)$/i
+  const numberedItemPattern = /^\d+[\.\)]\s+/  // Match "1. " or "1) "
 
   const markCorrect = (value: string, colored: boolean) => {
     if (colored) return true
@@ -385,6 +387,7 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
         id: `q-${items.length + 1}`,
         raw: text,
         title,
+        content: '',
         imageUrl: imageId || undefined,
         options: [],
         correct: new Set<number>(),
@@ -431,13 +434,39 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
       if (imageId && current.options.length === 0) {
         current.imageUrl = imageId
         if (trimmed) {
-          current.title = `${current.title} ${trimmed}`.trim()
+          // For theory questions, add to content instead of title
+          if (current.content) {
+            current.content += '\n' + trimmed
+          } else {
+            current.title = `${current.title} ${trimmed}`.trim()
+          }
         }
         return
       }
 
       if (current.options.length === 0) {
-        current.title = `${current.title} ${trimmed}`.trim()
+        // For theory questions, put additional lines in content with line breaks preserved
+        // If line starts with number (1., 2., etc), it's likely content
+        if (numberedItemPattern.test(trimmed) || current.content) {
+          if (current.content) {
+            current.content += '\n' + trimmed
+          } else {
+            current.content = trimmed
+          }
+        } else {
+          // First few lines without numbered items go to title
+          const titleLength = current.title.length
+          if (titleLength < 150) {
+            current.title = `${current.title} ${trimmed}`.trim()
+          } else {
+            // After title is long enough, move to content
+            if (current.content) {
+              current.content += '\n' + trimmed
+            } else {
+              current.content = trimmed
+            }
+          }
+        }
       } else {
         const last = current.options[current.options.length - 1]
         const updatedValue = `${last.value} ${trimmed}`.trim()
@@ -478,6 +507,7 @@ export type ParsedQuizQuestion = ReturnType<typeof groupQuestions>
 export type SanitizedQuizQuestion = {
   id: string
   title: string
+  content?: string
   imageUrl?: string
   options: Array<{
     id: string
@@ -511,6 +541,7 @@ export const sanitizeParsedQuestions = (questions: ParsedQuizQuestion): Sanitize
   questions.map((question) => ({
     id: question.id,
     title: question.title,
+    content: question.content || undefined,
     imageUrl: question.imageUrl,
     options: question.options.map((option, index) => ({
       id: `${question.id}-option-${index}`,

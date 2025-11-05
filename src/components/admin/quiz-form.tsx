@@ -14,6 +14,7 @@ import { slugify } from '@/lib/utils'
 type ImportedQuestion = {
   id: string
   title: string
+  content?: string
   imageUrl?: string
   options: Array<{
     id: string
@@ -417,7 +418,7 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
         const correctCount = item.options.filter((opt) => opt.isCorrect).length
         return {
           title: item.title,
-          content: '',
+          content: item.content || '',
           imageUrl: item.imageUrl || '',
           type: (correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE') as 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE',
           order: questionIndex,
@@ -890,38 +891,49 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                   {displayedPreview.map((question) => (
                     <article key={question.id} className="rounded-2xl border border-ink-200/70 bg-white p-4 text-sm dark:border-ink-700 dark:bg-ink-900">
                       <h5 className="font-semibold text-ink-700 dark:text-ink-100">{question.title}</h5>
+                      {question.content && (
+                        <div className="mt-2 whitespace-pre-wrap rounded-lg bg-ink-50 p-3 text-xs text-ink-600 dark:bg-ink-800/50 dark:text-ink-300">
+                          {question.content}
+                        </div>
+                      )}
                       {question.imageUrl && (
                         <div className="mt-2">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={question.imageUrl} alt="Question" className="max-w-full h-auto rounded-lg border border-ink-200" />
                         </div>
                       )}
-                      <ul className="mt-2 space-y-1">
-                        {question.options.map((option) => (
-                          <li
-                            key={option.id}
-                            className={`flex items-start gap-2 ${
-                              option.isCorrect ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-600 dark:text-ink-300'
-                            }`}
-                          >
-                            <span className="font-semibold">{option.order + 1}.</span>
-                            <div className="flex-1">
-                              <span>{option.text}</span>
-                              {option.imageUrl && (
-                                <div className="mt-1">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={option.imageUrl} alt="Option" className="max-w-xs h-auto rounded border border-ink-200" />
-                                </div>
-                              )}
-                            </div>
-                            {option.isCorrect ? (
-                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                                Đúng
-                              </span>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
+                      {question.options.length > 0 ? (
+                        <ul className="mt-2 space-y-1">
+                          {question.options.map((option) => (
+                            <li
+                              key={option.id}
+                              className={`flex items-start gap-2 ${
+                                option.isCorrect ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-600 dark:text-ink-300'
+                              }`}
+                            >
+                              <span className="font-semibold">{option.order + 1}.</span>
+                              <div className="flex-1">
+                                <span>{option.text}</span>
+                                {option.imageUrl && (
+                                  <div className="mt-1">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={option.imageUrl} alt="Option" className="max-w-xs h-auto rounded border border-ink-200" />
+                                  </div>
+                                )}
+                              </div>
+                              {option.isCorrect ? (
+                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                  Đúng
+                                </span>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs italic text-ink-400 dark:text-ink-500">
+                          (Câu lý thuyết - không có phương án)
+                        </p>
+                      )}
                     </article>
                   ))}
                 </div>
