@@ -27,6 +27,17 @@ const SmartImageComponent = ({
     onLoad?.(e)
   }
 
+  // Derive safe flags from src
+  const srcString = typeof props.src === 'string' ? props.src : ''
+  const isDataLike = srcString.startsWith('data:') || srcString.startsWith('blob:')
+  const isHttp = srcString.startsWith('http://') || srcString.startsWith('https://')
+  // If src is data/blob or a possibly non-whitelisted remote host, disable optimization
+  const computedUnoptimized = isDataLike || isHttp
+
+  if (!props.src || (typeof props.src === 'string' && props.src.trim() === '')) {
+    return null
+  }
+
   return (
     <>
       <NextImage
@@ -35,6 +46,7 @@ const SmartImageComponent = ({
         className={`${className} ${isLoading ? 'blur-sm scale-110' : 'blur-0 scale-100'} transition-all duration-700`}
         onLoad={handleLoad}
         loading="lazy"
+        unoptimized={computedUnoptimized}
         {...props}
       />
       {isLoading && showLoadingState && (
