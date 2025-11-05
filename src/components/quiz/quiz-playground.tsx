@@ -24,7 +24,7 @@ type QuizQuestion = {
   title: string
   content: string | null
   imageUrl?: string | null
-  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
+  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
   order: number
   points: number
   explanation: string | null
@@ -95,14 +95,37 @@ const computeResult = (quiz: Quiz, answers: AnswerState) => {
   quiz.questions.forEach((question) => {
     totalPoints += question.points
     const selected = answers[question.id] ?? []
-    const correctIds = question.options
-      .filter((option) => option.isCorrect)
-      .map((option) => option.id)
-      .sort()
-    const selectedIds = [...selected].sort()
-    const isCorrectAnswer =
-      correctIds.length === selectedIds.length &&
-      correctIds.every((id, i) => id === selectedIds[i])
+    
+    let isCorrectAnswer = false
+    
+    if (question.type === 'MATCHING') {
+      // For matching questions, answers are in format "leftId:rightId"
+      // Correct pairs are: option[0] with option[1], option[2] with option[3], etc.
+      const correctPairs = new Set<string>()
+      for (let i = 0; i < question.options.length; i += 2) {
+        const leftId = question.options[i]?.id
+        const rightId = question.options[i + 1]?.id
+        if (leftId && rightId) {
+          correctPairs.add(`${leftId}:${rightId}`)
+        }
+      }
+      
+      const selectedPairs = new Set(selected)
+      isCorrectAnswer = 
+        correctPairs.size === selectedPairs.size &&
+        [...correctPairs].every(pair => selectedPairs.has(pair))
+    } else {
+      // For regular questions
+      const correctIds = question.options
+        .filter((option) => option.isCorrect)
+        .map((option) => option.id)
+        .sort()
+      const selectedIds = [...selected].sort()
+      isCorrectAnswer =
+        correctIds.length === selectedIds.length &&
+        correctIds.every((id, i) => id === selectedIds[i])
+    }
+    
     if (isCorrectAnswer) {
       score += question.points
     }
@@ -594,7 +617,185 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     delta: 50,
   })
 
+  // For matching questions, we need to shuffle right items and allow pairing
+  const [shuffledRightItems, setShuffledRightItems] = useState<QuizOption[]>([])
+  const [selectedLeft, setSelectedLeft] = useState<string | null>(null)
+  
+  useEffect(() => {
+    if (currentQuestion.type === 'MATCHING') {
+      // Extract and shuffle right items (odd indices)
+      const rightItems = currentQuestion.options.filter((_, idx) => idx % 2 === 1)
+      const shuffled = [...rightItems].sort(() => Math.random() - 0.5)
+      setShuffledRightItems(shuffled)
+      setSelectedLeft(null)
+    }
+  }, [currentQuestion])
+  
+  const handleMatchingPair = useCallback((leftOptionId: string, rightOptionId: string) => {
+    if (progress.completed) return
+    
+    const pairString = `${leftOptionId}:${rightOptionId}`
+    setProgress((prev) => {
+      const current = prev.answers[currentQuestion.id] ?? []
+      
+      // Check if this left item is already paired
+      const existingPairIndex = current.findIndex(pair => pair.startsWith(`${leftOptionId}:`))
+      
+      let newSelected: string[]
+      if (existingPairIndex !== -1) {
+        // If clicking the same pair, unpair it
+        if (current[existingPairIndex] === pairString) {
+          newSelected = current.filter((_, idx) => idx !== existingPairIndex)
+        } else {
+          // Replace the existing pair
+          newSelected = current.map((pair, idx) => idx === existingPairIndex ? pairString : pair)
+        }
+      } else {
+        // Add new pair
+        newSelected = [...current, pairString]
+      }
+      
+      return {
+        ...prev,
+        answers: {
+          ...prev.answers,
+          [currentQuestion.id]: newSelected,
+        },
+      }
+    })
+    setSelectedLeft(null)
+  }, [progress.completed, currentQuestion.id, setProgress])
+  
+  const renderMatchingQuestion = useMemo(() => {
+    if (currentQuestion.type !== 'MATCHING') return null
+    
+    const leftItems = currentQuestion.options.filter((_, idx) => idx % 2 === 0)
+    const currentPairs = progress.answers[currentQuestion.id] ?? []
+    
+    // Create map of left to right pairs for easier lookup
+    const pairMap = new Map<string, string>()
+    currentPairs.forEach(pair => {
+      const [left, right] = pair.split(':')
+      if (left && right) pairMap.set(left, right)
+    })
+    
+    // Get correct pairs for result display
+    const correctPairMap = new Map<string, string>()
+    for (let i = 0; i < currentQuestion.options.length; i += 2) {
+      const leftId = currentQuestion.options[i]?.id
+      const rightId = currentQuestion.options[i + 1]?.id
+      if (leftId && rightId) {
+        correctPairMap.set(leftId, rightId)
+      }
+    }
+    
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600 dark:text-slate-300 bg-white/40 dark:bg-slate-800/40 rounded-lg p-3 backdrop-blur-sm">
+          💡 Nhấp vào mục bên trái, sau đó nhấp vào mục bên phải để ghép cặp. Bên phải đã được đảo thứ tự.
+        </p>
+        
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Left side */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Bên trái</h4>
+            {leftItems.map((leftOption) => {
+              const pairedRightId = pairMap.get(leftOption.id)
+              const isPaired = Boolean(pairedRightId)
+              const isSelected = selectedLeft === leftOption.id
+              const isCorrectPair = progress.completed && correctPairMap.get(leftOption.id) === pairedRightId
+              const isIncorrectPair = progress.completed && isPaired && !isCorrectPair
+              
+              return (
+                <button
+                  key={leftOption.id}
+                  type="button"
+                  onClick={() => {
+                    if (!progress.completed) {
+                      setSelectedLeft(isSelected ? null : leftOption.id)
+                    }
+                  }}
+                  disabled={progress.completed}
+                  className={`w-full text-left rounded-xl border p-3 backdrop-blur-xl transition-colors ${
+                    isCorrectPair
+                      ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
+                      : isIncorrectPair
+                      ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
+                      : isSelected
+                      ? 'border-indigo-500 bg-indigo-100/55 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/15'
+                      : isPaired
+                      ? 'border-indigo-400/60 bg-indigo-50/55 text-indigo-600 dark:border-indigo-400/30 dark:bg-indigo-500/10'
+                      : 'border-white/25 bg-white/45 text-slate-700 hover:border-white/40 hover:bg-white/55 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm font-medium">{leftOption.text}</span>
+                    {isPaired && !progress.completed && <span className="text-xs">✓</span>}
+                  </div>
+                  {isPaired && pairedRightId && (
+                    <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      → {shuffledRightItems.find(r => r.id === pairedRightId)?.text}
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          
+          {/* Right side */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Bên phải (đã đảo)</h4>
+            {shuffledRightItems.map((rightOption) => {
+              const isPaired = [...pairMap.values()].includes(rightOption.id)
+              const leftId = [...pairMap.entries()].find(([, right]) => right === rightOption.id)?.[0]
+              const isCorrectPair = progress.completed && leftId && correctPairMap.get(leftId) === rightOption.id
+              const isIncorrectPair = progress.completed && isPaired && !isCorrectPair
+              const shouldShowAsCorrect = progress.completed && !isPaired && [...correctPairMap.values()].includes(rightOption.id)
+              
+              return (
+                <button
+                  key={rightOption.id}
+                  type="button"
+                  onClick={() => {
+                    if (!progress.completed && selectedLeft) {
+                      handleMatchingPair(selectedLeft, rightOption.id)
+                    }
+                  }}
+                  disabled={progress.completed || !selectedLeft}
+                  className={`w-full text-left rounded-xl border p-3 backdrop-blur-xl transition-colors ${
+                    isCorrectPair
+                      ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
+                      : isIncorrectPair
+                      ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
+                      : shouldShowAsCorrect
+                      ? 'border-sky-400/60 bg-sky-100/55 text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/15'
+                      : isPaired
+                      ? 'border-indigo-400/60 bg-indigo-50/55 text-indigo-600 dark:border-indigo-400/30 dark:bg-indigo-500/10'
+                      : selectedLeft
+                      ? 'border-white/40 bg-white/55 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 cursor-pointer dark:border-slate-600/60 dark:bg-slate-800/40 dark:text-slate-200'
+                      : 'border-white/25 bg-white/45 text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200 opacity-70'
+                  }`}
+                >
+                  <span className="text-sm font-medium">{rightOption.text}</span>
+                  {progress.completed && shouldShowAsCorrect && (
+                    <div className="mt-1 text-xs text-sky-600 dark:text-sky-300">
+                      ✓ Đúng (chưa chọn)
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }, [currentQuestion, progress.answers, progress.completed, selectedLeft, shuffledRightItems, handleMatchingPair])
+
   const renderOptions = useMemo(() => {
+    if (currentQuestion.type === 'MATCHING') {
+      return renderMatchingQuestion
+    }
+    
     const hasImages = currentQuestion.options.some((opt) => opt.imageUrl)
     const gridCols = hasImages ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
     

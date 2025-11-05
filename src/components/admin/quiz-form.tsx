@@ -39,7 +39,7 @@ type QuizQuestionForm = {
   title: string
   content: string
   imageUrl?: string
-  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
+  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
   order: number
   points: number
   explanation: string
@@ -87,6 +87,24 @@ const createTheoryQuestion = (order: number): QuizQuestionForm => ({
   options: [],
 })
 
+const createMatchingQuestion = (order: number): QuizQuestionForm => ({
+  title: '',
+  content: '',
+  type: 'MATCHING',
+  order,
+  points: 1,
+  explanation: '',
+  options: [
+    // Create 3 pairs by default (left items at even indices, right items at odd indices)
+    { text: '', isCorrect: true, order: 0 }, // Left 1
+    { text: '', isCorrect: true, order: 1 }, // Right 1
+    { text: '', isCorrect: true, order: 2 }, // Left 2
+    { text: '', isCorrect: true, order: 3 }, // Right 2
+    { text: '', isCorrect: true, order: 4 }, // Left 3
+    { text: '', isCorrect: true, order: 5 }, // Right 3
+  ],
+})
+
 type QuestionEditorProps = {
   question: QuizQuestionForm
   index: number
@@ -105,7 +123,7 @@ type OptionRowProps = {
   optionIndex: number
   isCorrect: boolean
   disableRemove: boolean
-  questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
+  questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
   onSelectCorrect: () => void
   onToggleCorrect: () => void
   onChangeText: (value: string) => void
@@ -207,7 +225,7 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
       </div>
     </div>
 
-    <div className="mt-4 flex items-center gap-2">
+    <div className="mt-4 flex flex-wrap items-center gap-2">
       <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">Loại câu hỏi:</label>
       <Button
         type="button"
@@ -231,6 +249,20 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
       >
         Nhiều đáp án
       </Button>
+      <Button
+        type="button"
+        variant={question.type === 'MATCHING' ? 'primary' : 'ghost'}
+        size="sm"
+        onClick={() => {
+          onChange((current) => ({
+            ...current,
+            type: 'MATCHING',
+            options: current.options.length >= 4 ? current.options.map((opt) => ({ ...opt, isCorrect: true })) : createMatchingQuestion(current.order).options
+          }))
+        }}
+      >
+        Ghép cặp
+      </Button>
     </div>
 
     <div className="mt-4 space-y-3">
@@ -251,7 +283,111 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
       />
     </div>
 
-    {question.options.length > 0 ? (
+    {question.type === 'MATCHING' ? (
+      <div className="mt-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-ink-600 dark:text-ink-200">Các cặp ghép (trái | phải)</p>
+          <Button type="button" variant="subtle" onClick={() => {
+            // Add a new pair (2 options at a time)
+            const newOrder = question.options.length
+            onChange((current) => ({
+              ...current,
+              options: [
+                ...current.options,
+                { text: '', isCorrect: true, order: newOrder },
+                { text: '', isCorrect: true, order: newOrder + 1 }
+              ]
+            }))
+          }}>
+            + Thêm cặp
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {Array.from({ length: Math.floor(question.options.length / 2) }).map((_, pairIndex) => {
+            const leftIndex = pairIndex * 2
+            const rightIndex = pairIndex * 2 + 1
+            const leftOption = question.options[leftIndex]
+            const rightOption = question.options[rightIndex]
+            return (
+              <div key={`pair-${pairIndex}`} className="rounded-xl border border-ink-200/60 bg-white/80 p-4 dark:border-ink-700 dark:bg-ink-800/60">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-400 dark:text-ink-500">Cặp {pairIndex + 1}</span>
+                  {question.options.length > 4 && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        // Remove both options of the pair
+                        onChange((current) => ({
+                          ...current,
+                          options: current.options.filter((_, idx) => idx !== leftIndex && idx !== rightIndex).map((opt, idx) => ({ ...opt, order: idx }))
+                        }))
+                      }}
+                      className="text-rose-500 hover:text-rose-600"
+                    >
+                      Xoá cặp
+                    </Button>
+                  )}
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-ink-500 dark:text-ink-400">Bên trái</label>
+                    <Input
+                      value={leftOption?.text || ''}
+                      onChange={(event) => 
+                        onChange((current) => ({
+                          ...current,
+                          options: current.options.map((item, idx) => idx === leftIndex ? { ...item, text: event.target.value } : item)
+                        }))
+                      }
+                      placeholder="Ví dụ: K-means"
+                    />
+                    {leftOption?.imageUrl && (
+                      <ImageUploader
+                        value={leftOption.imageUrl}
+                        onChange={(url) => 
+                          onChange((current) => ({
+                            ...current,
+                            options: current.options.map((item, idx) => idx === leftIndex ? { ...item, imageUrl: url ?? undefined } : item)
+                          }))
+                        }
+                        compact
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-ink-500 dark:text-ink-400">Bên phải (sẽ được đảo)</label>
+                    <Input
+                      value={rightOption?.text || ''}
+                      onChange={(event) => 
+                        onChange((current) => ({
+                          ...current,
+                          options: current.options.map((item, idx) => idx === rightIndex ? { ...item, text: event.target.value } : item)
+                        }))
+                      }
+                      placeholder="Ví dụ: Phân đoạn ảnh màu"
+                    />
+                    {rightOption?.imageUrl && (
+                      <ImageUploader
+                        value={rightOption.imageUrl}
+                        onChange={(url) => 
+                          onChange((current) => ({
+                            ...current,
+                            options: current.options.map((item, idx) => idx === rightIndex ? { ...item, imageUrl: url ?? undefined } : item)
+                          }))
+                        }
+                        compact
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    ) : question.options.length > 0 ? (
       <div className="mt-6 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-ink-600 dark:text-ink-200">Các phương án</p>
@@ -501,6 +637,13 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     setValues((prev) => ({
       ...prev,
       questions: [...prev.questions, createTheoryQuestion(prev.questions.length)],
+    }))
+  }, [])
+
+  const addMatchingQuestion = useCallback(() => {
+    setValues((prev) => ({
+      ...prev,
+      questions: [...prev.questions, createMatchingQuestion(prev.questions.length)],
     }))
   }, [])
 
@@ -1048,12 +1191,15 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                   Tổng điểm hiện tại: <span className="font-medium text-emerald-600 dark:text-emerald-400">{totalPoints}</span>
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" variant="subtle" onClick={addQuestion}>
                   + Thêm câu hỏi
                 </Button>
                 <Button type="button" variant="ghost" onClick={addTheoryQuestion}>
                   + Câu lý thuyết
+                </Button>
+                <Button type="button" variant="ghost" onClick={addMatchingQuestion}>
+                  + Câu ghép cặp
                 </Button>
               </div>
             </div>

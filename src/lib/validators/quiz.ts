@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const quizStatusSchema = z.enum(['DRAFT', 'PUBLISHED'])
 
-export const quizQuestionTypeSchema = z.enum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE'])
+export const quizQuestionTypeSchema = z.enum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'MATCHING'])
 
 export const quizOptionInputSchema = z.object({
   id: z.string().cuid().optional(),
@@ -28,12 +28,22 @@ export const quizQuestionInputSchema = z.object({
   order: z.number().int().min(0).default(0),
   points: z.number().int().min(0).default(1),
   explanation: z.string().optional(),
-  // Allow 0 options for theory questions, or 2+ for regular questions
-  options: z.array(quizOptionInputSchema).refine(
-    (opts) => opts.length === 0 || opts.length >= 2,
-    { message: 'Cần 0 phương án (câu lý thuyết) hoặc ít nhất 2 phương án' }
-  ),
-})
+  // Allow 0 options for theory questions, 2+ for regular questions, or even number (4+) for matching questions
+  options: z.array(quizOptionInputSchema),
+}).refine(
+  (data) => {
+    if (data.type === 'MATCHING') {
+      // Matching questions must have even number of options (pairs), minimum 4 (2 pairs)
+      return data.options.length >= 4 && data.options.length % 2 === 0
+    }
+    // Theory questions have 0 options, regular questions have 2+
+    return data.options.length === 0 || data.options.length >= 2
+  },
+  {
+    message: 'Câu ghép cặp cần ít nhất 4 phương án (2 cặp) và số chẵn. Câu thường cần 0 (lý thuyết) hoặc ít nhất 2 phương án',
+    path: ['options']
+  }
+)
 
 export const quizInputSchema = z.object({
   id: z.string().cuid().optional(),
