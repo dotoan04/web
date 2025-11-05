@@ -594,100 +594,111 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     delta: 50,
   })
 
-  const renderOptions = useMemo(() => (
-    <div className="space-y-2 sm:space-y-3">
-      {currentQuestion.options.map((option, optionIdx) => {
-        const state = getOptionState(currentQuestion, option)
-        const isMulti = isMultipleChoice(currentQuestion)
-        const checked = (progress.answers[currentQuestion.id] ?? []).includes(option.id)
-        const shortcutKey = optionIdx < 9 ? (optionIdx + 1).toString() : '0'
-        const toneClasses =
-          state === 'correct'
-            ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200'
-            : state === 'incorrect'
-            ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15 dark:text-rose-200'
-            : state === 'missed'
-            ? 'border-sky-400/60 bg-sky-100/55 text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/15 dark:text-sky-200'
-            : checked
-            ? 'border-indigo-400/60 bg-indigo-100/55 text-indigo-700 dark:border-indigo-400/30 dark:bg-indigo-500/15 dark:text-indigo-200'
-            : 'border-white/25 bg-white/45 text-slate-700 hover:border-white/40 hover:bg-white/55 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-500/60 dark:hover:bg-slate-900/55'
-        const badgeTone =
-          state === 'correct'
-            ? 'border border-transparent bg-emerald-500 text-white'
-            : state === 'incorrect'
-            ? 'border border-transparent bg-rose-500 text-white'
-            : state === 'missed'
-            ? 'border border-transparent bg-sky-500 text-white'
-            : checked
-            ? 'border border-transparent bg-indigo-500 text-white'
-            : 'border border-white/40 bg-white/45 text-slate-600 dark:border-slate-600/40 dark:bg-slate-900/60 dark:text-slate-300'
-        const statusBadgeTone =
-          state === 'correct'
-            ? 'bg-emerald-500/85 text-white'
-            : state === 'incorrect'
-            ? 'bg-rose-500/85 text-white'
-            : 'bg-sky-500/85 text-white'
-        
-        return (
-          <label
-            key={option.id}
-            htmlFor={option.id}
-            className={`group relative flex w-full items-center gap-2 sm:gap-3 md:gap-4 overflow-hidden rounded-xl sm:rounded-2xl border backdrop-blur-xl transition-colors touch-manipulation cursor-pointer p-3 sm:p-4 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-200/60 dark:focus-within:ring-indigo-500/40 ${toneClasses}`}
-          >
-            {/* Glassmorphism overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-white/5" />
-            
-            {/* Shortcut key indicator */}
-            <div className={`relative z-10 hidden shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold md:text-xs sm:flex h-7 w-7 md:h-8 md:w-8 ${badgeTone}`}>
-              {shortcutKey}
-            </div>
-            
-            <input
-              type={isMulti ? 'checkbox' : 'radio'}
-              id={option.id}
-              name={isMulti ? undefined : currentQuestion.id}
-              checked={checked}
-              onChange={() => handleToggleOption(currentQuestion.id, option.id)}
-              disabled={progress.completed}
-              className="relative z-10 h-4 w-4 shrink-0 rounded border border-white/40 bg-white/40 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0 dark:border-slate-600/50 dark:bg-slate-900/50"
-            />
-            
-            <div className="relative z-10 flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
-              {option.imageUrl && (
-                <div className="relative w-full sm:w-48 overflow-hidden rounded-lg border border-white/30 dark:border-slate-600/30 bg-white/55 dark:bg-slate-900/45 aspect-[4/3]">
-                  <SmartImage
-                    src={option.imageUrl}
-                    alt={option.text || 'option image'}
-                    fill
-                    className="object-contain"
-                    sizes="(max-width: 640px) 85vw, (max-width: 1024px) 45vw, 220px"
+  const renderOptions = useMemo(() => {
+    const hasImages = currentQuestion.options.some((opt) => opt.imageUrl)
+    const gridCols = hasImages ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
+    
+    return (
+      <div className={`grid ${gridCols} gap-3 sm:gap-4`}>
+        {currentQuestion.options.map((option, optionIdx) => {
+          const state = getOptionState(currentQuestion, option)
+          const isMulti = isMultipleChoice(currentQuestion)
+          const checked = (progress.answers[currentQuestion.id] ?? []).includes(option.id)
+          const shortcutKey = optionIdx < 9 ? (optionIdx + 1).toString() : '0'
+          const toneClasses =
+            state === 'correct'
+              ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200'
+              : state === 'incorrect'
+              ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15 dark:text-rose-200'
+              : state === 'missed'
+              ? 'border-sky-400/60 bg-sky-100/55 text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/15 dark:text-sky-200'
+              : checked
+              ? 'border-indigo-400/60 bg-indigo-100/55 text-indigo-700 dark:border-indigo-400/30 dark:bg-indigo-500/15 dark:text-indigo-200'
+              : 'border-white/25 bg-white/45 text-slate-700 hover:border-white/40 hover:bg-white/55 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-500/60 dark:hover:bg-slate-900/55'
+          const badgeTone =
+            state === 'correct'
+              ? 'border border-transparent bg-emerald-500 text-white'
+              : state === 'incorrect'
+              ? 'border border-transparent bg-rose-500 text-white'
+              : state === 'missed'
+              ? 'border border-transparent bg-sky-500 text-white'
+              : checked
+              ? 'border border-transparent bg-indigo-500 text-white'
+              : 'border border-white/40 bg-white/45 text-slate-600 dark:border-slate-600/40 dark:bg-slate-900/60 dark:text-slate-300'
+          const statusBadgeTone =
+            state === 'correct'
+              ? 'bg-emerald-500/85 text-white'
+              : state === 'incorrect'
+              ? 'bg-rose-500/85 text-white'
+              : 'bg-sky-500/85 text-white'
+          
+          return (
+            <label
+              key={option.id}
+              htmlFor={option.id}
+              className={`group relative flex flex-col overflow-hidden rounded-xl sm:rounded-2xl border backdrop-blur-xl transition-colors touch-manipulation cursor-pointer focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-200/60 dark:focus-within:ring-indigo-500/40 ${toneClasses}`}
+            >
+              {/* Glassmorphism overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-white/5" />
+              
+              {/* Header with radio/checkbox and shortcut */}
+              <div className="relative z-10 flex items-center justify-between p-3 sm:p-4 pb-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <input
+                    type={isMulti ? 'checkbox' : 'radio'}
+                    id={option.id}
+                    name={isMulti ? undefined : currentQuestion.id}
+                    checked={checked}
+                    onChange={() => handleToggleOption(currentQuestion.id, option.id)}
+                    disabled={progress.completed}
+                    className="relative z-10 h-5 w-5 shrink-0 rounded border-2 border-white/50 bg-white/60 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0 dark:border-slate-600/50 dark:bg-slate-900/50"
                   />
+                  <div className={`hidden sm:flex items-center justify-center rounded-lg text-xs font-semibold h-7 w-7 ${badgeTone}`}>
+                    {shortcutKey}
+                  </div>
+                  {option.text && !option.imageUrl && (
+                    <span className="text-sm sm:text-base font-medium leading-relaxed font-sans break-words">{option.text}</span>
+                  )}
+                </div>
+                {state !== null && (
+                  <span className={`relative z-10 shrink-0 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider backdrop-blur-sm ${statusBadgeTone}`}>
+                    <span className="hidden sm:inline">
+                      {state === 'correct' ? '✓ Đúng' 
+                       : state === 'incorrect' ? '✗ Sai'
+                       : '✓ Đúng (chưa chọn)'}
+                    </span>
+                    <span className="sm:hidden">
+                      {state === 'correct' ? '✓' 
+                       : state === 'incorrect' ? '✗'
+                       : '✓'}
+                    </span>
+                  </span>
+                )}
+              </div>
+              
+              {/* Image section - full width, larger */}
+              {option.imageUrl && (
+                <div className="relative z-10 flex-1 w-full px-3 sm:px-4 pb-3 sm:pb-4">
+                  <div className="relative w-full overflow-hidden rounded-lg border-2 border-white/40 dark:border-slate-600/40 bg-white/70 dark:bg-slate-900/50 aspect-[4/3] min-h-[200px] sm:min-h-[240px]">
+                    <SmartImage
+                      src={option.imageUrl}
+                      alt={option.text || 'option image'}
+                      fill
+                      className="object-contain"
+                      sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 480px"
+                    />
+                  </div>
+                  {option.text && (
+                    <p className="mt-2 sm:mt-3 text-sm sm:text-base font-medium leading-relaxed font-sans break-words text-center">{option.text}</p>
+                  )}
                 </div>
               )}
-              {option.text ? (
-                <span className="text-sm sm:text-base font-medium leading-relaxed font-sans break-words">{option.text}</span>
-              ) : null}
-            </div>
-            
-            {state !== null ? (
-              <span className={`relative z-10 shrink-0 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider backdrop-blur-sm ${statusBadgeTone}`}>
-                <span className="hidden sm:inline">
-                  {state === 'correct' ? '✓ Đúng' 
-                   : state === 'incorrect' ? '✗ Sai'
-                   : '✓ Đúng (chưa chọn)'}
-                </span>
-                <span className="sm:hidden">
-                  {state === 'correct' ? '✓' 
-                   : state === 'incorrect' ? '✗'
-                   : '✓'}
-                </span>
-              </span>
-            ) : null}
-          </label>
-        )
-      })}
-    </div>
-  ), [currentQuestion, progress.answers, progress.completed, getOptionState, handleToggleOption])
+            </label>
+          )
+        })}
+      </div>
+    )
+  }, [currentQuestion, progress.answers, progress.completed, getOptionState, handleToggleOption])
 
   const renderFilterModal = () => {
     if (!showFilterModal || !progress.completed) return null
@@ -960,7 +971,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       </header>
 
       {/* Question Area with Swipe Support */}
-      <main className="relative mx-auto max-w-4xl" {...swipeHandlers}>
+      <main className="relative mx-auto w-full max-w-6xl px-4 sm:px-6" {...swipeHandlers}>
         <article className="relative rounded-xl sm:rounded-2xl border border-white/40 bg-white/65 p-4 sm:p-6 md:p-8 shadow-[0_24px_60px_rgba(15,23,42,0.18)] ring-1 ring-white/30 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/60 dark:shadow-[0_22px_55px_rgba(2,6,23,0.6)] dark:ring-white/5">
           {/* Subtle overlay effect */}
           <div className="pointer-events-none absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white/45 via-white/10 to-transparent dark:from-white/10 dark:via-white/5" />
@@ -994,13 +1005,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
           {currentQuestion.imageUrl && (
             <div className="relative mb-4 sm:mb-6">
-              <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl border border-white/30 dark:border-slate-700/40 shadow-lg bg-white/60 dark:bg-slate-900/40 aspect-[4/3] max-h-[420px]">
+              <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl border-2 border-white/40 dark:border-slate-700/50 shadow-lg bg-white/70 dark:bg-slate-900/50 aspect-[4/3] max-h-[500px] sm:max-h-[600px]">
                 <SmartImage
                   src={currentQuestion.imageUrl}
                   alt={currentQuestion.title}
                   fill
                   className="object-contain"
-                  sizes="(max-width: 640px) 95vw, (max-width: 1024px) 85vw, 960px"
+                  sizes="(max-width: 640px) 95vw, (max-width: 1024px) 90vw, 1200px"
                 />
               </div>
             </div>
