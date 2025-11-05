@@ -135,8 +135,8 @@ export const ImageUploader = ({ value, onChange, uploaderId, label, className, c
       {label && <label className="text-sm font-medium text-ink-600 dark:text-ink-300">{label}</label>}
 
       {value ? (
-        <div className="relative inline-block">
-          <div className="relative h-32 w-full max-w-xs overflow-hidden rounded-xl border-2 border-ink-200 dark:border-ink-700">
+        <div className="relative w-80">
+          <div className="relative h-32 w-full overflow-hidden rounded-xl border-2 border-ink-200 dark:border-ink-700">
             <SmartImage src={value} alt="Preview" fill className="object-cover" sizes="320px" />
           </div>
           <Button
