@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileText, Upload, X } from 'lucide-react'
 
@@ -128,7 +128,6 @@ const OptionRow = memo(({ option, questionIndex, optionIndex, isCorrect, disable
           onChange={(event) => onChangeText(event.target.value)}
           placeholder={`Phương án ${option.order + 1}`}
           className="flex-1"
-          required
         />
         <div className="flex items-center gap-2">
           <ImageUploader
@@ -332,8 +331,12 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
   }
 
   const isDataUrl = (url?: string) => !!url && url.startsWith('data:')
+  const uploadedCacheRef = useRef<Map<string, string>>(new Map())
+  const lastUploadIdsRef = useRef<string[]>([])
 
   const uploadDataUrl = async (dataUrl: string): Promise<string> => {
+    const cached = uploadedCacheRef.current.get(dataUrl)
+    if (cached) return cached
     const [header, base64] = dataUrl.split(',')
     const mimeMatch = /data:(.*);base64/.exec(header)
     const mime = (mimeMatch?.[1] || 'image/png').toLowerCase()
@@ -348,6 +351,8 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     const res = await fetch('/api/media/upload', { method: 'POST', body: form })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data?.error ?? 'Upload ảnh thất bại')
+    if (data?.id) lastUploadIdsRef.current.push(data.id as string)
+    uploadedCacheRef.current.set(dataUrl, data.url as string)
     return data.url as string
   }
 
@@ -419,6 +424,25 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     } finally {
       setApplying(false)
       setApplyProgress({ processed: 0, total: 0 })
+    }
+  }
+
+  const rollbackLastUploadedImages = async () => {
+    const ids = [...lastUploadIdsRef.current]
+    if (!ids.length) return
+    setImporting(true)
+    try {
+      await Promise.all(
+        ids.map((id) => fetch(`/api/media?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => null))
+      )
+      lastUploadIdsRef.current = []
+      uploadedCacheRef.current.clear()
+      setMessage('Đã xoá ảnh tải lên từ lần áp dụng gần nhất.')
+    } catch (e) {
+      console.error(e)
+      setError('Không thể xoá một số ảnh. Kiểm tra lại trong thư viện media.')
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -789,6 +813,11 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                 {preview.length ? (
                   <Button type="button" variant="ghost" onClick={resetPreview}>
                     <X size={16} className="mr-1" /> Xoá preview
+                  </Button>
+                ) : null}
+                {preview.length ? (
+                  <Button type="button" variant="ghost" onClick={rollbackLastUploadedImages}>
+                    Hoàn tác ảnh lần áp dụng trước
                   </Button>
                 ) : null}
               </div>

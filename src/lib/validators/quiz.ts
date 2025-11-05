@@ -6,10 +6,12 @@ export const quizQuestionTypeSchema = z.enum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE'
 
 export const quizOptionInputSchema = z.object({
   id: z.string().cuid().optional(),
-  text: z.string().min(1, 'Phương án không được bỏ trống'),
+  text: z.string().optional().transform((v) => v ?? ''),
   imageUrl: z.string().optional(),
   isCorrect: z.boolean(),
   order: z.number().int().min(0).default(0),
+}).refine((opt) => Boolean((opt.text && opt.text.trim()) || opt.imageUrl), {
+  message: 'Cần nội dung hoặc ảnh cho phương án',
 })
 
 export const quizQuestionInputSchema = z.object({
