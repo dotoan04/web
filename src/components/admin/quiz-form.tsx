@@ -518,38 +518,65 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
   const applyImportedQuestions = async (items: ImportedQuestion[]) => {
     try {
       setApplying(true)
-      // Count total images
-      const total = items.reduce((sum, q) => sum + (isDataUrl(q.imageUrl) ? 1 : 0) + q.options.filter((o) => isDataUrl(o.imageUrl)).length, 0)
+      // Collect all images that need to be uploaded with their locations
+      const imageUploadMap = new Map<string, string>() // dataUrl -> uploadedUrl
+      const imageUploadTasks: Array<{ dataUrl: string }> = []
+      
+      items.forEach((q) => {
+        if (isDataUrl(q.imageUrl)) {
+          imageUploadTasks.push({ dataUrl: q.imageUrl! })
+        }
+        q.options.forEach((opt) => {
+          if (isDataUrl(opt.imageUrl)) {
+            imageUploadTasks.push({ dataUrl: opt.imageUrl! })
+          }
+        })
+      })
+
+      const total = imageUploadTasks.length
       setApplyProgress({ processed: 0, total })
 
-      const processOption = async (opt: ImportedQuestion['options'][number]) => {
-        let imageUrl = opt.imageUrl
-        if (isDataUrl(imageUrl)) {
+      // Upload all images in parallel with concurrency limit
+      const CONCURRENCY_LIMIT = 5 // Upload 5 images at a time
+      
+      for (let i = 0; i < imageUploadTasks.length; i += CONCURRENCY_LIMIT) {
+        const batch = imageUploadTasks.slice(i, i + CONCURRENCY_LIMIT)
+        const batchPromises = batch.map(async (task) => {
           try {
-            imageUrl = await uploadDataUrl(imageUrl!)
+            // Check cache first
+            if (uploadedCacheRef.current.has(task.dataUrl)) {
+              const cachedUrl = uploadedCacheRef.current.get(task.dataUrl)!
+              imageUploadMap.set(task.dataUrl, cachedUrl)
+              setApplyProgress((p) => ({ processed: p.processed + 1, total: p.total }))
+              return
+            }
+            const newUrl = await uploadDataUrl(task.dataUrl)
+            imageUploadMap.set(task.dataUrl, newUrl)
+          } catch (error) {
+            console.error('Failed to upload image:', error)
+            // Keep original dataUrl if upload fails
+            imageUploadMap.set(task.dataUrl, task.dataUrl)
           } finally {
             setApplyProgress((p) => ({ processed: p.processed + 1, total: p.total }))
           }
-        }
-        return { ...opt, imageUrl }
+        })
+        // Wait for this batch to complete before starting next batch
+        await Promise.all(batchPromises)
       }
 
-      const processedItems: ImportedQuestion[] = []
-      for (const q of items) {
-        let qImage = q.imageUrl
-        if (isDataUrl(qImage)) {
-          try {
-            qImage = await uploadDataUrl(qImage!)
-          } finally {
-            setApplyProgress((p) => ({ processed: p.processed + 1, total: p.total }))
-          }
-        }
-        const processedOptions: ImportedQuestion['options'] = []
-        for (const opt of q.options) {
-          processedOptions.push(await processOption(opt))
-        }
-        processedItems.push({ ...q, imageUrl: qImage, options: processedOptions })
-      }
+      // Now process items and replace data URLs with uploaded URLs
+      const processedItems: ImportedQuestion[] = items.map((q) => ({
+        ...q,
+        imageUrl: q.imageUrl && isDataUrl(q.imageUrl) 
+          ? (imageUploadMap.get(q.imageUrl) || q.imageUrl)
+          : q.imageUrl,
+        options: q.options.map((opt) => ({
+          ...opt,
+          imageUrl: opt.imageUrl && isDataUrl(opt.imageUrl)
+            ? (imageUploadMap.get(opt.imageUrl) || opt.imageUrl)
+            : opt.imageUrl
+        }))
+      }))
 
       const nextQuestions = processedItems.map((item, questionIndex) => {
         // Determine question type

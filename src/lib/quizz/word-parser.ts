@@ -356,13 +356,18 @@ const parsePlainText = (text: string) =>
 const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
   const items: ParsedQuestion[] = []
   let current: ParsedQuestion | null = null
+  let questionTextBuffer: string[] = [] // Buffer to collect question text before options start
+  let isCollectingQuestion = false
 
   const questionPattern = /^(Câu\s+\d+\s*[:\.\-]?)(.*)$/i
-  const optionPattern = /^([A-DĐ])\.\s*(.*)$/i
+  // More strict option pattern - must be at start of line and followed by space/dot
+  const optionPattern = /^([A-DĐ])[\.\)]\s+(.+)$/i
   const labelPattern = /^(Chọn\s*\d+\s*(?:đáp\s*án|phương\s*án)\s*đúng)/i
   const multiPattern = /(Chọn\s*\d+\s*đáp\s*án\s*đúng|Chọn\s*\d+\s*phương\s*án)/i
-  const trueFalsePattern = /^(Đúng|Sai)$/i
+  const trueFalsePattern = /^(Đúng|Sai|True|False)$/i
   const numberedItemPattern = /^\d+[\.\)]\s+/  // Match "1. " or "1) "
+  // Pattern to detect if a line is likely an answer option (starts with A-D followed by dot/parenthesis)
+  const looksLikeOption = /^[A-DĐ][\.\)]\s/
 
   const markCorrect = (value: string, colored: boolean) => {
     if (colored) return true
@@ -377,7 +382,22 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
 
     const questionMatch = trimmed.match(questionPattern)
     if (questionMatch) {
+      // Flush previous question
       if (current) {
+        // Apply buffered question text before adding options
+        if (questionTextBuffer.length > 0 && current.options.length === 0) {
+          const bufferedText = questionTextBuffer.join(' ').trim()
+          if (bufferedText) {
+            if (current.content) {
+              current.content = `${current.content}\n${bufferedText}`.trim()
+            } else if (current.title.length < 200) {
+              current.title = `${current.title} ${bufferedText}`.trim()
+            } else {
+              current.content = bufferedText
+            }
+          }
+          questionTextBuffer = []
+        }
         items.push(current)
       }
 
@@ -394,11 +414,30 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
         correct: new Set<number>(),
         multi: multiPattern.test(text),
       }
+      questionTextBuffer = []
+      isCollectingQuestion = true
       return
     }
 
+    // Check if this looks like an option - must be more strict
     const optionMatch = trimmed.match(optionPattern)
     if (optionMatch && current) {
+      // If we were collecting question text, flush it first
+      if (questionTextBuffer.length > 0 && current.options.length === 0) {
+        const bufferedText = questionTextBuffer.join(' ').trim()
+        if (bufferedText) {
+          if (current.content) {
+            current.content = `${current.content}\n${bufferedText}`.trim()
+          } else if (current.title.length < 200) {
+            current.title = `${current.title} ${bufferedText}`.trim()
+          } else {
+            current.content = bufferedText
+          }
+        }
+        questionTextBuffer = []
+      }
+      isCollectingQuestion = false
+
       const [, key, rest] = optionMatch
       const original = rest.trim()
       const isCorrect = markCorrect(original, isColored)
@@ -407,22 +446,44 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
       return
     }
 
-    // Support for True/False questions
+    // Support for True/False questions - more flexible matching
     const trueFalseMatch = trimmed.match(trueFalsePattern)
-    if (trueFalseMatch && current && current.options.length < 2) {
-      const key = current.options.length === 0 ? 'A' : 'B'
-      const isCorrect = markCorrect(trimmed, isColored)
-      current.options.push({ key, value: trimmed, isCorrect, imageUrl: imageId || undefined })
-      return
+    if (trueFalseMatch && current) {
+      // Only add if we don't have 2 options yet, or if we're explicitly looking for T/F
+      if (current.options.length < 2) {
+        // Flush question text buffer if needed
+        if (questionTextBuffer.length > 0 && current.options.length === 0) {
+          const bufferedText = questionTextBuffer.join(' ').trim()
+          if (bufferedText) {
+            if (current.content) {
+              current.content = `${current.content}\n${bufferedText}`.trim()
+            } else if (current.title.length < 200) {
+              current.title = `${current.title} ${bufferedText}`.trim()
+            } else {
+              current.content = bufferedText
+            }
+          }
+          questionTextBuffer = []
+        }
+        isCollectingQuestion = false
+
+        const key = current.options.length === 0 ? 'A' : 'B'
+        const isCorrect = markCorrect(trimmed, isColored)
+        current.options.push({ key, value: trimmed, isCorrect, imageUrl: imageId || undefined })
+        return
+      }
     }
 
-    if (current && numId) {
+    // Handle numbered list items (1. 2. etc) as options if we're past question text
+    if (current && numId && !isCollectingQuestion) {
       const existingKeys = current.options.length
-      const key = String.fromCharCode(65 + existingKeys)
-      const isCorrect = markCorrect(trimmed, isColored)
-      const value = stripMarker(trimmed)
-      current.options.push({ key, value, isCorrect, imageUrl: imageId || undefined })
-      return
+      if (existingKeys < 10) { // Limit to reasonable number of options
+        const key = String.fromCharCode(65 + existingKeys)
+        const isCorrect = markCorrect(trimmed, isColored)
+        const value = stripMarker(trimmed)
+        current.options.push({ key, value, isCorrect, imageUrl: imageId || undefined })
+        return
+      }
     }
 
     if (current) {
@@ -431,59 +492,94 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
         return
       }
 
-      // Handle image in question title
-      if (imageId && current.options.length === 0) {
-        current.imageUrl = imageId
-        if (trimmed) {
-          // For theory questions, add to content instead of title
-          if (current.content) {
-            current.content += '\n' + trimmed
-          } else {
-            current.title = `${current.title} ${trimmed}`.trim()
+      // If we see something that looks like an option but wasn't matched, 
+      // it might be part of question text - be more careful
+      if (looksLikeOption.test(trimmed) && current.options.length === 0) {
+        // This might be part of question text, not an actual option
+        // Only treat as option if it's clearly formatted
+        if (optionPattern.test(trimmed)) {
+          // Actually is an option, process it
+          const optionMatch = trimmed.match(optionPattern)
+          if (optionMatch) {
+            const [, key, rest] = optionMatch
+            const original = rest.trim()
+            const isCorrect = markCorrect(original, isColored)
+            const value = stripMarker(original)
+            current.options.push({ key: key.trim(), value, isCorrect, imageUrl: imageId || undefined })
+            isCollectingQuestion = false
+            return
           }
         }
-        return
+        // Otherwise, treat as question text
+      }
+
+      // Handle images - if we have an image and no options yet, it's part of question
+      if (imageId) {
+        if (current.options.length === 0) {
+          // Image is part of question
+          if (!current.imageUrl) {
+            current.imageUrl = imageId
+          }
+          // Add text to question buffer
+          if (trimmed) {
+            questionTextBuffer.push(trimmed)
+          }
+          return
+        } else {
+          // Image is part of last option
+          const last = current.options[current.options.length - 1]
+          if (!last.imageUrl) {
+            last.imageUrl = imageId
+          }
+          // Continue to add text to option
+        }
       }
 
       if (current.options.length === 0) {
-        // For theory questions, put additional lines in content with line breaks preserved
+        // Still collecting question text
+        isCollectingQuestion = true
+        
         // If line starts with number (1., 2., etc), it's likely content
-        if (numberedItemPattern.test(trimmed) || current.content) {
-          if (current.content) {
-            current.content += '\n' + trimmed
-          } else {
-            current.content = trimmed
+        if (numberedItemPattern.test(trimmed)) {
+          if (trimmed) {
+            questionTextBuffer.push(trimmed)
           }
         } else {
-          // First few lines without numbered items go to title
-          const titleLength = current.title.length
-          if (titleLength < 150) {
-            current.title = `${current.title} ${trimmed}`.trim()
-          } else {
-            // After title is long enough, move to content
-            if (current.content) {
-              current.content += '\n' + trimmed
-            } else {
-              current.content = trimmed
-            }
+          // Check if this might be the start of options (looks like option but not matched)
+          // If it does, don't add to question
+          if (!looksLikeOption.test(trimmed)) {
+            questionTextBuffer.push(trimmed)
           }
         }
       } else {
+        // We have options, so this text belongs to the last option
+        isCollectingQuestion = false
         const last = current.options[current.options.length - 1]
         const updatedValue = `${last.value} ${trimmed}`.trim()
         last.value = stripMarker(updatedValue)
         if (markCorrect(updatedValue, isColored)) {
           last.isCorrect = true
         }
-        // Handle image in option
-        if (imageId) {
-          last.imageUrl = imageId
-        }
+        // Image already handled above
       }
     }
   })
 
+  // Flush last question
   if (current) {
+    // Apply buffered question text before adding options
+    if (questionTextBuffer.length > 0 && current.options.length === 0) {
+      const bufferedText = questionTextBuffer.join(' ').trim()
+      if (bufferedText) {
+        if (current.content) {
+          current.content = `${current.content}\n${bufferedText}`.trim()
+        } else if (current.title.length < 200) {
+          current.title = `${current.title} ${bufferedText}`.trim()
+        } else {
+          current.content = bufferedText
+        }
+      }
+    }
     items.push(current)
   }
 
@@ -529,24 +625,52 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
       return
     }
     
-    // Detect true/false questions
+    // Detect true/false questions - more comprehensive
     if (question.options.length === 2) {
-      const hasTrue = question.options.some(opt => 
-        /^(đúng|true|yes|có|t)$/i.test(opt.value.trim())
-      )
-      const hasFalse = question.options.some(opt => 
-        /^(sai|false|no|không|f)$/i.test(opt.value.trim())
-      )
+      const opt1 = question.options[0].value.trim().toLowerCase()
+      const opt2 = question.options[1].value.trim().toLowerCase()
       
-      if (hasTrue && hasFalse) {
+      // Check various True/False patterns
+      const truePatterns = ['đúng', 'true', 'yes', 'có', 't', 'đúng.', 'true.', 'yes.', 'có.', 't.']
+      const falsePatterns = ['sai', 'false', 'no', 'không', 'f', 'sai.', 'false.', 'no.', 'không.', 'f.']
+      
+      const hasTrue = truePatterns.some(pattern => opt1 === pattern || opt2 === pattern)
+      const hasFalse = falsePatterns.some(pattern => opt1 === pattern || opt2 === pattern)
+      
+      // Also check if options are exactly "Đúng" and "Sai" (case-insensitive)
+      if ((hasTrue && hasFalse) || 
+          (opt1 === 'đúng' && opt2 === 'sai') ||
+          (opt1 === 'sai' && opt2 === 'đúng') ||
+          (opt1 === 'true' && opt2 === 'false') ||
+          (opt1 === 'false' && opt2 === 'true')) {
         question.type = 'truefalse'
+        // Ensure correct ordering: Đúng/True first, Sai/False second
+        if (falsePatterns.some(p => opt1 === p) || opt1 === 'false' || opt1 === 'sai') {
+          // Swap options
+          const temp = question.options[0]
+          question.options[0] = question.options[1]
+          question.options[1] = temp
+        }
       }
     }
     
-    // Process numbered items in content (1) Text 2) Text)
+    // Process numbered items in content (1) Text 2) Text) or (1. Text 2. Text)
     if (question.content && question.options.length === 0) {
-      const numberedPattern = /(\d+)\)\s*([^0-9]+?)(?=\d+\)|$)/g
-      const numberedMatches = Array.from(question.content.matchAll(numberedPattern))
+      // Try pattern with parenthesis: 1) Text 2) Text
+      let numberedPattern = /(\d+)\)\s*([^0-9]+?)(?=\d+\)|$)/g
+      let numberedMatches = Array.from(question.content.matchAll(numberedPattern))
+      
+      // If no matches, try pattern with dots: 1. Text 2. Text
+      if (numberedMatches.length < 2) {
+        numberedPattern = /(\d+)\.\s+([^0-9]+?)(?=\d+\.|$)/g
+        numberedMatches = Array.from(question.content.matchAll(numberedPattern))
+      }
+      
+      // If still no matches, try pattern with dashes: 1- Text 2- Text
+      if (numberedMatches.length < 2) {
+        numberedPattern = /(\d+)-\s+([^0-9]+?)(?=\d+-|$)/g
+        numberedMatches = Array.from(question.content.matchAll(numberedPattern))
+      }
       
       if (numberedMatches.length >= 2) {
         // This is likely a question with numbered options
@@ -566,6 +690,31 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
         // Clean content if we extracted options
         if (question.options.length > 0) {
           question.content = ''
+        }
+      } else {
+        // Try to split by common separators if content is long and has multiple sentences
+        const sentences = question.content.split(/[.!?]\s+/).filter(s => s.trim().length > 10)
+        if (sentences.length >= 2 && sentences.length <= 6) {
+          // Might be options separated by sentences
+          sentences.forEach((sentence, index) => {
+            const text = sentence.trim()
+            const isCorrect = /đúng|true|correct/i.test(text) || 
+                             text.toLowerCase().includes('*')
+            
+            question.options.push({
+              key: String.fromCharCode(65 + index),
+              value: text.replace(/\*+/g, '').trim(),
+              isCorrect: isCorrect,
+              imageUrl: undefined
+            })
+          })
+          
+          if (question.options.length >= 2) {
+            question.content = ''
+          } else {
+            // Reset if we didn't get enough options
+            question.options = []
+          }
         }
       }
     }
