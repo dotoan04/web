@@ -567,20 +567,21 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
 
   // Flush last question
   if (current) {
+    const finalQuestion: ParsedQuestion = current
     // Apply buffered question text before adding options
-    if (questionTextBuffer.length > 0 && current.options.length === 0) {
+    if (questionTextBuffer.length > 0 && finalQuestion.options.length === 0) {
       const bufferedText = questionTextBuffer.join(' ').trim()
       if (bufferedText) {
-        if (current.content) {
-          current.content = `${current.content}\n${bufferedText}`.trim()
-        } else if (current.title.length < 200) {
-          current.title = `${current.title} ${bufferedText}`.trim()
+        if (finalQuestion.content) {
+          finalQuestion.content = `${finalQuestion.content}\n${bufferedText}`.trim()
+        } else if (finalQuestion.title.length < 200) {
+          finalQuestion.title = `${finalQuestion.title} ${bufferedText}`.trim()
         } else {
-          current.content = bufferedText
+          finalQuestion.content = bufferedText
         }
       }
     }
-    items.push(current)
+    items.push(finalQuestion)
   }
 
   items.forEach((question) => {
