@@ -800,7 +800,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     const gridCols = hasImages ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
     
     return (
-      <div className={`grid ${gridCols} gap-2`}>
+      <div className="space-y-3">
         {currentQuestion.options.map((option, optionIdx) => {
           const state = getOptionState(currentQuestion, option)
           const isMulti = isMultipleChoice(currentQuestion)
@@ -837,53 +837,64 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             <label
               key={option.id}
               htmlFor={option.id}
-              className={`group relative flex flex-col overflow-hidden rounded-lg border backdrop-blur-sm transition-colors touch-manipulation cursor-pointer focus-within:outline-none focus-within:ring-1 focus-within:ring-indigo-300/60 dark:focus-within:ring-indigo-500/40 ${toneClasses}`}
+              className={`group relative flex items-start gap-4 p-4 rounded-xl border-2 transition-all touch-manipulation cursor-pointer hover:shadow-md focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-400/50 dark:focus-within:ring-indigo-500/40 ${
+                checked ? 'border-indigo-400 bg-indigo-50/80 dark:border-indigo-500 dark:bg-indigo-500/20' : 'border-gray-200 bg-white/80 dark:border-gray-700 dark:bg-slate-800/80'
+              } ${toneClasses}`}
             >
-              {/* Header with radio/checkbox and shortcut */}
-              <div className="relative z-10 flex items-center justify-between p-2">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <input
-                    type={isMulti ? 'checkbox' : 'radio'}
-                    id={option.id}
-                    name={isMulti ? undefined : currentQuestion.id}
-                    checked={checked}
-                    onChange={() => handleToggleOption(currentQuestion.id, option.id)}
-                    disabled={progress.completed}
-                    className="relative z-10 h-4 w-4 shrink-0 rounded border-2 border-white/50 bg-white/60 text-indigo-600 focus:ring-1 focus:ring-indigo-500/50 focus:ring-offset-0 dark:border-slate-600/50 dark:bg-slate-900/50"
-                  />
-                  <div className={`hidden sm:flex items-center justify-center rounded text-[10px] font-semibold h-5 w-5 ${badgeTone}`}>
+              {/* Radio/Checkbox */}
+              <div className="flex-shrink-0 mt-0.5">
+                <input
+                  type={isMulti ? 'checkbox' : 'radio'}
+                  id={option.id}
+                  name={isMulti ? undefined : currentQuestion.id}
+                  checked={checked}
+                  onChange={() => handleToggleOption(currentQuestion.id, option.id)}
+                  disabled={progress.completed}
+                  className="h-5 w-5 rounded border-2 border-gray-300 bg-white text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0 dark:border-gray-600 dark:bg-slate-700"
+                />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                {/* Option Number Badge */}
+                <div className="flex items-center gap-3 mb-2">
+                  <span className={`flex items-center justify-center rounded-lg text-xs font-bold h-6 w-6 ${badgeTone}`}>
                     {shortcutKey}
-                  </div>
-                  {option.text && !option.imageUrl && (
-                    <span className="text-xs sm:text-sm font-medium leading-snug font-sans break-words flex-1">{option.text}</span>
+                  </span>
+                  {state !== null && (
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadgeTone}`}>
+                      {state === 'correct' ? '✓ Đúng' 
+                       : state === 'incorrect' ? '✗ Sai'
+                       : '✓ Đúng (chưa chọn)'}
+                    </span>
                   )}
                 </div>
-                {state !== null && (
-                  <span className={`relative z-10 shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm ${statusBadgeTone}`}>
-                    {state === 'correct' ? '✓' 
-                     : state === 'incorrect' ? '✗'
-                     : '✓'}
-                  </span>
+
+                {/* Option Text */}
+                {option.text && (
+                  <p className={`text-base font-medium leading-relaxed mb-3 ${
+                    state === 'correct' ? 'text-emerald-700 dark:text-emerald-300'
+                    : state === 'incorrect' ? 'text-rose-700 dark:text-rose-300'
+                    : state === 'missed' ? 'text-sky-700 dark:text-sky-300'
+                    : 'text-gray-900 dark:text-gray-100'
+                  }`}>
+                    {option.text}
+                  </p>
                 )}
-              </div>
-              
-              {/* Image section - compact */}
-              {option.imageUrl && (
-                <div className="relative z-10 flex-1 w-full px-2 pb-2">
-                  <div className="relative w-full overflow-hidden rounded border border-white/40 dark:border-slate-600/40 bg-white/70 dark:bg-slate-900/50 aspect-[4/3] min-h-[150px]">
+
+                {/* Option Image */}
+                {option.imageUrl && (
+                  <div className="relative w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 aspect-[4/3] min-h-[180px]">
                     <SmartImage
                       src={option.imageUrl}
                       alt={option.text || 'option image'}
                       fill
-                      className="object-contain"
-                      sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 480px"
+                      className="object-contain p-3"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                   </div>
-                  {option.text && (
-                    <p className="mt-1.5 text-xs font-medium leading-snug font-sans break-words text-center">{option.text}</p>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </label>
           )
         })}
@@ -1057,7 +1068,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       {renderFilterModal()}
       
       {/* Header - Compact */}
-      <header className="sticky top-0 z-10 mb-2 rounded-lg border border-white/40 bg-white/70 p-2 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
+      <header className="sticky top-0 z-10 mb-4 rounded-xl border border-white/40 bg-white/70 p-4 shadow-md backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {renderCompactTimer}
@@ -1156,103 +1167,119 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </div>
       </header>
 
-      {/* Question Area with Swipe Support */}
-      <main className="relative mx-auto w-full max-w-6xl px-2 sm:px-4" {...swipeHandlers}>
-        {/* Sticky Question Title */}
-        <div className="sticky top-[120px] z-10 mb-2 rounded-lg border border-white/30 bg-white/80 p-2 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10 rounded-full px-2 py-0.5 font-sans">
-                  Câu {currentQuestionIndex + 1}/{quiz.questions.length}
-                </p>
-                <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10 rounded-full px-2 py-0.5">
-                  {currentQuestion.points}đ
-                </span>
+      {/* Split View Layout - Optimized for Focus */}
+      <main className="relative mx-auto w-full max-w-[98%] lg:max-w-[1600px] px-2 sm:px-4" {...swipeHandlers}>
+        <div className="grid lg:grid-cols-2 gap-4 lg:gap-6 h-[calc(100vh-200px)] lg:h-[calc(100vh-180px)]">
+          {/* Left Side - Question (Sticky) */}
+          <div className="lg:sticky lg:top-[140px] lg:h-[calc(100vh-200px)] flex flex-col">
+            <article className="relative flex-1 flex flex-col rounded-xl border border-white/40 bg-white/70 p-5 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 overflow-y-auto">
+              {/* Question Header */}
+              <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
+                    Câu {currentQuestionIndex + 1}/{quiz.questions.length}
+                  </span>
+                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
+                    {currentQuestion.points}đ
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}
+                    disabled={currentQuestionIndex === 0}
+                    className="h-7 px-2 text-xs"
+                  >
+                    ←
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))}
+                    disabled={currentQuestionIndex === quiz.questions.length - 1}
+                    className="h-7 px-2 text-xs"
+                  >
+                    →
+                  </Button>
+                </div>
               </div>
-              <h2 className="text-sm sm:text-base font-semibold leading-snug text-gray-900 dark:text-gray-100 font-sans line-clamp-2">
+
+              {/* Question Title */}
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight text-gray-900 dark:text-gray-100 mb-4 font-sans">
                 {currentQuestion.title}
               </h2>
+
+              {/* Question Content */}
+              {currentQuestion.content && (
+                <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 mb-4 bg-gray-50/80 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200/50 dark:border-gray-700/50">
+                  {currentQuestion.content}
+                </p>
+              )}
+
+              {/* Question Image */}
+              {currentQuestion.imageUrl && (
+                <div className="relative flex-1 min-h-[200px] mb-4 rounded-lg border-2 border-gray-200/50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/50 overflow-hidden">
+                  <SmartImage
+                    src={currentQuestion.imageUrl}
+                    alt={currentQuestion.title}
+                    fill
+                    className="object-contain p-4"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                  />
+                </div>
+              )}
+
+              {/* Explanation (if completed) */}
+              {progress.completed && currentQuestion.explanation && (
+                <div className="mt-auto pt-4 border-t border-emerald-200/50 dark:border-emerald-800/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">💡</span>
+                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                      Giải thích
+                    </p>
+                  </div>
+                  <p className="text-sm leading-relaxed text-emerald-800 dark:text-emerald-200">
+                    {currentQuestion.explanation}
+                  </p>
+                </div>
+              )}
+            </article>
+          </div>
+
+          {/* Right Side - Options (Scrollable) */}
+          <div className="flex flex-col lg:h-[calc(100vh-180px)]">
+            <div className="flex-1 rounded-xl border border-white/40 bg-white/70 p-5 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 overflow-y-auto">
+              <div className="mb-4 pb-3 border-b border-gray-200/50 dark:border-gray-700/50">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+                  Chọn đáp án
+                </h3>
+              </div>
+              
+              <div className="space-y-3">
+                {renderOptions}
+              </div>
+
+              {/* Keyboard shortcuts hint */}
+              <div className="mt-6 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">1-9</span>
+                  <span>chọn đáp án</span>
+                  <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
+                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">Enter</span>
+                  <span>câu tiếp</span>
+                  <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
+                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">↑↓</span>
+                  <span>di chuyển</span>
+                </div>
+              </div>
+
+              {error && <p className="mt-4 text-sm text-rose-500 dark:text-rose-300">{error}</p>}
             </div>
           </div>
         </div>
-
-        <article className="relative rounded-lg border border-white/40 bg-white/65 p-3 sm:p-4 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
-          {/* Subtle overlay effect */}
-          <div className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-br from-white/30 via-white/5 to-transparent dark:from-white/5 dark:via-white/2" />
-
-          {currentQuestion.imageUrl && (
-            <div className="relative mb-3">
-              <div className="relative w-full overflow-hidden rounded-lg border border-white/40 dark:border-slate-700/50 bg-white/70 dark:bg-slate-900/50 aspect-[4/3] max-h-[400px]">
-                <SmartImage
-                  src={currentQuestion.imageUrl}
-                  alt={currentQuestion.title}
-                  fill
-                  className="object-contain"
-                  sizes="(max-width: 640px) 95vw, (max-width: 1024px) 90vw, 1200px"
-                />
-              </div>
-            </div>
-          )}
-
-          {currentQuestion.content && (
-            <p className="relative mb-3 text-xs sm:text-sm leading-relaxed text-gray-700 dark:text-gray-200 bg-gray-50/60 rounded-lg p-2 backdrop-blur-sm border border-gray-200/30 dark:bg-gray-800/40 dark:border-gray-700/30 font-sans">
-              {currentQuestion.content}
-            </p>
-          )}
-
-          <div className="relative">
-            {renderOptions}
-          </div>
-
-          {progress.completed && currentQuestion.explanation && (
-            <div className="relative mt-3 rounded-lg border border-emerald-400/50 bg-emerald-50/60 p-2.5 backdrop-blur-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
-              <div className="relative mb-1.5 flex items-center gap-1.5">
-                <span className="text-sm">💡</span>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-500/20 rounded-full px-2 py-0.5 font-sans">
-                  Giải thích
-                </p>
-              </div>
-              <p className="relative text-xs leading-relaxed text-emerald-800 dark:text-emerald-200 font-sans">
-                {currentQuestion.explanation}
-              </p>
-            </div>
-          )}
-
-          <div className="relative mt-3 flex items-center justify-between gap-2 border-t border-gray-200/50 pt-3">
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}
-                disabled={currentQuestionIndex === 0}
-                className="text-xs h-7 px-2 border border-white/35 bg-white/45 backdrop-blur-sm hover:bg-white/55 disabled:opacity-60 dark:border-white/10 dark:bg-slate-900/40 dark:hover:bg-slate-900/55"
-              >
-                ← Trước
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))}
-                disabled={currentQuestionIndex === quiz.questions.length - 1}
-                className="text-xs h-7 px-2 border border-white/35 bg-white/45 backdrop-blur-sm hover:bg-white/55 disabled:opacity-60 dark:border-white/10 dark:bg-slate-900/40 dark:hover:bg-slate-900/55"
-              >
-                Tiếp →
-              </Button>
-            </div>
-            
-            {/* Keyboard shortcuts hint - Desktop only */}
-            <div className="hidden lg:flex items-center gap-1.5 text-[10px] text-slate-600 dark:text-slate-300">
-              <span className="font-mono">1-9</span>
-              <span>chọn</span>
-              <span className="w-px h-2.5 bg-gray-300 dark:bg-gray-600" />
-              <span className="font-mono">Enter</span>
-              <span>tiếp</span>
-            </div>
-          </div>
-
-          {error && <p className="mt-4 text-sm text-rose-500 dark:text-rose-300">{error}</p>}
-        </article>
       </main>
     </div>
   )
