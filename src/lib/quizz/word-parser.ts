@@ -740,9 +740,12 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
 
     // Detect matching questions using arrow notation (e.g., A → B)
     if (question.options.length === 0) {
-      const normalizedTitle = question.title.replace(/[•●▪·\u2022\u25CF\u25A0\u2023\uF0B7]/g, '|')
-      const arrowPattern = /([^→]+)→\s*([^|]+)/g
-      const arrowMatches = Array.from(normalizedTitle.matchAll(arrowPattern))
+      // Combine title and content to search for matching pairs
+      const fullText = `${question.title} ${question.content || ''}`.trim()
+      // Find arrow patterns: match text before → and text after until next arrow or end
+      // More precise: stop right side at word boundary before next potential left item
+      const arrowPattern = /([^→\n]+?)→\s*([^→\n]+?)(?=\s*(?:[A-Z][A-Za-z]+\s*→|$|\n))/g
+      const arrowMatches = Array.from(fullText.matchAll(arrowPattern))
 
       if (arrowMatches.length >= 2) {
         question.type = 'matching'
@@ -750,10 +753,30 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
         question.correct.clear()
 
         arrowMatches.forEach((match, index) => {
-          const leftRaw = match[1]
-          const rightRaw = match[2]
-          const left = leftRaw.split('|').pop()?.trim() ?? leftRaw.trim()
-          const right = rightRaw.split('|')[0].trim()
+          let leftRaw = match[1]
+          let rightRaw = match[2]
+          
+          // For first match, remove title part (everything before last colon or newline)
+          if (index === 0) {
+            const colonIndex = leftRaw.lastIndexOf(':')
+            const newlineIndex = leftRaw.lastIndexOf('\n')
+            const separatorIndex = Math.max(colonIndex, newlineIndex)
+            if (separatorIndex > 0) {
+              leftRaw = leftRaw.substring(separatorIndex + 1)
+            }
+          }
+          
+          // Remove bullet points and clean up
+          const left = leftRaw
+            .replace(/^[\s•●▪·\u2022\u25CF\u25A0\u2023\uF0B7:]+/, '')  // Remove leading bullets, colons
+            .replace(/[•●▪·\u2022\u25CF\u25A0\u2023\uF0B7]+$/, '')      // Remove trailing bullets
+            .trim()
+          
+          // Clean up right side (pattern already stops at next pair)
+          const right = rightRaw
+            .replace(/^[\s•●▪·\u2022\u25CF\u25A0\u2023\uF0B7]+/, '')  // Remove leading bullets
+            .replace(/[•●▪·\u2022\u25CF\u25A0\u2023\uF0B7]+$/, '')    // Remove trailing bullets
+            .trim()
 
           question.options.push({
             key: `L${index + 1}`,
@@ -773,7 +796,24 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
           question.correct.add(index * 2 + 1)
         })
 
-        question.title = question.title.split('→')[0].split(/[:\-]/)[0].trim()
+        // Extract clean title (before first arrow, colon, or the matching pairs start)
+        // Find where the first matching pair starts (usually after colon or on new line)
+        const firstArrowIndex = fullText.indexOf('→')
+        if (firstArrowIndex > 0) {
+          // Try to find the question part before the pairs
+          const beforeArrow = fullText.substring(0, firstArrowIndex)
+          // Look for colon or newline as separator
+          const colonIndex = beforeArrow.lastIndexOf(':')
+          const newlineIndex = beforeArrow.lastIndexOf('\n')
+          const separatorIndex = Math.max(colonIndex, newlineIndex)
+          if (separatorIndex > 0) {
+            question.title = beforeArrow.substring(0, separatorIndex).trim()
+          } else {
+            question.title = beforeArrow.trim()
+          }
+        } else {
+          question.title = question.title.split(/[:\-]/)[0].trim()
+        }
         question.content = ''
         return
       }

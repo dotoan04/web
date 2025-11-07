@@ -1,0 +1,20 @@
+Câu 1: Kéo và thả để ghép các thuật ngữ công nghệ với định nghĩa tương ứng:
+ • HTML → A. Ngôn ngữ đánh dấu siêu văn bản dùng để tạo cấu trúc trang web • CSS → B. Ngôn ngữ định kiểu dùng để trang trí và bố cục trang web • JavaScript → C. Ngôn ngữ lập trình phía client dùng để tạo tương tác động • API → D. Giao diện lập trình ứng dụng cho phép các hệ thống giao tiếp với nhau
+
+Câu 2: Kéo và thả để ghép các mô hình điện toán đám mây với mô tả phù hợp:
+IaaS → A. Cung cấp hạ tầng máy tính như máy chủ, lưu trữ và mạng
+PaaS → B. Cung cấp nền tảng phát triển và triển khai ứng dụng
+SaaS → C. Cung cấp phần mềm ứng dụng hoàn chỉnh qua internet
+
+Câu 3: Ba loại dịch vụ cơ bản của điện toán đám mây được gọi chung là mô hình gì? SPI
+
+Câu 4: Đâu là công nghệ bảo mật được sử dụng rộng rãi nhất trong ứng dụng SaaS? SSL
+
+Câu 5: Ngôn ngữ lập trình nào được sử dụng phổ biến nhất để phát triển ứng dụng web? JavaScript
+
+Câu 6: Kéo và thả để ghép các phương thức HTTP với mô tả:
+GET → A. Lấy dữ liệu từ server
+POST → B. Gửi dữ liệu mới lên server
+PUT → C. Cập nhật toàn bộ tài nguyên
+DELETE → D. Xóa tài nguyên khỏi server
+
