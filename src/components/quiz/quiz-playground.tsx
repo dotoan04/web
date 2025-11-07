@@ -26,7 +26,7 @@ type QuizQuestion = {
   title: string
   content: string | null
   imageUrl?: string | null
-  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
+  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' | 'FILL_IN_BLANK'
   order: number
   points: number
   explanation: string | null
@@ -46,7 +46,7 @@ type QuizPlaygroundProps = {
   quiz: Quiz
 }
 
-type AnswerState = Record<string, string[]>
+type AnswerState = Record<string, string[] | string>
 
 type SubmissionState = {
   quizId: string
@@ -76,7 +76,7 @@ type SubmissionPayload = {
 }
 const createInitialState = (quiz: Quiz): SubmissionState => ({
   quizId: quiz.id,
-  answers: Object.fromEntries(quiz.questions.map((question) => [question.id, []])),
+  answers: Object.fromEntries(quiz.questions.map((question) => [question.id, question.type === 'FILL_IN_BLANK' ? '' : []])),
   startedAt: new Date().toISOString(),
   remainingSeconds: quiz.durationSeconds,
 })
@@ -113,16 +113,22 @@ const computeResult = (quiz: Quiz, answers: AnswerState) => {
       }
       
       const selectedPairs = new Set(selected)
-      isCorrectAnswer = 
+      isCorrectAnswer =
         correctPairs.size === selectedPairs.size &&
         [...correctPairs].every(pair => selectedPairs.has(pair))
+    } else if (question.type === 'FILL_IN_BLANK') {
+      // For fill-in-the-blank questions, answers are strings
+      const correctAnswer = question.options[0]?.text || ''
+      const userAnswer = Array.isArray(selected) ? selected[0] : selected
+      
+      isCorrectAnswer = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
     } else {
       // For regular questions
       const correctIds = question.options
         .filter((option) => option.isCorrect)
         .map((option) => option.id)
         .sort()
-      const selectedIds = [...selected].sort()
+      const selectedIds = Array.isArray(selected) ? selected.sort() : [selected].sort()
       isCorrectAnswer =
         correctIds.length === selectedIds.length &&
         correctIds.every((id, i) => id === selectedIds[i])
@@ -394,14 +400,31 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         const current = prev.answers[questionId] ?? []
         const question = quiz.questions.find((q) => q.id === questionId)
         if (!question) return prev
+        
+        // Handle fill-in-the-blank questions (single string answer)
+        if (question.type === 'FILL_IN_BLANK') {
+          return {
+            ...prev,
+            answers: {
+              ...prev.answers,
+              [questionId]: optionId, // For fill-in-the-blank, optionId is the text answer
+            },
+          },
+        }
+        }
+        
         const isMulti = isMultipleChoice(question)
         let newSelected: string[]
         if (isMulti) {
-          newSelected = current.includes(optionId)
-            ? current.filter((id) => id !== optionId)
-            : [...current, optionId]
+          newSelected = Array.isArray(current)
+            ? current.includes(optionId)
+              ? current.filter((id) => id !== optionId)
+              : [...current, optionId]
+            : [optionId]
         } else {
-          newSelected = current.includes(optionId) ? [] : [optionId]
+          newSelected = Array.isArray(current)
+            ? current.includes(optionId) ? [] : [optionId]
+            : [optionId]
         }
         return {
           ...prev,
@@ -912,9 +935,77 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     )
   }, [currentQuestion, progress.answers, progress.completed, selectedLeft, shuffledRightItems, handleMatchingPair])
 
+  const renderFillInBlankQuestion = useMemo(() => {
+    if (currentQuestion.type !== 'FILL_IN_BLANK') return null
+    
+    const currentAnswer = progress.answers[currentQuestion.id] ?? ''
+    const correctAnswer = currentQuestion.options[0]?.text || ''
+    const isCorrect = currentAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+    
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600 dark:text-slate-300 bg-white/40 dark:bg-slate-800/40 rounded-lg p-3 backdrop-blur-sm">
+          💡 Nhập câu trả lời của bạn vào ô trống.
+        </p>
+        
+        <div className="relative">
+          <Input
+            type="text"
+            value={currentAnswer}
+            onChange={(e) => {
+              if (progress.completed) return
+              setProgress((prev) => ({
+                ...prev,
+                answers: {
+                  ...prev.answers,
+                  [currentQuestion.id]: e.target.value,
+                },
+              }))
+            }}
+            placeholder="Nhập câu trả lời của bạn..."
+            disabled={progress.completed}
+            className={`w-full px-4 py-3 text-lg border-2 rounded-xl transition-colors ${
+              progress.completed
+                ? isCorrect
+                  ? 'border-emerald-400/60 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
+                  : 'border-rose-400/60 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
+                  : 'border-gray-300 bg-white text-gray-500 dark:border-gray-600 dark:bg-slate-800 dark:text-slate-300'
+                : 'border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-slate-800 dark:text-slate-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0'
+            }`}
+          />
+          
+          {progress.completed && (
+            <div className={`mt-3 p-3 rounded-lg border-2 ${
+              isCorrect
+                ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
+                : 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-semibold ${
+                  isCorrect ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+                }`}>
+                  {isCorrect ? '✓ Đúng!' : '✗ Sai'}
+                </span>
+                {!isCorrect && (
+                  <span className="text-sm text-emerald-600 dark:text-emerald-300">
+                    Đáp án đúng: {correctAnswer}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }, [currentQuestion, progress.answers, progress.completed])
+
   const renderOptions = useMemo(() => {
     if (currentQuestion.type === 'MATCHING') {
       return renderMatchingQuestion
+    }
+    
+    if (currentQuestion.type === 'FILL_IN_BLANK') {
+      return renderFillInBlankQuestion
     }
     
     const hasImages = currentQuestion.options.some((opt) => opt.imageUrl)
@@ -984,7 +1075,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   </span>
                   {state !== null && (
                     <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadgeTone}`}>
-                      {state === 'correct' ? '✓ Đúng' 
+                      {state === 'correct' ? '✓ Đúng'
                        : state === 'incorrect' ? '✗ Sai'
                        : '✓ Đúng (chưa chọn)'}
                     </span>
@@ -1021,7 +1112,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         })}
       </div>
     )
-  }, [currentQuestion, progress.answers, progress.completed, getOptionState, handleToggleOption, renderMatchingQuestion])
+  }, [currentQuestion, progress.answers, progress.completed, getOptionState, handleToggleOption, renderMatchingQuestion, renderFillInBlankQuestion])
 
   const renderFilterModal = () => {
     if (!showFilterModal || !progress.completed) return null

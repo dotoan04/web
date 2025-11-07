@@ -36,7 +36,7 @@ type ParsedQuestion = {
   options: Array<{ key: string; value: string; isCorrect: boolean; imageUrl?: string }>
   correct: Set<number>
   multi: boolean
-  type?: 'matching' | 'truefalse' | 'regular'
+  type?: 'matching' | 'truefalse' | 'regular' | 'fillinblank'
 }
 
 const getColorValue = (run: Element) => {
@@ -368,6 +368,7 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
   const numberedItemPattern = /^\d+[\.\)]\s+/  // Match "1. " or "1) "
   // Pattern to detect if a line is likely an answer option (starts with A-D followed by dot/parenthesis)
   const looksLikeOption = /^[A-DĐ][\.\)]\s/
+  const fillInBlankPattern = /Câu\s+\d+.*?(\p{So}+)/u
 
   const markCorrect = (value: string, colored: boolean) => {
     if (colored) return true
@@ -585,6 +586,31 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
   }
 
   items.forEach((question) => {
+    // Detect fill-in-the-blank questions (red text that should be hidden)
+    const fillInBlankMatch = question.title.match(fillInBlankPattern)
+    if (fillInBlankMatch && question.options.length === 0) {
+      // This is a fill-in-the-blank question
+      question.type = 'fillinblank'
+      
+      // Extract the red text (correct answer) and create a placeholder
+      const correctAnswer = fillInBlankMatch[1].trim()
+      
+      // Replace the red text with a placeholder in the title
+      const questionTitle = question.title.replace(fillInBlankPattern, '_______')
+      question.title = questionTitle
+      
+      // Store the correct answer in a special option for fill-in-the-blank
+      question.options.push({
+        key: 'ANSWER',
+        value: correctAnswer,
+        isCorrect: true,
+        imageUrl: undefined
+      })
+      
+      question.correct.add(0)
+      return
+    }
+    
     // Detect matching questions (pairs separated by |)
     const matchingPattern = /([^|]+)\|([^|]+)/g
     const fullText = `${question.title} ${question.content}`.trim()
@@ -742,7 +768,7 @@ export type SanitizedQuizQuestion = {
   title: string
   content?: string
   imageUrl?: string
-  type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
+  type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' | 'FILL_IN_BLANK'
   options: Array<{
     id: string
     text: string
@@ -774,10 +800,12 @@ export const parseQuizContent = async (input: { buffer?: ArrayBuffer; text?: str
 export const sanitizeParsedQuestions = (questions: ParsedQuizQuestion): SanitizedQuizQuestion[] =>
   questions.map((question) => {
     // Determine question type
-    let questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' = 'SINGLE_CHOICE'
+    let questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' | 'FILL_IN_BLANK' = 'SINGLE_CHOICE'
     
     if (question.type === 'matching') {
       questionType = 'MATCHING'
+    } else if (question.type === 'fillinblank') {
+      questionType = 'FILL_IN_BLANK'
     } else if (question.multi || question.correct.size > 1) {
       questionType = 'MULTIPLE_CHOICE'
     }

@@ -42,6 +42,7 @@ enum QuizQuestionType {
   SINGLE_CHOICE
   MULTIPLE_CHOICE
   MATCHING
+  FILL_IN_BLANK
 }
 
 model User {
