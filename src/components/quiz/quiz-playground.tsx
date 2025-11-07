@@ -213,7 +213,10 @@ const QuestionNavigator = memo(({
         {visibleQuestions.map((question, relativeIndex) => {
           const index = navStartIndex + relativeIndex
           const selected = currentQuestionIndex === index
-          const answered = Array.isArray(progress.answers[question.id]) && progress.answers[question.id].length > 0
+          const answerValue = progress.answers[question.id]
+          const answered = Array.isArray(answerValue) 
+            ? answerValue.length > 0 
+            : (typeof answerValue === 'string' && answerValue.trim().length > 0)
           return (
             <button
               key={question.id}
@@ -331,7 +334,11 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     }
 
     const answered = Object.fromEntries(
-      Object.entries(progress.answers).filter(([, value]) => value.length > 0),
+      Object.entries(progress.answers).filter(([, value]) => {
+        if (Array.isArray(value)) return value.length > 0
+        if (typeof value === 'string') return value.trim().length > 0
+        return false
+      }),
     )
 
     const durationSeconds = Math.max(
@@ -409,22 +416,19 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               ...prev.answers,
               [questionId]: optionId, // For fill-in-the-blank, optionId is the text answer
             },
-          },
-        }
+          }
         }
         
         const isMulti = isMultipleChoice(question)
+        // Ensure current is treated as array for non-fill-in-blank questions
+        const currentArray = Array.isArray(current) ? current : [current].filter(Boolean)
         let newSelected: string[]
         if (isMulti) {
-          newSelected = Array.isArray(current)
-            ? current.includes(optionId)
-              ? current.filter((id) => id !== optionId)
-              : [...current, optionId]
-            : [optionId]
+          newSelected = currentArray.includes(optionId)
+            ? currentArray.filter((id) => id !== optionId)
+            : [...currentArray, optionId]
         } else {
-          newSelected = Array.isArray(current)
-            ? current.includes(optionId) ? [] : [optionId]
-            : [optionId]
+          newSelected = currentArray.includes(optionId) ? [] : [optionId]
         }
         return {
           ...prev,
@@ -526,7 +530,11 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }, [progress.answers, progress.completed, progress.score, progress.totalPoints, progress.submittedAt, quiz.id, setHistory, setProgress])
 
   const answeredCount = useMemo(
-    () => Object.values(progress.answers).filter((value) => Array.isArray(value) && value.length > 0).length,
+    () => Object.values(progress.answers).filter((value) => {
+      if (Array.isArray(value)) return value.length > 0
+      if (typeof value === 'string') return value.trim().length > 0
+      return false
+    }).length,
     [progress.answers],
   )
 
@@ -597,7 +605,11 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     setError(null)
 
     const answered = Object.fromEntries(
-      Object.entries(progress.answers).filter(([, value]) => value.length > 0),
+      Object.entries(progress.answers).filter(([, value]) => {
+        if (Array.isArray(value)) return value.length > 0
+        if (typeof value === 'string') return value.trim().length > 0
+        return false
+      }),
     )
 
     const durationSeconds = Math.max(
@@ -693,8 +705,10 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const getOptionState = useCallback(
     (question: QuizQuestion, option: QuizOption) => {
       if (!progress.completed) return null
+      if (question.type === 'FILL_IN_BLANK') return null // Fill-in-blank doesn't use this
       const selected = progress.answers[question.id] ?? []
-      if (selected.includes(option.id)) {
+      const selectedArray = Array.isArray(selected) ? selected : []
+      if (selectedArray.includes(option.id)) {
         return option.isCorrect ? 'correct' : 'incorrect'
       } else if (option.isCorrect) {
         return 'missed'
@@ -781,22 +795,24 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     const pairString = `${leftOptionId}:${rightOptionId}`
     setProgress((prev) => {
       const current = prev.answers[currentQuestion.id] ?? []
-      
+      // Ensure current is treated as array for matching questions
+      const currentArray = Array.isArray(current) ? current : []
+
       // Check if this left item is already paired
-      const existingPairIndex = current.findIndex(pair => pair.startsWith(`${leftOptionId}:`))
+      const existingPairIndex = currentArray.findIndex(pair => pair.startsWith(`${leftOptionId}:`))
       
       let newSelected: string[]
       if (existingPairIndex !== -1) {
         // If clicking the same pair, unpair it
-        if (current[existingPairIndex] === pairString) {
-          newSelected = current.filter((_, idx) => idx !== existingPairIndex)
+        if (currentArray[existingPairIndex] === pairString) {
+          newSelected = currentArray.filter((_, idx) => idx !== existingPairIndex)
         } else {
           // Replace the existing pair
-          newSelected = current.map((pair, idx) => idx === existingPairIndex ? pairString : pair)
+          newSelected = currentArray.map((pair, idx) => idx === existingPairIndex ? pairString : pair)
         }
       } else {
         // Add new pair
-        newSelected = [...current, pairString]
+        newSelected = [...currentArray, pairString]
       }
       
       return {
@@ -814,7 +830,11 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     if (currentQuestion.type !== 'MATCHING') return null
     
     const leftItems = currentQuestion.options.filter((_, idx) => idx % 2 === 0)
-    const currentPairs = progress.answers[currentQuestion.id] ?? []
+    // Ensure currentPairs is always an array
+    const rawAnswer = progress.answers[currentQuestion.id]
+    const currentPairs = Array.isArray(rawAnswer)
+      ? rawAnswer
+      : rawAnswer ? [rawAnswer] : []
     
     // Create map of left to right pairs for easier lookup
     const pairMap = new Map<string, string>()
@@ -938,7 +958,9 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const renderFillInBlankQuestion = useMemo(() => {
     if (currentQuestion.type !== 'FILL_IN_BLANK') return null
     
-    const currentAnswer = progress.answers[currentQuestion.id] ?? ''
+    const currentAnswer = Array.isArray(progress.answers[currentQuestion.id])
+      ? (progress.answers[currentQuestion.id] as string[])[0] || ''
+      : (progress.answers[currentQuestion.id] as string) ?? ''
     const correctAnswer = currentQuestion.options[0]?.text || ''
     const isCorrect = currentAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
     
@@ -966,10 +988,9 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             disabled={progress.completed}
             className={`w-full px-4 py-3 text-lg border-2 rounded-xl transition-colors ${
               progress.completed
-                ? isCorrect
+                ? (isCorrect
                   ? 'border-emerald-400/60 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
-                  : 'border-rose-400/60 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
-                  : 'border-gray-300 bg-white text-gray-500 dark:border-gray-600 dark:bg-slate-800 dark:text-slate-300'
+                  : 'border-rose-400/60 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15')
                 : 'border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-slate-800 dark:text-slate-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0'
             }`}
           />
@@ -1016,7 +1037,9 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         {currentQuestion.options.map((option, optionIdx) => {
           const state = getOptionState(currentQuestion, option)
           const isMulti = isMultipleChoice(currentQuestion)
-          const checked = (progress.answers[currentQuestion.id] ?? []).includes(option.id)
+          const rawAnswer = progress.answers[currentQuestion.id]
+          const answerArray = Array.isArray(rawAnswer) ? rawAnswer : []
+          const checked = answerArray.includes(option.id)
           const shortcutKey = optionIdx < 9 ? (optionIdx + 1).toString() : '0'
           const toneClasses =
             state === 'correct'
@@ -1156,12 +1179,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           </div>
           <div className="max-h-96 space-y-2 overflow-y-auto p-4">
             {filteredQuestions.map((question) => {
-              const selected = progress.answers[question.id] ?? []
+              const rawAnswer = progress.answers[question.id]
+              const selected = Array.isArray(rawAnswer) ? rawAnswer : []
               const correctIds = question.options
                 .filter((o) => o.isCorrect)
                 .map((o) => o.id)
                 .sort()
-              const selectedIds = [...selected].sort()
+              const selectedIds = selected.sort()
               const isCorrectAnswer =
                 correctIds.length === selectedIds.length &&
                 correctIds.every((id, i) => id === selectedIds[i])
