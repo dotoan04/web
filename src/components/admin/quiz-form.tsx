@@ -16,7 +16,7 @@ type ImportedQuestion = {
   title: string
   content?: string
   imageUrl?: string
-  type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
+  type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' | 'FILL_IN_BLANK'
   options: Array<{
     id: string
     text: string
@@ -40,7 +40,7 @@ type QuizQuestionForm = {
   title: string
   content: string
   imageUrl?: string
-  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
+  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' | 'FILL_IN_BLANK'
   order: number
   points: number
   explanation: string
@@ -106,6 +106,16 @@ const createMatchingQuestion = (order: number): QuizQuestionForm => ({
   ],
 })
 
+const createFillInBlankQuestion = (order: number): QuizQuestionForm => ({
+  title: '',
+  content: '',
+  type: 'FILL_IN_BLANK',
+  order,
+  points: 1,
+  explanation: '',
+  options: [{ text: '', isCorrect: true, order: 0 }],
+})
+
 type QuestionEditorProps = {
   question: QuizQuestionForm
   index: number
@@ -124,7 +134,7 @@ type OptionRowProps = {
   optionIndex: number
   isCorrect: boolean
   disableRemove: boolean
-  questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
+  questionType: QuizQuestionForm['type']
   onSelectCorrect: () => void
   onToggleCorrect: () => void
   onChangeText: (value: string) => void
@@ -236,7 +246,10 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
           onChange((current) => ({
             ...current,
             type: 'SINGLE_CHOICE',
-            options: current.options.map((opt, idx) => ({ ...opt, isCorrect: idx === 0 }))
+            options: (current.options.length >= 2 ? current.options : [
+              { text: current.options[0]?.text ?? '', imageUrl: current.options[0]?.imageUrl, isCorrect: true, order: 0 },
+              { text: '', imageUrl: undefined, isCorrect: false, order: 1 },
+            ]).map((opt, idx) => ({ ...opt, isCorrect: idx === 0, order: idx }))
           }))
         }}
       >
@@ -246,7 +259,16 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
         type="button"
         variant={question.type === 'MULTIPLE_CHOICE' ? 'primary' : 'ghost'}
         size="sm"
-        onClick={() => onChange((current) => ({ ...current, type: 'MULTIPLE_CHOICE' }))}
+        onClick={() =>
+          onChange((current) => ({
+            ...current,
+            type: 'MULTIPLE_CHOICE',
+            options: (current.options.length >= 2 ? current.options : [
+              { text: current.options[0]?.text ?? '', imageUrl: current.options[0]?.imageUrl, isCorrect: true, order: 0 },
+              { text: '', imageUrl: undefined, isCorrect: false, order: 1 },
+            ]).map((opt, idx) => ({ ...opt, order: idx })),
+          }))
+        }
       >
         Nhiều đáp án
       </Button>
@@ -263,6 +285,25 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
         }}
       >
         Ghép cặp
+      </Button>
+      <Button
+        type="button"
+        variant={question.type === 'FILL_IN_BLANK' ? 'primary' : 'ghost'}
+        size="sm"
+        onClick={() => {
+          onChange((current) => ({
+            ...current,
+            type: 'FILL_IN_BLANK',
+            options: [{
+              text: current.options[0]?.text ?? '',
+              imageUrl: undefined,
+              isCorrect: true,
+              order: 0,
+            }],
+          }))
+        }}
+      >
+        Điền khuyết
       </Button>
     </div>
 
@@ -387,6 +428,30 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
             )
           })}
         </div>
+      </div>
+    ) : question.type === 'FILL_IN_BLANK' ? (
+      <div className="mt-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-ink-600 dark:text-ink-200">Đáp án điền khuyết</p>
+        </div>
+        <Input
+          value={question.options[0]?.text ?? ''}
+          onChange={(event) =>
+            onChange((current) => ({
+              ...current,
+              options: [{
+                text: event.target.value,
+                imageUrl: undefined,
+                isCorrect: true,
+                order: 0,
+              }],
+            }))
+          }
+          placeholder="Nhập đáp án đúng"
+        />
+        <p className="text-xs text-ink-500 dark:text-ink-400">
+          Câu trả lời được so khớp theo chữ (không phân biệt hoa/thường).
+        </p>
       </div>
     ) : question.options.length > 0 ? (
       <div className="mt-6 space-y-3">
@@ -580,10 +645,12 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
 
       const nextQuestions = processedItems.map((item, questionIndex) => {
         // Determine question type
-        let questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' = 'SINGLE_CHOICE'
+        let questionType: QuizQuestionForm['type'] = 'SINGLE_CHOICE'
         
         if (item.type === 'MATCHING') {
           questionType = 'MATCHING'
+        } else if (item.type === 'FILL_IN_BLANK') {
+          questionType = 'FILL_IN_BLANK'
         } else {
           const correctCount = item.options.filter((opt) => opt.isCorrect).length
           questionType = correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE'
@@ -598,12 +665,15 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
           // Theory questions (no options) have 0 points by default
           points: item.options.length === 0 ? 0 : 1,
           explanation: '',
-          options: item.options.map((option, optionIndex) => ({
-            text: option.text,
-            imageUrl: option.imageUrl || '',
-            isCorrect: option.isCorrect,
-            order: optionIndex,
-          })),
+          options:
+            questionType === 'FILL_IN_BLANK'
+              ? [{ text: item.options[0]?.text ?? '', imageUrl: undefined, isCorrect: true, order: 0 }]
+              : item.options.map((option, optionIndex) => ({
+                  text: option.text,
+                  imageUrl: option.imageUrl || '',
+                  isCorrect: option.isCorrect,
+                  order: optionIndex,
+                })),
         }
       })
 
@@ -684,6 +754,13 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     }))
   }, [])
 
+const addFillInBlankQuestion = useCallback(() => {
+  setValues((prev) => ({
+    ...prev,
+    questions: [...prev.questions, createFillInBlankQuestion(prev.questions.length)],
+  }))
+}, [])
+
   const removeQuestion = useCallback((index: number) => {
     setValues((prev) => ({
       ...prev,
@@ -694,38 +771,58 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
   }, [])
 
   const addOption = useCallback((questionIndex: number) => {
-    updateQuestion(questionIndex, (question) => ({
-      ...question,
-      options: [...question.options, createEmptyOption(question.options.length)],
-    }))
+    updateQuestion(questionIndex, (question) => {
+      if (question.type === 'FILL_IN_BLANK') {
+        return question
+      }
+      return {
+        ...question,
+        options: [...question.options, createEmptyOption(question.options.length)],
+      }
+    })
   }, [updateQuestion])
 
   const removeOption = useCallback((questionIndex: number, optionIndex: number) => {
-    updateQuestion(questionIndex, (question) => ({
-      ...question,
-      options: question.options
-        .filter((_, index) => index !== optionIndex)
-        .map((option, order) => ({ ...option, order })),
-    }))
+    updateQuestion(questionIndex, (question) => {
+      if (question.type === 'FILL_IN_BLANK') {
+        return question
+      }
+      return {
+        ...question,
+        options: question.options
+          .filter((_, index) => index !== optionIndex)
+          .map((option, order) => ({ ...option, order })),
+      }
+    })
   }, [updateQuestion])
 
   const setCorrectOption = useCallback((questionIndex: number, optionIndex: number) => {
-    updateQuestion(questionIndex, (question) => ({
-      ...question,
-      options: question.options.map((option, index) => ({
-        ...option,
-        isCorrect: index === optionIndex,
-      })),
-    }))
+    updateQuestion(questionIndex, (question) => {
+      if (question.type === 'FILL_IN_BLANK') {
+        return question
+      }
+      return {
+        ...question,
+        options: question.options.map((option, index) => ({
+          ...option,
+          isCorrect: index === optionIndex,
+        })),
+      }
+    })
   }, [updateQuestion])
 
   const toggleCorrectOption = useCallback((questionIndex: number, optionIndex: number) => {
-    updateQuestion(questionIndex, (question) => ({
-      ...question,
-      options: question.options.map((option, index) =>
-        index === optionIndex ? { ...option, isCorrect: !option.isCorrect } : option
-      ),
-    }))
+    updateQuestion(questionIndex, (question) => {
+      if (question.type === 'FILL_IN_BLANK') {
+        return question
+      }
+      return {
+        ...question,
+        options: question.options.map((option, index) =>
+          index === optionIndex ? { ...option, isCorrect: !option.isCorrect } : option
+        ),
+      }
+    })
   }, [updateQuestion])
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -885,6 +982,15 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
       // If only 1 option remains after filtering, convert to theory question (0 options)
       const normalizedQuestions = values.questions.map((question) => {
         const validOptions = question.options.filter((opt) => (opt.text && opt.text.trim()) || opt.imageUrl)
+
+        if (question.type === 'FILL_IN_BLANK') {
+          const answer = validOptions[0] ?? { text: '', imageUrl: undefined, isCorrect: true, order: 0 }
+          return {
+            ...question,
+            options: [{ ...answer, isCorrect: true, order: 0 }],
+          }
+        }
+
         return {
           ...question,
           options: validOptions.length === 1 ? [] : validOptions,
@@ -905,9 +1011,10 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
             order: index,
             points: question.points,
             explanation: question.explanation,
-            options: question.options
-              .filter((opt) => (opt.text && opt.text.trim()) || opt.imageUrl)
-              .map((option, optionIndex) => ({
+            options: (question.type === 'FILL_IN_BLANK'
+              ? question.options
+              : question.options.filter((opt) => (opt.text && opt.text.trim()) || opt.imageUrl)
+            ).map((option, optionIndex) => ({
               ...(isValidCuid(option.id) ? { id: option.id } : {}),
               text: option.text,
               imageUrl: option.imageUrl,
@@ -1249,6 +1356,9 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
                 </Button>
                 <Button type="button" variant="ghost" onClick={addMatchingQuestion}>
                   + Câu ghép cặp
+                </Button>
+                <Button type="button" variant="ghost" onClick={addFillInBlankQuestion}>
+                  + Câu điền khuyết
                 </Button>
               </div>
             </div>
