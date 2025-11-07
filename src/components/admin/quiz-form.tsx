@@ -201,7 +201,7 @@ const OptionRow = memo(({ option, questionIndex, optionIndex, isCorrect, disable
 OptionRow.displayName = 'OptionRow'
 
 const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, onRemove, onAddOption, onRemoveOption, onSetCorrect, onToggleCorrect }: QuestionEditorProps) => (
-  <section className="rounded-2xl border border-ink-200/70 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900">
+  <section className="rounded-xl border-2 border-ink-200/70 bg-white p-6 shadow-md transition-all hover:shadow-lg dark:border-ink-700 dark:bg-ink-900">
     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div className="flex flex-1 items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-ink-100 font-semibold text-ink-600 dark:bg-ink-800 dark:text-ink-100">
@@ -236,12 +236,13 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
       </div>
     </div>
 
-    <div className="mt-4 flex flex-wrap items-center gap-2">
-      <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">Loại câu hỏi:</label>
+    <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg bg-ink-50/50 p-3 dark:bg-ink-800/30">
+      <label className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">Loại câu hỏi:</label>
       <Button
         type="button"
         variant={question.type === 'SINGLE_CHOICE' ? 'primary' : 'ghost'}
         size="sm"
+        className={question.type === 'SINGLE_CHOICE' ? 'shadow-md' : ''}
         onClick={() => {
           onChange((current) => ({
             ...current,
@@ -259,6 +260,7 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
         type="button"
         variant={question.type === 'MULTIPLE_CHOICE' ? 'primary' : 'ghost'}
         size="sm"
+        className={question.type === 'MULTIPLE_CHOICE' ? 'shadow-md' : ''}
         onClick={() =>
           onChange((current) => ({
             ...current,
@@ -276,6 +278,7 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
         type="button"
         variant={question.type === 'MATCHING' ? 'primary' : 'ghost'}
         size="sm"
+        className={question.type === 'MATCHING' ? 'shadow-md' : ''}
         onClick={() => {
           onChange((current) => ({
             ...current,
@@ -290,6 +293,7 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
         type="button"
         variant={question.type === 'FILL_IN_BLANK' ? 'primary' : 'ghost'}
         size="sm"
+        className={question.type === 'FILL_IN_BLANK' ? 'shadow-md' : ''}
         onClick={() => {
           onChange((current) => ({
             ...current,
@@ -1075,37 +1079,40 @@ const addFillInBlankQuestion = useCallback(() => {
   }
 
   return (
-    <Card className="p-0">
-      <CardHeader className="border-b border-ink-100 px-6 py-6 dark:border-ink-800">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-2xl">{quiz ? 'Chỉnh sửa quiz' : 'Tạo quiz mới'}</CardTitle>
-            <CardDescription>
-              Quản lý cấu trúc câu hỏi, thời lượng và trạng thái trước khi xuất bản.
-            </CardDescription>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <Card className="p-0 shadow-lg">
+        <CardHeader className="border-b border-ink-100 bg-gradient-to-r from-indigo-50 to-purple-50 px-8 py-6 dark:border-ink-800 dark:from-ink-900 dark:to-ink-800">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <CardTitle className="text-3xl font-bold text-ink-900 dark:text-ink-50">
+                {quiz ? 'Chỉnh sửa quiz' : 'Tạo quiz mới'}
+              </CardTitle>
+              <CardDescription className="text-base text-ink-600 dark:text-ink-300">
+                Quản lý cấu trúc câu hỏi, thời lượng và trạng thái trước khi xuất bản.
+              </CardDescription>
+            </div>
+            {quiz ? (
+              <Button type="button" variant="ghost" onClick={handleDelete} disabled={loading} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400">
+                Xoá quiz
+              </Button>
+            ) : null}
           </div>
-          {quiz ? (
-            <Button type="button" variant="ghost" onClick={handleDelete} disabled={loading}>
-              Xoá quiz
-            </Button>
-          ) : null}
-        </div>
-      </CardHeader>
-      <CardContent className="px-6 py-8">
-        <form className="space-y-8" onSubmit={handleSubmit}>
-          <section className="rounded-2xl border border-ink-200/70 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold text-ink-700 dark:text-ink-200">Nhập đề từ Word</h3>
-                <p className="text-sm text-ink-500 dark:text-ink-400">
+        </CardHeader>
+        <CardContent className="px-8 py-8">
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <section className="rounded-xl border-2 border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 p-6 shadow-md dark:border-indigo-800/50 dark:from-ink-900 dark:to-ink-800/50">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-ink-800 dark:text-ink-100">📄 Nhập đề từ Word</h3>
+                <p className="text-sm text-ink-600 dark:text-ink-400">
                   Tải tập tin .docx hoặc dán nội dung để tự động tách câu hỏi, đáp án.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <label className="flex cursor-pointer items-center gap-2 rounded-full bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-400">
-                  <Upload size={16} />
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-indigo-700 hover:shadow-lg active:scale-95">
+                  <Upload size={18} />
                   <span>Tải tập tin</span>
-                  <input className="hidden" type="file" accept=".docx" onChange={handleUpload} />
+                  <input className="hidden" type="file" accept=".docx" onChange={handleUpload} disabled={importing} />
                 </label>
                 <Button type="button" variant="subtle" onClick={handlePasteText}>
                   <FileText size={16} className="mr-2" /> Dán văn bản
@@ -1152,10 +1159,15 @@ const addFillInBlankQuestion = useCallback(() => {
               </div>
             </div>
             {importError ? (
-              <p className="mt-3 text-sm text-rose-500 dark:text-rose-300">{importError}</p>
+              <div className="mt-4 rounded-lg border-2 border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-900/20">
+                <p className="text-sm font-medium text-rose-700 dark:text-rose-300">⚠️ {importError}</p>
+              </div>
             ) : null}
             {importing ? (
-              <p className="mt-4 text-sm text-indigo-500 dark:text-indigo-300">Đang phân tích tập tin…</p>
+              <div className="mt-4 flex items-center gap-3 rounded-lg border-2 border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent"></div>
+                <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Đang phân tích tập tin…</p>
+              </div>
             ) : null}
             {preview.length ? (
               <div className="mt-5 space-y-4">
@@ -1180,13 +1192,23 @@ const addFillInBlankQuestion = useCallback(() => {
                       <div className="flex items-start gap-2 mb-2">
                         <h5 className="flex-1 font-semibold text-ink-700 dark:text-ink-100">{question.title}</h5>
                         {question.type === 'MATCHING' && (
-                          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-purple-700 dark:bg-purple-500/10 dark:text-purple-300">
-                            Ghép cặp
+                          <span className="rounded-full bg-purple-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:bg-purple-500/20 dark:text-purple-300">
+                            🔗 Ghép cặp
                           </span>
                         )}
                         {question.type === 'MULTIPLE_CHOICE' && (
-                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-                            Nhiều đáp án
+                          <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
+                            ☑️ Nhiều đáp án
+                          </span>
+                        )}
+                        {question.type === 'FILL_IN_BLANK' && (
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                            ✏️ Điền khuyết
+                          </span>
+                        )}
+                        {question.type === 'SINGLE_CHOICE' && question.options.length > 0 && (
+                          <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                            ⭕ Một đáp án
                           </span>
                         )}
                       </div>
@@ -1249,8 +1271,9 @@ const addFillInBlankQuestion = useCallback(() => {
             ) : null}
           </section>
 
-          <section className="rounded-2xl border border-ink-200/70 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900">
-            <div className="grid gap-4 md:grid-cols-2">
+          <section className="rounded-xl border-2 border-ink-200/70 bg-white p-6 shadow-md dark:border-ink-700 dark:bg-ink-900">
+            <h3 className="mb-4 text-lg font-bold text-ink-800 dark:text-ink-100">⚙️ Thông tin cơ bản</h3>
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500" htmlFor="title">
                   Tiêu đề
@@ -1340,11 +1363,12 @@ const addFillInBlankQuestion = useCallback(() => {
           </section>
 
           <section className="space-y-5">
-            <div className="flex flex-col gap-2 rounded-2xl border border-ink-200/70 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-ink-700 dark:text-ink-200">Câu hỏi</p>
-                <p className="text-xs text-ink-500 dark:text-ink-400">
-                  Tổng điểm hiện tại: <span className="font-medium text-emerald-600 dark:text-emerald-400">{totalPoints}</span>
+            <div className="flex flex-col gap-3 rounded-xl border-2 border-ink-200/70 bg-gradient-to-r from-white to-ink-50/50 p-6 shadow-md dark:border-ink-700 dark:from-ink-900 dark:to-ink-800/50 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <p className="text-lg font-bold text-ink-800 dark:text-ink-100">📝 Câu hỏi</p>
+                <p className="text-sm text-ink-600 dark:text-ink-400">
+                  Tổng điểm: <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">{totalPoints}</span> điểm • 
+                  <span className="ml-2 font-medium">{values.questions.length}</span> câu hỏi
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1381,19 +1405,40 @@ const addFillInBlankQuestion = useCallback(() => {
             </div>
           </section>
 
-          <div className="flex flex-col gap-3 rounded-2xl border border-ink-200/70 bg-white p-5 shadow-sm dark:border-ink-700 dark:bg-ink-900 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-1 text-sm">
-              {message ? <p className="text-emerald-600 dark:text-emerald-400">{message}</p> : null}
-              {error ? <p className="text-rose-600 dark:text-rose-400">{error}</p> : null}
+          <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-xl border-2 border-ink-200/70 bg-white p-6 shadow-xl dark:border-ink-700 dark:bg-ink-900 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-2">
+              {message ? (
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                  <span className="text-lg">✅</span>
+                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">{message}</p>
+                </div>
+              ) : null}
+              {error ? (
+                <div className="flex items-start gap-2 rounded-lg bg-rose-50 p-3 dark:bg-rose-900/20">
+                  <span className="text-lg">❌</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-rose-700 dark:text-rose-300">Lỗi:</p>
+                    <p className="mt-1 text-xs text-rose-600 dark:text-rose-400 whitespace-pre-wrap">{error}</p>
+                  </div>
+                </div>
+              ) : null}
             </div>
-            <div className="flex items-center gap-2">
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Đang lưu...' : 'Lưu quiz'}
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={loading} size="lg" className="min-w-[140px] bg-indigo-600 hover:bg-indigo-700">
+                {loading ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    Đang lưu...
+                  </>
+                ) : (
+                  '💾 Lưu quiz'
+                )}
               </Button>
             </div>
           </div>
         </form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

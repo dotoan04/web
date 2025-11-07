@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const quizStatusSchema = z.enum(['DRAFT', 'PUBLISHED'])
 
-export const quizQuestionTypeSchema = z.enum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'MATCHING'])
+export const quizQuestionTypeSchema = z.enum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'MATCHING', 'FILL_IN_BLANK'])
 
 export const quizOptionInputSchema = z.object({
   id: z.string().cuid().optional(),
@@ -36,11 +36,15 @@ export const quizQuestionInputSchema = z.object({
       // Matching questions must have even number of options (pairs), minimum 4 (2 pairs)
       return data.options.length >= 4 && data.options.length % 2 === 0
     }
+    if (data.type === 'FILL_IN_BLANK') {
+      // Fill-in-blank questions need exactly 1 option with the correct answer
+      return data.options.length === 1 && data.options[0]?.isCorrect === true
+    }
     // Theory questions have 0 options, regular questions have 2+
     return data.options.length === 0 || data.options.length >= 2
   },
   {
-    message: 'Câu ghép cặp cần ít nhất 4 phương án (2 cặp) và số chẵn. Câu thường cần 0 (lý thuyết) hoặc ít nhất 2 phương án',
+    message: 'Câu ghép cặp cần ít nhất 4 phương án (2 cặp) và số chẵn. Câu điền từ cần 1 phương án đúng. Câu thường cần 0 (lý thuyết) hoặc ít nhất 2 phương án',
     path: ['options']
   }
 )
