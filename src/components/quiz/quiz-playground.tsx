@@ -1018,7 +1018,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </div>
       </div>
     )
-  }, [currentQuestion, progress.answers, progress.completed])
+  }, [currentQuestion, progress.answers, progress.completed, setProgress])
 
   const renderOptions = useMemo(() => {
     if (currentQuestion.type === 'MATCHING') {

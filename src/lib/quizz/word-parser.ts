@@ -36,7 +36,7 @@ type ParsedQuestion = {
   options: Array<{ key: string; value: string; isCorrect: boolean; imageUrl?: string }>
   correct: Set<number>
   multi: boolean
-  type?: 'matching' | 'truefalse' | 'regular'
+  type?: 'matching' | 'truefalse' | 'regular' | 'fill_in_blank'
 }
 
 const getColorValue = (run: Element) => {
@@ -737,6 +737,64 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
         }
       }
     }
+
+    // Detect matching questions using arrow notation (e.g., A → B)
+    if (question.options.length === 0) {
+      const normalizedTitle = question.title.replace(/[•●▪·\u2022\u25CF\u25A0\u2023\uF0B7]/g, '|')
+      const arrowPattern = /([^→]+)→\s*([^|]+)/g
+      const arrowMatches = Array.from(normalizedTitle.matchAll(arrowPattern))
+
+      if (arrowMatches.length >= 2) {
+        question.type = 'matching'
+        question.options = []
+        question.correct.clear()
+
+        arrowMatches.forEach((match, index) => {
+          const leftRaw = match[1]
+          const rightRaw = match[2]
+          const left = leftRaw.split('|').pop()?.trim() ?? leftRaw.trim()
+          const right = rightRaw.split('|')[0].trim()
+
+          question.options.push({
+            key: `L${index + 1}`,
+            value: left,
+            isCorrect: true,
+            imageUrl: undefined,
+          })
+
+          question.options.push({
+            key: `R${index + 1}`,
+            value: right,
+            isCorrect: true,
+            imageUrl: undefined,
+          })
+
+          question.correct.add(index * 2)
+          question.correct.add(index * 2 + 1)
+        })
+
+        question.title = question.title.split('→')[0].split(/[:\-]/)[0].trim()
+        question.content = ''
+        return
+      }
+    }
+
+    // Detect inline fill-in-the-blank answers appended after question mark
+    if (question.options.length === 0) {
+      const fillMatch = question.title.match(/(.+\?)\s*([A-Za-zÀ-ỹ0-9_\(\)\[\]\/\\\-\.\s]{1,80})$/u)
+      if (fillMatch) {
+        const prompt = fillMatch[1].trim()
+        const answer = fillMatch[2].trim()
+
+        if (answer && answer.length < 60) {
+          question.title = prompt
+          question.type = 'fill_in_blank' as any
+          question.options = [{ key: 'A', value: answer, isCorrect: true, imageUrl: undefined }]
+          question.correct = new Set([0])
+          question.multi = false
+        }
+      }
+    }
     
     question.options.forEach((option, index) => {
       if (option.isCorrect) {
@@ -749,8 +807,8 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
   })
 
   // Allow questions without options (theory questions)
-  // Only filter out questions that have exactly 1 option (incomplete)
-  return items.filter((item) => item.options.length !== 1)
+  // Only filter out questions that have exactly 1 option (incomplete) unless they are fill-in-blank
+  return items.filter((item) => item.options.length !== 1 || item.type === 'fill_in_blank')
 }
 
 export type ParsedQuizQuestion = ReturnType<typeof groupQuestions>
@@ -760,7 +818,7 @@ export type SanitizedQuizQuestion = {
   title: string
   content?: string
   imageUrl?: string
-  type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING'
+  type?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' | 'FILL_IN_BLANK'
   options: Array<{
     id: string
     text: string
@@ -792,10 +850,12 @@ export const parseQuizContent = async (input: { buffer?: ArrayBuffer; text?: str
 export const sanitizeParsedQuestions = (questions: ParsedQuizQuestion): SanitizedQuizQuestion[] =>
   questions.map((question) => {
     // Determine question type
-    let questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' = 'SINGLE_CHOICE'
-    
+    let questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'MATCHING' | 'FILL_IN_BLANK' = 'SINGLE_CHOICE'
+
     if (question.type === 'matching') {
       questionType = 'MATCHING'
+    } else if (question.type === 'fill_in_blank') {
+      questionType = 'FILL_IN_BLANK'
     } else if (question.multi || question.correct.size > 1) {
       questionType = 'MULTIPLE_CHOICE'
     }
