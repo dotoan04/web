@@ -103,16 +103,9 @@ const convertImageToBase64 = (imageData: Uint8Array, extension: string): string 
 
     // Convert Uint8Array to Buffer properly
     // Handle both Uint8Array and regular array
-    let buffer: Buffer
-    try {
-      buffer = Buffer.isBuffer(imageData)
-        ? imageData
-        : Buffer.from(imageData.buffer, imageData.byteOffset, imageData.byteLength)
-    } catch (bufferError) {
-      // Fallback for problematic imageData
-      console.warn('Using fallback buffer conversion method')
-      buffer = Buffer.from(imageData)
-    }
+    const buffer = Buffer.isBuffer(imageData) 
+      ? imageData 
+      : Buffer.from(imageData.buffer, imageData.byteOffset, imageData.byteLength)
     
     const base64 = buffer.toString('base64')
     
@@ -169,12 +162,6 @@ const extractParagraphs = async (xml: string, relsMap?: Map<string, string>, zip
           continue
         }
         
-        // Additional validation for corrupted images
-        if (imageData.length < 100) {
-          console.warn(`Image ${imagePath} seems too small (${imageData.length} bytes), might be corrupted`)
-          // Still try to process it, but warn
-        }
-        
         // Extract extension from target path
         // Handle cases where target might be like "media/image1.png" or just "image1"
         const pathParts = target.split('/')
@@ -217,13 +204,8 @@ const extractParagraphs = async (xml: string, relsMap?: Map<string, string>, zip
           }
         }
         
-        try {
-          const base64Url = convertImageToBase64(imageData, detectedExtension)
-          imageCache.set(relId, base64Url)
-        } catch (conversionError) {
-          console.error(`Failed to convert image ${imagePath} to base64:`, conversionError)
-          // Continue with other images even if conversion fails
-        }
+        const base64Url = convertImageToBase64(imageData, detectedExtension)
+        imageCache.set(relId, base64Url)
       } catch (error) {
         console.error(`Failed to load image ${imagePath}:`, error)
         // Continue processing other images instead of failing completely

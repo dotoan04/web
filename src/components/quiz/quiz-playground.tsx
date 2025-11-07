@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, memo, lazy, Suspense } from 'react'
 import { useSwipeable } from 'react-swipeable'
 import { createPortal } from 'react-dom'
 
@@ -9,7 +9,9 @@ import { Input } from '@/components/ui/input'
 import { SmartImage } from '@/components/ui/smart-image'
 import { useLocalStorage } from '@/hooks/use-local-storage'
 import { collectUserInfo, type UserInfo } from '@/lib/user-info'
-import { ThemeFeatureNotification } from '@/components/theme-feature-notification'
+
+// Lazy load the theme notification to improve initial load performance
+const ThemeFeatureNotification = lazy(() => import('@/components/theme-feature-notification').then(mod => ({ default: mod.ThemeFeatureNotification })))
 
 type QuizOption = {
   id: string
@@ -133,6 +135,129 @@ const computeResult = (quiz: Quiz, answers: AnswerState) => {
 
   return { score, totalPoints }
 }
+
+// Memoized components for better performance
+const TimerDisplay = memo(({ timePercentage, isCriticalTime, isLowTime, remainingSeconds, completed }: {
+  timePercentage: number
+  isCriticalTime: boolean
+  isLowTime: boolean
+  remainingSeconds: number
+  completed: boolean
+}) => (
+  <div className="flex items-center gap-2 sm:gap-3">
+    <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl border border-white/30 bg-white/20 backdrop-blur-xl shadow-lg shadow-white/10 dark:border-white/10 dark:bg-white/5 dark:shadow-white/5">
+      <div
+        className={`absolute inset-1 rounded-lg sm:rounded-xl transition-all ${
+          isCriticalTime
+            ? 'border-2 border-rose-500/50'
+            : isLowTime
+            ? 'border-2 border-orange-400/50'
+            : 'border-2 border-indigo-400/50'
+        }`}
+        style={{
+          background: `conic-gradient(${isCriticalTime ? 'rgb(244 63 94)' : isLowTime ? 'rgb(251 146 60)' : 'rgb(99 102 241)'} ${timePercentage * 3.6}deg, transparent 0deg)`,
+        }}
+      />
+      <div className="absolute inset-2 rounded-md sm:rounded-lg bg-white/60 backdrop-blur-sm dark:bg-white/10" />
+      <span className={`relative text-[10px] sm:text-xs font-bold transition-colors font-sans ${
+        isCriticalTime
+          ? 'text-rose-600 dark:text-rose-400'
+          : isLowTime
+          ? 'text-orange-600 dark:text-orange-400'
+          : 'text-gray-700 dark:text-gray-200'
+      }`}>
+        {formatDuration(remainingSeconds)}
+      </span>
+    </div>
+    {isLowTime && !completed && (
+      <span className="hidden sm:inline text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300 font-sans">
+        ⚠️ Cẩn thận!
+      </span>
+    )}
+  </div>
+))
+
+TimerDisplay.displayName = 'TimerDisplay'
+
+const QuestionNavigator = memo(({
+  questions,
+  currentQuestionIndex,
+  setCurrentQuestionIndex,
+  progress,
+  navPage,
+  setNavPage,
+  QUESTIONS_PER_NAV_PAGE
+}: {
+  questions: QuizQuestion[]
+  currentQuestionIndex: number
+  setCurrentQuestionIndex: (index: number) => void
+  progress: SubmissionState
+  navPage: number
+  setNavPage: (page: number) => void
+  QUESTIONS_PER_NAV_PAGE: number
+}) => {
+  const totalNavPages = Math.ceil(questions.length / QUESTIONS_PER_NAV_PAGE)
+  const navStartIndex = navPage * QUESTIONS_PER_NAV_PAGE
+  const navEndIndex = Math.min(navStartIndex + QUESTIONS_PER_NAV_PAGE, questions.length)
+  const visibleQuestions = questions.slice(navStartIndex, navEndIndex)
+  
+  return (
+    <div className="mt-2 border-t border-gray-200/50 pt-2">
+      <div className="flex flex-wrap gap-1">
+        {visibleQuestions.map((question, relativeIndex) => {
+          const index = navStartIndex + relativeIndex
+          const selected = currentQuestionIndex === index
+          const answered = Array.isArray(progress.answers[question.id]) && progress.answers[question.id].length > 0
+          return (
+            <button
+              key={question.id}
+              type="button"
+              onClick={() => setCurrentQuestionIndex(index)}
+              className={`relative flex h-6 w-6 items-center justify-center rounded border text-[10px] font-medium transition-colors touch-manipulation ${
+                selected
+                  ? 'border-indigo-400/70 bg-indigo-500/85 text-white'
+                  : answered
+                  ? 'border-emerald-400/60 bg-emerald-500/80 text-white'
+                  : 'border-white/30 bg-white/40 text-slate-600 hover:border-white/45 hover:bg-white/55 dark:border-white/10 dark:bg-slate-900/35 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-slate-900/55'
+              }`}
+            >
+              <span className="relative">{index + 1}</span>
+            </button>
+          )
+        })}
+      </div>
+      {totalNavPages > 1 && (
+        <div className="mt-1.5 flex items-center justify-between text-[10px] text-ink-500 dark:text-ink-400">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setNavPage(Math.max(0, navPage - 1))}
+            disabled={navPage === 0}
+            className="h-5 px-1.5 text-[10px]"
+          >
+            ←
+          </Button>
+          <span className="text-[10px]">
+            {navStartIndex + 1}–{navEndIndex} / {questions.length}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setNavPage(Math.min(totalNavPages - 1, navPage + 1))}
+            disabled={navPage === totalNavPages - 1}
+            className="h-5 px-1.5 text-[10px]"
+          >
+            →
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+})
+
+QuestionNavigator.displayName = 'QuestionNavigator'
 
 export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const storageKey = useMemo(() => `quiz-progress:${quiz.id}`, [quiz.id])
@@ -594,10 +719,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     </div>
   ), [timePercentage, isCriticalTime, isLowTime, progress.remainingSeconds, progress.completed])
 
-  const totalNavPages = Math.ceil(quiz.questions.length / QUESTIONS_PER_NAV_PAGE)
-  const navStartIndex = navPage * QUESTIONS_PER_NAV_PAGE
-  const navEndIndex = Math.min(navStartIndex + QUESTIONS_PER_NAV_PAGE, quiz.questions.length)
-  const visibleQuestions = quiz.questions.slice(navStartIndex, navEndIndex)
 
   // Swipe handlers for mobile navigation
   const swipeHandlers = useSwipeable({
@@ -984,7 +1105,9 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   return (
     <div className="relative mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6">
-      <ThemeFeatureNotification />
+      <Suspense fallback={null}>
+        <ThemeFeatureNotification />
+      </Suspense>
       
       {showNamePrompt &&
         typeof document !== 'undefined' &&
@@ -1071,7 +1194,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       <header className="sticky top-0 z-10 mb-4 rounded-xl border border-white/40 bg-white/70 p-4 shadow-md backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            {renderCompactTimer}
+            <TimerDisplay
+              timePercentage={timePercentage}
+              isCriticalTime={isCriticalTime}
+              isLowTime={isLowTime}
+              remainingSeconds={progress.remainingSeconds}
+              completed={progress.completed ?? false}
+            />
             <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
             <div className="min-w-0 flex-1">
               <h1 className="text-xs font-semibold text-gray-900 dark:text-gray-100 font-sans truncate">{quiz.title}</h1>
@@ -1113,58 +1242,15 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </div>
         
         {/* Question Navigator - Compact */}
-        <div className="mt-2 border-t border-gray-200/50 pt-2">
-          <div className="flex flex-wrap gap-1">
-            {visibleQuestions.map((question, relativeIndex) => {
-              const index = navStartIndex + relativeIndex
-              const selected = currentQuestionIndex === index
-              const answered = Array.isArray(progress.answers[question.id]) && progress.answers[question.id].length > 0
-              return (
-                <button
-                  key={question.id}
-                  type="button"
-                  onClick={() => setCurrentQuestionIndex(index)}
-                  className={`relative flex h-6 w-6 items-center justify-center rounded border text-[10px] font-medium transition-colors touch-manipulation ${
-                    selected 
-                      ? 'border-indigo-400/70 bg-indigo-500/85 text-white' 
-                      : answered 
-                      ? 'border-emerald-400/60 bg-emerald-500/80 text-white' 
-                      : 'border-white/30 bg-white/40 text-slate-600 hover:border-white/45 hover:bg-white/55 dark:border-white/10 dark:bg-slate-900/35 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-slate-900/55'
-                  }`}
-                >
-                  <span className="relative">{index + 1}</span>
-                </button>
-              )
-            })}
-          </div>
-          {totalNavPages > 1 && (
-            <div className="mt-1.5 flex items-center justify-between text-[10px] text-ink-500 dark:text-ink-400">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setNavPage((p) => Math.max(0, p - 1))}
-                disabled={navPage === 0}
-                className="h-5 px-1.5 text-[10px]"
-              >
-                ←
-              </Button>
-              <span className="text-[10px]">
-                {navStartIndex + 1}–{navEndIndex} / {quiz.questions.length}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setNavPage((p) => Math.min(totalNavPages - 1, p + 1))}
-                disabled={navPage === totalNavPages - 1}
-                className="h-5 px-1.5 text-[10px]"
-              >
-                →
-              </Button>
-            </div>
-          )}
-        </div>
+        <QuestionNavigator
+          questions={quiz.questions}
+          currentQuestionIndex={currentQuestionIndex}
+          setCurrentQuestionIndex={setCurrentQuestionIndex}
+          progress={progress}
+          navPage={navPage}
+          setNavPage={setNavPage}
+          QUESTIONS_PER_NAV_PAGE={QUESTIONS_PER_NAV_PAGE}
+        />
       </header>
 
       {/* Split View Layout - Optimized for Focus */}
@@ -1172,7 +1258,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         <div className="grid lg:grid-cols-2 gap-4 lg:gap-6 h-[calc(100vh-200px)] lg:h-[calc(100vh-180px)]">
           {/* Left Side - Question (Sticky) */}
           <div className="lg:sticky lg:top-[140px] lg:h-[calc(100vh-200px)] flex flex-col">
-            <article className="relative flex-1 flex flex-col rounded-xl border border-white/40 bg-white/70 p-5 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 overflow-y-auto">
+            <article className="relative flex-1 flex flex-col rounded-xl border border-white/40 bg-white/70 p-4 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 overflow-y-auto">
               {/* Question Header */}
               <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-200/50 dark:border-gray-700/50">
                 <div className="flex items-center gap-3">
@@ -1251,7 +1337,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
           {/* Right Side - Options (Scrollable) */}
           <div className="flex flex-col lg:h-[calc(100vh-180px)]">
-            <div className="flex-1 rounded-xl border border-white/40 bg-white/70 p-5 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 overflow-y-auto">
+            <div className="flex-1 rounded-xl border border-white/40 bg-white/70 p-4 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 overflow-y-auto">
               <div className="mb-4 pb-3 border-b border-gray-200/50 dark:border-gray-700/50">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
                   Chọn đáp án
