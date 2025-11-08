@@ -1065,61 +1065,61 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         enableVirtualization={quiz.questions.length > 50}
       />
       
-      {/* Header - Simplified */}
-      <header className="sticky top-0 z-10 mb-4 rounded-xl border border-white/40 bg-white/70 p-4 shadow-md backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
+      {/* Header - Compact */}
+      <header className="sticky top-0 z-10 mb-3 border-b border-white/40 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/90">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <TimerDisplay
-              timePercentage={timePercentage}
-              isCriticalTime={isCriticalTime}
-              isLowTime={isLowTime}
-              remainingSeconds={progress.remainingSeconds}
-              completed={progress.completed ?? false}
-            />
-            <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
+            <div className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-white/30 bg-white/20 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+              <div
+                className={`absolute inset-0.5 rounded-md transition-all ${
+                  isCriticalTime
+                    ? 'border border-rose-500/50'
+                    : isLowTime
+                    ? 'border border-orange-400/50'
+                    : 'border border-indigo-400/50'
+                }`}
+                style={{
+                  background: `conic-gradient(${isCriticalTime ? 'rgb(244 63 94)' : isLowTime ? 'rgb(251 146 60)' : 'rgb(99 102 241)'} ${timePercentage * 3.6}deg, transparent 0deg)`,
+                }}
+              />
+              <div className="absolute inset-1.5 rounded bg-white/60 backdrop-blur-sm dark:bg-white/10" />
+              <span className={`relative text-[9px] font-bold transition-colors font-mono ${
+                isCriticalTime
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : isLowTime
+                  ? 'text-orange-600 dark:text-orange-400'
+                  : 'text-gray-700 dark:text-gray-200'
+              }`}>
+                {formatDuration(progress.remainingSeconds)}
+              </span>
+            </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xs font-semibold text-gray-900 dark:text-gray-100 font-sans truncate">{quiz.title}</h1>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-sans">
-                {quiz.questions.length} câu · {answeredCount} đã trả lời
-              </p>
+              <h1 className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{quiz.title}</h1>
             </div>
           </div>
           
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {/* Mobile Menu Button */}
             <Button
               type="button"
               size="sm"
               variant="ghost"
               onClick={() => setShowMobileMenu(true)}
-              className="lg:hidden text-xs h-8 px-2"
+              className="lg:hidden h-7 px-1.5"
               aria-label="Mở menu"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </Button>
             
-            {progress.completed && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowFilterModal(true)}
-                className="hidden lg:flex text-[10px] px-2 h-7"
-              >
-                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-              </Button>
-            )}
             {!progress.completed ? (
               <Button type="button" size="sm" onClick={handleSubmit} disabled={submitting} className="hidden lg:flex text-xs h-7 px-3">
                 {submitting ? '...' : 'Nộp'}
               </Button>
             ) : (
-              <div className="hidden lg:flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+              <div className="hidden lg:flex items-center gap-1">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                   {progress.score}/{progress.totalPoints}
                 </span>
                 <Button type="button" size="sm" variant="subtle" onClick={handleReset} className="text-xs h-7 px-2">
@@ -1132,12 +1132,12 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       </header>
 
       {/* New Layout: Scrollable Questions List (Left) | Question Navigator (Right) */}
-      <main className="relative mx-auto w-full max-w-[98%] lg:max-w-[1600px] px-2 sm:px-4">
-        <div className="grid lg:grid-cols-[1fr_360px] gap-4 lg:gap-6">
+      <main className="relative mx-auto w-full max-w-[98%] lg:max-w-[1800px] px-2 sm:px-3">
+        <div className="grid lg:grid-cols-[1fr_300px] gap-3 lg:gap-4">
           {/* Left Side - Scrollable Questions List */}
           <div 
             ref={scrollContainerRef}
-            className="space-y-6 max-h-[calc(100vh-160px)] overflow-y-auto pr-2 scroll-smooth"
+            className="space-y-3 max-h-[calc(100vh-100px)] overflow-y-auto pr-1 scroll-smooth"
           >
             {quiz.questions.map((question, index) => {
               const isMulti = isMultipleChoice(question)
@@ -1149,44 +1149,42 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   ref={(el) => {
                     questionRefs.current[index] = el
                   }}
-                  className={`rounded-xl border-2 transition-all ${
+                  className={`rounded-lg border transition-all ${
                     currentQuestionIndex === index
-                      ? 'border-indigo-400 bg-white/80 shadow-xl dark:border-indigo-500 dark:bg-slate-900/80'
-                      : 'border-white/40 bg-white/70 shadow-lg dark:border-white/10 dark:bg-slate-900/70'
-                  } p-4 sm:p-6 lg:p-8 backdrop-blur-xl`}
+                      ? 'border-indigo-400 bg-white/90 shadow-md dark:border-indigo-500 dark:bg-slate-900/90'
+                      : 'border-gray-200/60 bg-white/80 dark:border-gray-700/50 dark:bg-slate-900/70'
+                  } p-3 sm:p-4 backdrop-blur-sm`}
                 >
                   {/* Question Header */}
-                  <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-200/50 dark:border-gray-700/50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
-                        Câu {index + 1}/{quiz.questions.length}
-                      </span>
-                      <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
-                        {question.points}đ
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 rounded px-2 py-0.5">
+                      Câu {index + 1}
+                    </span>
+                    <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                      {question.points} điểm
+                    </span>
                   </div>
 
                   {/* Question Title */}
-                  <h2 className="text-xl sm:text-2xl font-bold leading-tight text-gray-900 dark:text-gray-100 mb-4 font-sans">
+                  <h2 className="text-base sm:text-lg font-semibold leading-snug text-gray-900 dark:text-gray-100 mb-2">
                     {question.title}
                   </h2>
 
                   {/* Question Content */}
                   {question.content && (
-                    <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 mb-4 bg-gray-50/80 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200/50 dark:border-gray-700/50">
+                    <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400 mb-3 bg-gray-50/60 dark:bg-gray-800/40 rounded p-2 border border-gray-200/40 dark:border-gray-700/40">
                       {question.content}
                     </p>
                   )}
 
                   {/* Question Image */}
                   {question.imageUrl && (
-                    <div className="relative w-full min-h-[200px] sm:min-h-[300px] mb-4 rounded-lg border-2 border-gray-200/50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/50 overflow-hidden">
+                    <div className="relative w-full min-h-[150px] sm:min-h-[200px] mb-3 rounded border border-gray-200/50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/50 overflow-hidden">
                       <SmartImage
                         src={question.imageUrl}
                         alt={question.title}
                         fill
-                        className="object-contain p-4"
+                        className="object-contain p-2"
                         sizes="(max-width: 1024px) 100vw, 60vw"
                         priority={index < 3}
                       />
@@ -1194,17 +1192,13 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   )}
 
                   {/* Answer Options */}
-                  <div className="mb-4">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-3">
-                      {question.type === 'MATCHING' ? 'Ghép cặp' : question.type === 'FILL_IN_BLANK' ? 'Điền vào chỗ trống' : 'Chọn đáp án'}
-                    </h3>
-                    
+                  <div className="mb-2">
                     {question.type === 'MATCHING' ? (
                       renderMatchingQuestionForIndex(question, index)
                     ) : question.type === 'FILL_IN_BLANK' ? (
                       renderFillInBlankQuestionForIndex(question, index)
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {question.options.map((option, optionIdx) => {
                           const state = getOptionState(question, option)
                           const answerArray = Array.isArray(rawAnswer) ? rawAnswer : []
@@ -1214,19 +1208,19 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                             <label
                               key={option.id}
                               htmlFor={`${question.id}-${option.id}`}
-                              className={`group relative flex items-start gap-4 p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                              className={`group relative flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
                                 state === 'correct'
-                                  ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
+                                  ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10'
                                   : state === 'incorrect'
-                                  ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
+                                  ? 'border-rose-400 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10'
                                   : state === 'missed'
-                                  ? 'border-sky-400/60 bg-sky-100/55 text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/15'
+                                  ? 'border-sky-400 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10'
                                   : checked
-                                  ? 'border-indigo-400 bg-indigo-50/80 dark:border-indigo-500 dark:bg-indigo-500/20'
-                                  : 'border-gray-200 bg-white/80 hover:border-indigo-300 dark:border-gray-700 dark:bg-slate-800/80'
+                                  ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-500/15'
+                                  : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-slate-800/60 dark:hover:border-gray-600'
                               }`}
                             >
-                              <div className="flex-shrink-0 mt-0.5">
+                              <div className="flex-shrink-0">
                                 <input
                                   type={isMulti ? 'checkbox' : 'radio'}
                                   id={`${question.id}-${option.id}`}
@@ -1234,18 +1228,18 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                                   checked={checked}
                                   onChange={() => handleToggleOption(question.id, option.id)}
                                   disabled={progress.completed}
-                                  className="h-5 w-5 rounded border-2 border-gray-300 bg-white text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 dark:border-gray-600 dark:bg-slate-700"
+                                  className="h-4 w-4 rounded border border-gray-300 bg-white text-indigo-600 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-slate-700"
                                 />
                               </div>
 
                               <div className="flex-1 min-w-0">
                                 {option.text && (
-                                  <p className="text-base font-medium leading-relaxed">
+                                  <p className="text-sm leading-snug">
                                     {option.text}
                                   </p>
                                 )}
                                 {option.imageUrl && (
-                                  <div className="relative w-full h-32 mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                                  <div className="relative w-full h-24 mt-1.5 rounded overflow-hidden border border-gray-200 dark:border-gray-700">
                                     <SmartImage
                                       src={option.imageUrl}
                                       alt={option.text || 'option image'}
@@ -1265,14 +1259,14 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
                   {/* Explanation (if completed) */}
                   {progress.completed && question.explanation && (
-                    <div className="mt-4 pt-4 border-t border-emerald-200/50 dark:border-emerald-800/50">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">💡</span>
-                        <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                    <div className="mt-2 pt-2 border-t border-emerald-200/50 dark:border-emerald-800/50">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-sm">💡</span>
+                        <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
                           Giải thích
                         </p>
                       </div>
-                      <p className="text-sm leading-relaxed text-emerald-800 dark:text-emerald-200">
+                      <p className="text-xs leading-relaxed text-emerald-800 dark:text-emerald-200">
                         {question.explanation}
                       </p>
                     </div>
@@ -1282,15 +1276,15 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             })}
 
             {error && (
-              <div className="rounded-xl border border-rose-400/60 bg-rose-100/55 p-4 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15">
+              <div className="rounded-lg border border-rose-400/60 bg-rose-100/55 p-3 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15">
                 <p className="text-sm">{error}</p>
               </div>
             )}
           </div>
 
           {/* Right Side - Question List Panel (Desktop Only) */}
-          <div className="hidden lg:block lg:sticky lg:top-[140px] lg:h-[calc(100vh-180px)]">
-            <div className="h-full rounded-xl border border-white/40 bg-white/70 p-4 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70">
+          <div className="hidden lg:block lg:sticky lg:top-[60px] lg:h-[calc(100vh-80px)]">
+            <div className="h-full rounded-lg border border-gray-200/60 bg-white/90 p-3 shadow-sm backdrop-blur-sm dark:border-gray-700/50 dark:bg-slate-900/90">
               <QuestionListPanel
                 questions={quiz.questions}
                 currentQuestionIndex={currentQuestionIndex}

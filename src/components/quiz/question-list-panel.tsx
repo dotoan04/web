@@ -65,18 +65,18 @@ const QuestionButton = memo(({
       type="button"
       onClick={onClick}
       className={`
-        relative flex h-12 w-full items-center justify-center rounded-lg border-2 text-sm font-semibold
+        relative flex h-10 w-full items-center justify-center rounded text-xs font-semibold
         transition-all touch-manipulation
         ${
           isSelected
-            ? 'border-indigo-500 bg-indigo-500 text-white shadow-md scale-105'
+            ? 'border-2 border-indigo-500 bg-indigo-500 text-white shadow-sm scale-105'
             : isCorrect === true
-            ? 'border-emerald-400/70 bg-emerald-500/85 text-white'
+            ? 'border border-emerald-400 bg-emerald-500 text-white'
             : isCorrect === false
-            ? 'border-rose-400/70 bg-rose-500/85 text-white'
+            ? 'border border-rose-400 bg-rose-500 text-white'
             : isAnswered
-            ? 'border-emerald-400/60 bg-emerald-500/80 text-white'
-            : 'border-gray-300/60 bg-white/70 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/80 dark:border-gray-600/50 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:border-indigo-500/50 dark:hover:bg-indigo-900/30'
+            ? 'border border-emerald-400 bg-emerald-500 text-white'
+            : 'border border-gray-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-gray-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-indigo-500 dark:hover:bg-indigo-900/40'
         }
       `}
     >
@@ -215,17 +215,17 @@ export const QuestionListPanel = memo(({
   // Non-virtualized version for shorter lists
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-4 pb-3 border-b border-gray-200/50 dark:border-gray-700/50">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+      <div className="mb-2 pb-2 border-b border-gray-200/50 dark:border-gray-700/50">
+        <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300">
           Danh sách câu hỏi
         </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+        <p className="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">
           {questions.length} câu
         </p>
       </div>
       
       <div className="flex-1 overflow-auto">
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-1.5">
           {questions.map((question, index) => {
             const { isAnswered, isCorrect } = questionStates[index]
             
