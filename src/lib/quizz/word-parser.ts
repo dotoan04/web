@@ -12,6 +12,12 @@ const NS = {
 }
 
 const BLACK_VALUES = new Set(['000000', 'auto'])
+// Red color values commonly used in Word documents (in hex, without #)
+const RED_COLORS = new Set([
+  'ff0000', 'ff0001', 'ff0002', 'ff0003', 'ff0004', 'ff0005', // Various shades of red
+  'dc143c', 'crimson', 'b22222', '8b0000', 'a52a2a', // More red variants
+  'ff0033', 'ff3333', 'cc0000', '990000', // Red variations
+])
 
 type ImageData = {
   id: string
@@ -22,6 +28,7 @@ type ImageData = {
 type ParagraphEntry = {
   text: string
   isColored: boolean
+  isRed: boolean  // Specifically track if text is red
   numId: string | null
   ilvl: string | null
   imageId?: string | null  // Can be either relId or base64 URL
@@ -46,7 +53,16 @@ const getColorValue = (run: Element) => {
     colorNode.getAttributeNS(NS.w, 'val') ||
     colorNode.getAttribute('w:val') ||
     colorNode.getAttribute('val')
-  return val ? val.toLowerCase() : null
+  return val ? val.toLowerCase().replace('#', '') : null
+}
+
+const isRedColor = (colorValue: string | null): boolean => {
+  if (!colorValue) return false
+  const normalized = colorValue.toLowerCase().replace('#', '').trim()
+  // Check if it's a red color
+  return RED_COLORS.has(normalized) || 
+         (normalized.startsWith('ff') && normalized.length === 6) || // Starts with FF (high red component)
+         normalized === 'red'
 }
 
 const getImageId = (element: Element): string | null => {
@@ -234,6 +250,7 @@ const extractParagraphs = async (xml: string, relsMap?: Map<string, string>, zip
   paragraphs.forEach((paragraph) => {
     let buffer = ''
     let isColored = false
+    let isRed = false
     let currentNumId: string | null = null
     let currentIlvl: string | null = null
     let imageId: string | null = null
@@ -277,10 +294,11 @@ const extractParagraphs = async (xml: string, relsMap?: Map<string, string>, zip
       if (text || imageId) {
         // Convert imageId to base64 URL if available in cache
         const imageUrl = imageId && imageCache.has(imageId) ? imageCache.get(imageId)! : (imageId || undefined)
-        entries.push({ text, isColored, numId: currentNumId, ilvl: currentIlvl, imageId: imageUrl })
+        entries.push({ text, isColored, isRed, numId: currentNumId, ilvl: currentIlvl, imageId: imageUrl })
       }
       buffer = ''
       isColored = false
+      isRed = false
       imageId = null
     }
 
@@ -317,6 +335,10 @@ const extractParagraphs = async (xml: string, relsMap?: Map<string, string>, zip
         const colorValue = getColorValue(run)
         if (colorValue && !BLACK_VALUES.has(colorValue)) {
           isColored = true
+          // Check if it's specifically red
+          if (isRedColor(colorValue)) {
+            isRed = true
+          }
         }
       } else if (element.localName === 'br' || element.localName === 'cr') {
         flush()
@@ -369,7 +391,7 @@ const parsePlainText = (text: string) =>
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => ({ text: line, isColored: false, numId: null, ilvl: null }))
+    .map((line) => ({ text: line, isColored: false, isRed: false, numId: null, ilvl: null }))
 
 const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
   const items: ParsedQuestion[] = []
@@ -383,19 +405,35 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
   const labelPattern = /^(Chọn\s*\d+\s*(?:đáp\s*án|phương\s*án)\s*đúng)/i
   const multiPattern = /(Chọn\s*\d+\s*đáp\s*án\s*đúng|Chọn\s*\d+\s*phương\s*án)/i
   const trueFalsePattern = /^(Đúng|Sai|True|False)$/i
+  // More flexible pattern for true/false that can handle prefixes like "A. Đúng" or "* Đúng"
+  const trueFalseOptionPattern = /^(?:[A-DĐ][\.\)]\s*)?\*?\s*(Đúng|Sai|True|False)\s*$/i
+  // Pattern to match option format with true/false: "A. Đúng" or "A. Sai"
+  const trueFalseWithOptionPattern = /^([A-DĐ])[\.\)]\s*\*?\s*(Đúng|Sai|True|False)\s*$/i
   const numberedItemPattern = /^\d+[\.\)]\s+/  // Match "1. " or "1) "
   // Pattern to detect if a line is likely an answer option (starts with A-D followed by dot/parenthesis)
   const looksLikeOption = /^[A-DĐ][\.\)]\s/
+  // Pattern to detect asterisk before option key or in text
+  const asteriskPattern = /^\*\s*([A-DĐ])[\.\)]\s*(.+)$|^([A-DĐ])[\.\)]\s*\*\s*(.+)$|^([A-DĐ])[\.\)]\s+(.+)\*|^([A-DĐ])[\.\)]\s+([^\*]*\*[^\*]*)$/i
 
-  const markCorrect = (value: string, colored: boolean) => {
+  const markCorrect = (value: string, colored: boolean, isRed: boolean) => {
+    // Red text is a strong indicator of correct answer
+    if (isRed) return true
+    // Colored (non-black, non-red) can also indicate correct
     if (colored) return true
-    return value.startsWith('*')
+    // Asterisk anywhere in the text indicates correct answer
+    if (value.includes('*')) return true
+    // Asterisk at the start
+    if (value.trim().startsWith('*')) return true
+    return false
   }
 
-  const stripMarker = (value: string) => value.replace(/^\*/g, '').trim()
+  const stripMarker = (value: string) => {
+    // Remove asterisks from anywhere in the text
+    return value.replace(/\*+/g, '').trim()
+  }
 
   lines.forEach((entry, index) => {
-    const { text, isColored, numId, ilvl, imageId } = entry
+    const { text, isColored, isRed, numId, ilvl, imageId } = entry
     const trimmed = text.trim()
 
     const questionMatch = trimmed.match(questionPattern)
@@ -437,9 +475,50 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
       return
     }
 
-    // Check if this looks like an option - must be more strict
-    const optionMatch = trimmed.match(optionPattern)
+    // Check if this looks like an option - handle asterisk patterns first
+    let optionMatch = trimmed.match(asteriskPattern)
+    let optionKey: string | null = null
+    let optionValue: string | null = null
+    let hasAsterisk = false
+
     if (optionMatch && current) {
+      // Extract key and value from various asterisk patterns
+      // Pattern 1: *A. Text
+      if (optionMatch[1] && optionMatch[2]) {
+        optionKey = optionMatch[1]
+        optionValue = optionMatch[2]
+        hasAsterisk = true
+      }
+      // Pattern 2: A. *Text
+      else if (optionMatch[3] && optionMatch[4]) {
+        optionKey = optionMatch[3]
+        optionValue = optionMatch[4]
+        hasAsterisk = true
+      }
+      // Pattern 3: A. Text*
+      else if (optionMatch[5] && optionMatch[6]) {
+        optionKey = optionMatch[5]
+        optionValue = optionMatch[6]
+        hasAsterisk = true
+      }
+      // Pattern 4: A. Text with * somewhere
+      else if (optionMatch[7] && optionMatch[8]) {
+        optionKey = optionMatch[7]
+        optionValue = optionMatch[8]
+        hasAsterisk = true
+      }
+    }
+
+    // If no asterisk pattern matched, try regular option pattern
+    if (!optionMatch || !optionKey) {
+      optionMatch = trimmed.match(optionPattern)
+      if (optionMatch) {
+        optionKey = optionMatch[1]
+        optionValue = optionMatch[2]
+      }
+    }
+
+    if (optionMatch && optionKey && optionValue && current) {
       // If we were collecting question text, flush it first
       if (questionTextBuffer.length > 0 && current.options.length === 0) {
         const bufferedText = questionTextBuffer.join(' ').trim()
@@ -456,18 +535,45 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
       }
       isCollectingQuestion = false
 
-      const [, key, rest] = optionMatch
-      const original = rest.trim()
-      const isCorrect = markCorrect(original, isColored)
+      const original = optionValue.trim()
+      // Check for correct answer: red text, colored text, or asterisk
+      const isCorrect = markCorrect(original, isColored, isRed) || hasAsterisk
       const value = stripMarker(original)
-      current.options.push({ key: key.trim(), value, isCorrect, imageUrl: imageId || undefined })
+      current.options.push({ key: optionKey.trim(), value, isCorrect, imageUrl: imageId || undefined })
       return
     }
 
     // Support for True/False questions - more flexible matching
-    const trueFalseMatch = trimmed.match(trueFalsePattern)
-    if (trueFalseMatch && current) {
-      // Only add if we don't have 2 options yet, or if we're explicitly looking for T/F
+    // Try pattern that handles "A. Đúng" or "* Đúng" or just "Đúng"
+    let trueFalseMatch: RegExpMatchArray | null = null
+    let trueFalseValue: string | null = null
+    let trueFalseKey: string | null = null
+    let hasTrueFalseAsterisk = false
+    
+    // First try pattern with option key: "A. Đúng" or "A. *Đúng" or "*A. Đúng"
+    const trueFalseWithOption = trimmed.match(trueFalseWithOptionPattern)
+    if (trueFalseWithOption && current) {
+      trueFalseKey = trueFalseWithOption[1]
+      trueFalseValue = trueFalseWithOption[2]
+      hasTrueFalseAsterisk = trimmed.includes('*')
+      trueFalseMatch = trueFalseWithOption
+    } else {
+      // Try pattern without option key but with optional asterisk: "* Đúng" or "Đúng"
+      trueFalseMatch = trimmed.match(trueFalseOptionPattern)
+      if (trueFalseMatch) {
+        trueFalseValue = trueFalseMatch[1] // The captured group is the true/false value
+        hasTrueFalseAsterisk = trimmed.includes('*')
+      } else {
+        // Fallback to simple pattern: just "Đúng" or "Sai"
+        trueFalseMatch = trimmed.match(trueFalsePattern)
+        if (trueFalseMatch) {
+          trueFalseValue = trimmed.trim()
+        }
+      }
+    }
+
+    if (trueFalseMatch && trueFalseValue && current) {
+      // Only add if we don't have 2 options yet
       if (current.options.length < 2) {
         // Flush question text buffer if needed
         if (questionTextBuffer.length > 0 && current.options.length === 0) {
@@ -485,9 +591,12 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
         }
         isCollectingQuestion = false
 
-        const key = current.options.length === 0 ? 'A' : 'B'
-        const isCorrect = markCorrect(trimmed, isColored)
-        current.options.push({ key, value: trimmed, isCorrect, imageUrl: imageId || undefined })
+        // Use the key from pattern if available, otherwise assign A or B
+        const key = trueFalseKey || (current.options.length === 0 ? 'A' : 'B')
+        // Check for correct: red text, colored text, or asterisk in original text
+        const isCorrect = markCorrect(trimmed, isColored, isRed) || hasTrueFalseAsterisk
+        const cleanValue = stripMarker(trueFalseValue)
+        current.options.push({ key, value: cleanValue, isCorrect, imageUrl: imageId || undefined })
         return
       }
     }
@@ -497,7 +606,7 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
       const existingKeys = current.options.length
       if (existingKeys < 10) { // Limit to reasonable number of options
         const key = String.fromCharCode(65 + existingKeys)
-        const isCorrect = markCorrect(trimmed, isColored)
+        const isCorrect = markCorrect(trimmed, isColored, isRed)
         const value = stripMarker(trimmed)
         current.options.push({ key, value, isCorrect, imageUrl: imageId || undefined })
         return
@@ -519,13 +628,13 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
           // Actually is an option, process it
           const optionMatch = trimmed.match(optionPattern)
           if (optionMatch) {
-            const [, key, rest] = optionMatch
-            const original = rest.trim()
-            const isCorrect = markCorrect(original, isColored)
-            const value = stripMarker(original)
-            current.options.push({ key: key.trim(), value, isCorrect, imageUrl: imageId || undefined })
-            isCollectingQuestion = false
-            return
+          const [, key, rest] = optionMatch
+          const original = rest.trim()
+          const isCorrect = markCorrect(original, isColored, isRed)
+          const value = stripMarker(original)
+          current.options.push({ key: key.trim(), value, isCorrect, imageUrl: imageId || undefined })
+          isCollectingQuestion = false
+          return
           }
         }
         // Otherwise, treat as question text
@@ -575,7 +684,8 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
         const last = current.options[current.options.length - 1]
         const updatedValue = `${last.value} ${trimmed}`.trim()
         last.value = stripMarker(updatedValue)
-        if (markCorrect(updatedValue, isColored)) {
+        // Update correctness based on new text (red, colored, or asterisk)
+        if (markCorrect(updatedValue, isColored, isRed)) {
           last.isCorrect = true
         }
         // Image already handled above
@@ -645,27 +755,59 @@ const groupQuestions = (lines: ParagraphEntry[]): ParsedQuestion[] => {
     }
     
     // Detect true/false questions - more comprehensive
+    // Check if question has exactly 2 options that are True/False
     if (question.options.length === 2) {
       const opt1 = question.options[0].value.trim().toLowerCase()
       const opt2 = question.options[1].value.trim().toLowerCase()
       
-      // Check various True/False patterns
-      const truePatterns = ['đúng', 'true', 'yes', 'có', 't', 'đúng.', 'true.', 'yes.', 'có.', 't.']
-      const falsePatterns = ['sai', 'false', 'no', 'không', 'f', 'sai.', 'false.', 'no.', 'không.', 'f.']
+      // Check various True/False patterns - be more flexible
+      const truePatterns = ['đúng', 'true', 'yes', 'có', 't', 'đúng.', 'true.', 'yes.', 'có.', 't.', 'đ', 'đúng!', 'true!']
+      const falsePatterns = ['sai', 'false', 'no', 'không', 'f', 'sai.', 'false.', 'no.', 'không.', 'f.', 's', 'sai!', 'false!']
       
-      const hasTrue = truePatterns.some(pattern => opt1 === pattern || opt2 === pattern)
-      const hasFalse = falsePatterns.some(pattern => opt1 === pattern || opt2 === pattern)
+      // Normalize: remove extra whitespace and punctuation
+      const normalizeOption = (opt: string) => {
+        return opt.replace(/[.!?,\s]+$/g, '').trim().toLowerCase()
+      }
       
-      // Also check if options are exactly "Đúng" and "Sai" (case-insensitive)
+      const norm1 = normalizeOption(opt1)
+      const norm2 = normalizeOption(opt2)
+      
+      const hasTrue = truePatterns.some(pattern => {
+        const normPattern = normalizeOption(pattern)
+        return norm1 === normPattern || norm2 === normPattern || 
+               norm1.startsWith(normPattern) || norm2.startsWith(normPattern) ||
+               norm1.includes('đúng') || norm2.includes('đúng') ||
+               norm1.includes('true') || norm2.includes('true')
+      })
+      
+      const hasFalse = falsePatterns.some(pattern => {
+        const normPattern = normalizeOption(pattern)
+        return norm1 === normPattern || norm2 === normPattern ||
+               norm1.startsWith(normPattern) || norm2.startsWith(normPattern) ||
+               norm1.includes('sai') || norm2.includes('sai') ||
+               norm1.includes('false') || norm2.includes('false')
+      })
+      
+      // If we have both true and false patterns, it's a true/false question
       if ((hasTrue && hasFalse) || 
-          (opt1 === 'đúng' && opt2 === 'sai') ||
-          (opt1 === 'sai' && opt2 === 'đúng') ||
-          (opt1 === 'true' && opt2 === 'false') ||
-          (opt1 === 'false' && opt2 === 'true')) {
+          (norm1.includes('đúng') && norm2.includes('sai')) ||
+          (norm1.includes('sai') && norm2.includes('đúng')) ||
+          (norm1.includes('true') && norm2.includes('false')) ||
+          (norm1.includes('false') && norm2.includes('true')) ||
+          (norm1 === 'đúng' && norm2 === 'sai') ||
+          (norm1 === 'sai' && norm2 === 'đúng') ||
+          (norm1 === 'true' && norm2 === 'false') ||
+          (norm1 === 'false' && norm2 === 'true')) {
         question.type = 'truefalse'
         // Ensure correct ordering: Đúng/True first, Sai/False second
-        if (falsePatterns.some(p => opt1 === p) || opt1 === 'false' || opt1 === 'sai') {
-          // Swap options
+        // Check which option is false
+        const isFirstFalse = falsePatterns.some(p => {
+          const normP = normalizeOption(p)
+          return norm1 === normP || norm1.startsWith(normP) || norm1.includes('sai') || norm1.includes('false')
+        }) || norm1 === 'false' || norm1 === 'sai' || norm1.includes('sai') || norm1.includes('false')
+        
+        if (isFirstFalse) {
+          // Swap options to put Đúng/True first
           const temp = question.options[0]
           question.options[0] = question.options[1]
           question.options[1] = temp
