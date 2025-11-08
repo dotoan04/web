@@ -1066,10 +1066,10 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       />
       
       {/* Header - Compact */}
-      <header className="sticky top-0 z-10 mb-3 border-b border-white/40 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/90">
+      <header className="sticky top-2 z-10 mb-3 mx-2 sm:mx-0 rounded-xl border border-white/40 bg-white/95 px-3 py-2.5 shadow-md backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/95">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-white/30 bg-white/20 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/30 bg-white/20 backdrop-blur-xl dark:border-white/10 dark:bg-white/5 shrink-0">
               <div
                 className={`absolute inset-0.5 rounded-md transition-all ${
                   isCriticalTime
@@ -1083,7 +1083,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 }}
               />
               <div className="absolute inset-1.5 rounded bg-white/60 backdrop-blur-sm dark:bg-white/10" />
-              <span className={`relative text-[9px] font-bold transition-colors font-mono ${
+              <span className={`relative text-[10px] font-bold transition-colors font-mono ${
                 isCriticalTime
                   ? 'text-rose-600 dark:text-rose-400'
                   : isLowTime
@@ -1105,10 +1105,10 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               size="sm"
               variant="ghost"
               onClick={() => setShowMobileMenu(true)}
-              className="lg:hidden h-7 px-1.5"
+              className="lg:hidden h-8 w-8 px-0"
               aria-label="Mở menu"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </Button>
@@ -1132,12 +1132,12 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       </header>
 
       {/* New Layout: Scrollable Questions List (Left) | Question Navigator (Right) */}
-      <main className="relative mx-auto w-full max-w-[98%] lg:max-w-[1800px] px-2 sm:px-3">
+      <main className="relative mx-auto w-full max-w-[98%] lg:max-w-[1800px] px-2 sm:px-3 pb-4">
         <div className="grid lg:grid-cols-[1fr_300px] gap-3 lg:gap-4">
           {/* Left Side - Scrollable Questions List */}
           <div 
             ref={scrollContainerRef}
-            className="space-y-3 max-h-[calc(100vh-100px)] overflow-y-auto pr-1 scroll-smooth"
+            className="space-y-3 max-h-[calc(100vh-120px)] lg:max-h-[calc(100vh-100px)] overflow-y-auto pr-1 scroll-smooth"
           >
             {quiz.questions.map((question, index) => {
               const isMulti = isMultipleChoice(question)
@@ -1283,8 +1283,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           </div>
 
           {/* Right Side - Question List Panel (Desktop Only) */}
-          <div className="hidden lg:block lg:sticky lg:top-[60px] lg:h-[calc(100vh-80px)]">
-            <div className="h-full rounded-lg border border-gray-200/60 bg-white/90 p-3 shadow-sm backdrop-blur-sm dark:border-gray-700/50 dark:bg-slate-900/90">
+          <div className="hidden lg:block lg:sticky lg:top-[72px] lg:h-[calc(100vh-88px)]">
+            <div className="h-full rounded-xl border border-gray-200/60 bg-white/90 p-3 shadow-sm backdrop-blur-sm dark:border-gray-700/50 dark:bg-slate-900/90">
               <QuestionListPanel
                 questions={quiz.questions}
                 currentQuestionIndex={currentQuestionIndex}
