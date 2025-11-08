@@ -205,6 +205,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   })
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const questionRefs = useRef<(HTMLDivElement | null)[]>([])
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect'>('all')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -362,45 +364,42 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   const goToQuestion = useCallback((newIndex: number) => {
     setCurrentQuestionIndex(newIndex)
+    // Scroll to the question
+    if (questionRefs.current[newIndex]) {
+      questionRefs.current[newIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }
   }, [])
 
+  // Track which question is currently visible in viewport
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (progress.completed) return
-      
-      const key = event.key.toLowerCase()
-      
-      // Handle number keys for answer selection (1-9)
-      if (/^[1-9]$/.test(key)) {
-        event.preventDefault()
-        const optionIndex = parseInt(key) - 1
-        if (optionIndex < currentQuestion.options.length) {
-          handleToggleOption(currentQuestion.id, currentQuestion.options[optionIndex].id)
-        }
+    if (!scrollContainerRef.current) return
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = questionRefs.current.findIndex((ref) => ref === entry.target)
+            if (index !== -1 && index !== currentQuestionIndex) {
+              setCurrentQuestionIndex(index)
+            }
+          }
+        })
+      },
+      {
+        root: scrollContainerRef.current,
+        threshold: 0.5,
       }
-      // Handle 0 key for option 10 if exists
-      else if (key === '0') {
-        event.preventDefault()
-        if (currentQuestion.options.length >= 10) {
-          handleToggleOption(currentQuestion.id, currentQuestion.options[9].id)
-        }
-      }
-      // Handle navigation keys
-      else if (key === 'enter') {
-        event.preventDefault()
-        goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))
-      } else if (key === 'arrowup') {
-        event.preventDefault()
-        goToQuestion(Math.max(0, currentQuestionIndex - 1))
-      } else if (key === 'arrowdown') {
-        event.preventDefault()
-        goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))
-      }
-    }
+    )
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [progress.completed, currentQuestionIndex, goToQuestion, quiz.questions.length, currentQuestion, handleToggleOption])
+    questionRefs.current.forEach((ref) => {
+      if (ref) observer.observe(ref)
+    })
+
+    return () => observer.disconnect()
+  }, [quiz.questions.length])
 
   useEffect(() => {
     if (progress.completed) {
@@ -673,44 +672,35 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   ), [timePercentage, isCriticalTime, isLowTime, progress.remainingSeconds, progress.completed])
 
 
-  // Swipe handlers for mobile navigation
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => {
-      if (!progress.completed && currentQuestionIndex < quiz.questions.length - 1) {
-        goToQuestion(currentQuestionIndex + 1)
-      }
-    },
-    onSwipedRight: () => {
-      if (!progress.completed && currentQuestionIndex > 0) {
-        goToQuestion(currentQuestionIndex - 1)
-      }
-    },
-    trackMouse: false,
-    trackTouch: true,
-    preventScrollOnSwipe: false,
-    delta: 50,
-  })
+  // No swipe handlers needed for scrollable list
 
   // For matching questions, we need to shuffle right items and allow pairing
-  const [shuffledRightItems, setShuffledRightItems] = useState<QuizOption[]>([])
-  const [selectedLeft, setSelectedLeft] = useState<string | null>(null)
+  const [shuffledRightItemsMap, setShuffledRightItemsMap] = useState<Record<string, QuizOption[]>>({})
+  const [selectedLeftMap, setSelectedLeftMap] = useState<Record<string, string | null>>({})
   
   useEffect(() => {
-    if (currentQuestion.type === 'MATCHING') {
-      // Extract and shuffle right items (odd indices)
-      const rightItems = currentQuestion.options.filter((_, idx) => idx % 2 === 1)
-      const shuffled = [...rightItems].sort(() => Math.random() - 0.5)
-      setShuffledRightItems(shuffled)
-      setSelectedLeft(null)
-    }
-  }, [currentQuestion])
+    // Initialize shuffled items for all matching questions
+    const newShuffledMap: Record<string, QuizOption[]> = {}
+    const newSelectedMap: Record<string, string | null> = {}
+    
+    quiz.questions.forEach((question) => {
+      if (question.type === 'MATCHING') {
+        const rightItems = question.options.filter((_, idx) => idx % 2 === 1)
+        newShuffledMap[question.id] = [...rightItems].sort(() => Math.random() - 0.5)
+        newSelectedMap[question.id] = null
+      }
+    })
+    
+    setShuffledRightItemsMap(newShuffledMap)
+    setSelectedLeftMap(newSelectedMap)
+  }, [quiz.questions])
   
-  const handleMatchingPair = useCallback((leftOptionId: string, rightOptionId: string) => {
+  const handleMatchingPair = useCallback((questionId: string, leftOptionId: string, rightOptionId: string) => {
     if (progress.completed) return
     
     const pairString = `${leftOptionId}:${rightOptionId}`
     setProgress((prev) => {
-      const current = prev.answers[currentQuestion.id] ?? []
+      const current = prev.answers[questionId] ?? []
       // Ensure current is treated as array for matching questions
       const currentArray = Array.isArray(current) ? current : []
 
@@ -735,323 +725,164 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         ...prev,
         answers: {
           ...prev.answers,
-          [currentQuestion.id]: newSelected,
+          [questionId]: newSelected,
         },
       }
     })
-    setSelectedLeft(null)
-  }, [progress.completed, currentQuestion.id, setProgress])
+    setSelectedLeftMap(prev => ({ ...prev, [questionId]: null }))
+  }, [progress.completed, setProgress])
   
-  const renderMatchingQuestion = useMemo(() => {
-    if (currentQuestion.type !== 'MATCHING') return null
+  // Helper function to render matching questions for each question in the list
+  const renderMatchingQuestionForIndex = useCallback((question: QuizQuestion, index: number) => {
+    const leftItems = question.options.filter((_, idx) => idx % 2 === 0)
+    const shuffledRightItems = shuffledRightItemsMap[question.id] || []
+    const selectedLeft = selectedLeftMap[question.id]
+    const rawAnswer = progress.answers[question.id]
+    const currentPairs = Array.isArray(rawAnswer) ? rawAnswer : rawAnswer ? [rawAnswer] : []
     
-    const leftItems = currentQuestion.options.filter((_, idx) => idx % 2 === 0)
-    // Ensure currentPairs is always an array
-    const rawAnswer = progress.answers[currentQuestion.id]
-    const currentPairs = Array.isArray(rawAnswer)
-      ? rawAnswer
-      : rawAnswer ? [rawAnswer] : []
-    
-    // Create map of left to right pairs for easier lookup
     const pairMap = new Map<string, string>()
     currentPairs.forEach(pair => {
       const [left, right] = pair.split(':')
       if (left && right) pairMap.set(left, right)
     })
     
-    // Get correct pairs for result display
     const correctPairMap = new Map<string, string>()
-    for (let i = 0; i < currentQuestion.options.length; i += 2) {
-      const leftId = currentQuestion.options[i]?.id
-      const rightId = currentQuestion.options[i + 1]?.id
+    for (let i = 0; i < question.options.length; i += 2) {
+      const leftId = question.options[i]?.id
+      const rightId = question.options[i + 1]?.id
       if (leftId && rightId) {
         correctPairMap.set(leftId, rightId)
       }
     }
     
     return (
-      <div className="space-y-4">
-        <p className="text-sm text-slate-600 dark:text-slate-300 bg-white/40 dark:bg-slate-800/40 rounded-lg p-3 backdrop-blur-sm">
-          💡 Nhấp vào mục bên trái, sau đó nhấp vào mục bên phải để ghép cặp. Bên phải đã được đảo thứ tự.
-        </p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-300">Bên trái</h4>
+          {leftItems.map((leftOption) => {
+            const pairedRightId = pairMap.get(leftOption.id)
+            const isPaired = Boolean(pairedRightId)
+            const isSelected = selectedLeft === leftOption.id
+            const isCorrectPair = progress.completed && correctPairMap.get(leftOption.id) === pairedRightId
+            const isIncorrectPair = progress.completed && isPaired && !isCorrectPair
+            
+            return (
+              <button
+                key={leftOption.id}
+                type="button"
+                onClick={() => {
+                  if (!progress.completed) {
+                    setSelectedLeftMap(prev => ({
+                      ...prev,
+                      [question.id]: isSelected ? null : leftOption.id
+                    }))
+                  }
+                }}
+                disabled={progress.completed}
+                className={`w-full text-left rounded-lg border p-2 text-sm transition-colors ${
+                  isCorrectPair
+                    ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700'
+                    : isIncorrectPair
+                    ? 'border-rose-400/60 bg-rose-100/55 text-rose-700'
+                    : isSelected
+                    ? 'border-indigo-500 bg-indigo-100/55 text-indigo-700'
+                    : isPaired
+                    ? 'border-indigo-400/60 bg-indigo-50/55 text-indigo-600'
+                    : 'border-gray-300 bg-white/80 hover:border-gray-400'
+                }`}
+              >
+                {leftOption.text}
+              </button>
+            )
+          })}
+        </div>
         
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Left side */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Bên trái</h4>
-            {leftItems.map((leftOption) => {
-              const pairedRightId = pairMap.get(leftOption.id)
-              const isPaired = Boolean(pairedRightId)
-              const isSelected = selectedLeft === leftOption.id
-              const isCorrectPair = progress.completed && correctPairMap.get(leftOption.id) === pairedRightId
-              const isIncorrectPair = progress.completed && isPaired && !isCorrectPair
-              
-              return (
-                <button
-                  key={leftOption.id}
-                  type="button"
-                  onClick={() => {
-                    if (!progress.completed) {
-                      setSelectedLeft(isSelected ? null : leftOption.id)
-                    }
-                  }}
-                  disabled={progress.completed}
-                  className={`w-full text-left rounded-xl border p-3 backdrop-blur-xl transition-colors ${
-                    isCorrectPair
-                      ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
-                      : isIncorrectPair
-                      ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
-                      : isSelected
-                      ? 'border-indigo-500 bg-indigo-100/55 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/15'
-                      : isPaired
-                      ? 'border-indigo-400/60 bg-indigo-50/55 text-indigo-600 dark:border-indigo-400/30 dark:bg-indigo-500/10'
-                      : 'border-white/25 bg-white/45 text-slate-700 hover:border-white/40 hover:bg-white/55 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="text-sm font-medium">{leftOption.text}</span>
-                    {isPaired && !progress.completed && <span className="text-xs">✓</span>}
-                  </div>
-                  {isPaired && pairedRightId && (
-                    <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                      → {shuffledRightItems.find(r => r.id === pairedRightId)?.text}
-                    </div>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          
-          {/* Right side */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Bên phải (đã đảo)</h4>
-            {shuffledRightItems.map((rightOption) => {
-              const isPaired = [...pairMap.values()].includes(rightOption.id)
-              const leftId = [...pairMap.entries()].find(([, right]) => right === rightOption.id)?.[0]
-              const isCorrectPair = progress.completed && leftId && correctPairMap.get(leftId) === rightOption.id
-              const isIncorrectPair = progress.completed && isPaired && !isCorrectPair
-              const shouldShowAsCorrect = progress.completed && !isPaired && [...correctPairMap.values()].includes(rightOption.id)
-              
-              return (
-                <button
-                  key={rightOption.id}
-                  type="button"
-                  onClick={() => {
-                    if (!progress.completed && selectedLeft) {
-                      handleMatchingPair(selectedLeft, rightOption.id)
-                    }
-                  }}
-                  disabled={progress.completed || !selectedLeft}
-                  className={`w-full text-left rounded-xl border p-3 backdrop-blur-xl transition-colors ${
-                    isCorrectPair
-                      ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
-                      : isIncorrectPair
-                      ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
-                      : shouldShowAsCorrect
-                      ? 'border-sky-400/60 bg-sky-100/55 text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/15'
-                      : isPaired
-                      ? 'border-indigo-400/60 bg-indigo-50/55 text-indigo-600 dark:border-indigo-400/30 dark:bg-indigo-500/10'
-                      : selectedLeft
-                      ? 'border-white/40 bg-white/55 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 cursor-pointer dark:border-slate-600/60 dark:bg-slate-800/40 dark:text-slate-200'
-                      : 'border-white/25 bg-white/45 text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200 opacity-70'
-                  }`}
-                >
-                  <span className="text-sm font-medium">{rightOption.text}</span>
-                  {progress.completed && shouldShowAsCorrect && (
-                    <div className="mt-1 text-xs text-sky-600 dark:text-sky-300">
-                      ✓ Đúng (chưa chọn)
-                    </div>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-300">Bên phải</h4>
+          {shuffledRightItems.map((rightOption) => {
+            const isPaired = [...pairMap.values()].includes(rightOption.id)
+            const leftId = [...pairMap.entries()].find(([, right]) => right === rightOption.id)?.[0]
+            const isCorrectPair = progress.completed && leftId && correctPairMap.get(leftId) === rightOption.id
+            const isIncorrectPair = progress.completed && isPaired && !isCorrectPair
+            
+            return (
+              <button
+                key={rightOption.id}
+                type="button"
+                onClick={() => {
+                  if (!progress.completed && selectedLeft) {
+                    handleMatchingPair(question.id, selectedLeft, rightOption.id)
+                  }
+                }}
+                disabled={progress.completed || !selectedLeft}
+                className={`w-full text-left rounded-lg border p-2 text-sm transition-colors ${
+                  isCorrectPair
+                    ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700'
+                    : isIncorrectPair
+                    ? 'border-rose-400/60 bg-rose-100/55 text-rose-700'
+                    : isPaired
+                    ? 'border-indigo-400/60 bg-indigo-50/55 text-indigo-600'
+                    : selectedLeft
+                    ? 'border-gray-300 bg-white/80 hover:border-indigo-400 cursor-pointer'
+                    : 'border-gray-300 bg-gray-50/80 opacity-60'
+                }`}
+              >
+                {rightOption.text}
+              </button>
+            )
+          })}
         </div>
       </div>
     )
-  }, [currentQuestion, progress.answers, progress.completed, selectedLeft, shuffledRightItems, handleMatchingPair])
+  }, [shuffledRightItemsMap, selectedLeftMap, progress, handleMatchingPair])
 
-  const renderFillInBlankQuestion = useMemo(() => {
-    if (currentQuestion.type !== 'FILL_IN_BLANK') return null
-    
-    const currentAnswer = Array.isArray(progress.answers[currentQuestion.id])
-      ? (progress.answers[currentQuestion.id] as string[])[0] || ''
-      : (progress.answers[currentQuestion.id] as string) ?? ''
-    const correctAnswer = currentQuestion.options[0]?.text || ''
+  // Helper function to render fill-in-blank questions for each question in the list
+  const renderFillInBlankQuestionForIndex = useCallback((question: QuizQuestion, index: number) => {
+    const currentAnswer = Array.isArray(progress.answers[question.id])
+      ? (progress.answers[question.id] as string[])[0] || ''
+      : (progress.answers[question.id] as string) ?? ''
+    const correctAnswer = question.options[0]?.text || ''
     const isCorrect = currentAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
     
     return (
-      <div className="space-y-4">
-        <p className="text-sm text-slate-600 dark:text-slate-300 bg-white/40 dark:bg-slate-800/40 rounded-lg p-3 backdrop-blur-sm">
-          💡 Nhập câu trả lời của bạn vào ô trống.
-        </p>
+      <div>
+        <Input
+          type="text"
+          value={currentAnswer}
+          onChange={(e) => {
+            if (progress.completed) return
+            setProgress((prev) => ({
+              ...prev,
+              answers: {
+                ...prev.answers,
+                [question.id]: e.target.value,
+              },
+            }))
+          }}
+          placeholder="Nhập câu trả lời của bạn..."
+          disabled={progress.completed}
+          className={`w-full px-4 py-3 text-base border-2 rounded-xl transition-colors ${
+            progress.completed
+              ? (isCorrect
+                ? 'border-emerald-400/60 bg-emerald-50'
+                : 'border-rose-400/60 bg-rose-50')
+              : 'border-gray-300 bg-white'
+          }`}
+        />
         
-        <div className="relative">
-          <Input
-            type="text"
-            value={currentAnswer}
-            onChange={(e) => {
-              if (progress.completed) return
-              setProgress((prev) => ({
-                ...prev,
-                answers: {
-                  ...prev.answers,
-                  [currentQuestion.id]: e.target.value,
-                },
-              }))
-            }}
-            placeholder="Nhập câu trả lời của bạn..."
-            disabled={progress.completed}
-            className={`w-full px-4 py-3 text-lg border-2 rounded-xl transition-colors ${
-              progress.completed
-                ? (isCorrect
-                  ? 'border-emerald-400/60 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
-                  : 'border-rose-400/60 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15')
-                : 'border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-slate-800 dark:text-slate-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0'
-            }`}
-          />
-          
-          {progress.completed && (
-            <div className={`mt-3 p-3 rounded-lg border-2 ${
-              isCorrect
-                ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
-                : 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
-            }`}>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-semibold ${
-                  isCorrect ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
-                }`}>
-                  {isCorrect ? '✓ Đúng!' : '✗ Sai'}
-                </span>
-                {!isCorrect && (
-                  <span className="text-sm text-emerald-600 dark:text-emerald-300">
-                    Đáp án đúng: {correctAnswer}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        {progress.completed && (
+          <div className={`mt-2 p-2 rounded-lg text-sm ${
+            isCorrect
+              ? 'bg-emerald-100/55 text-emerald-700'
+              : 'bg-rose-100/55 text-rose-700'
+          }`}>
+            {isCorrect ? '✓ Đúng!' : `✗ Sai. Đáp án: ${correctAnswer}`}
+          </div>
+        )}
       </div>
     )
-  }, [currentQuestion, progress.answers, progress.completed, setProgress])
+  }, [progress, setProgress])
 
-  const renderOptions = useMemo(() => {
-    if (currentQuestion.type === 'MATCHING') {
-      return renderMatchingQuestion
-    }
-    
-    if (currentQuestion.type === 'FILL_IN_BLANK') {
-      return renderFillInBlankQuestion
-    }
-    
-    const hasImages = currentQuestion.options.some((opt) => opt.imageUrl)
-    const gridCols = hasImages ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
-    
-    return (
-      <div className="space-y-3">
-        {currentQuestion.options.map((option, optionIdx) => {
-          const state = getOptionState(currentQuestion, option)
-          const isMulti = isMultipleChoice(currentQuestion)
-          const rawAnswer = progress.answers[currentQuestion.id]
-          const answerArray = Array.isArray(rawAnswer) ? rawAnswer : []
-          const checked = answerArray.includes(option.id)
-          const shortcutKey = optionIdx < 9 ? (optionIdx + 1).toString() : '0'
-          const toneClasses =
-            state === 'correct'
-              ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200'
-              : state === 'incorrect'
-              ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15 dark:text-rose-200'
-              : state === 'missed'
-              ? 'border-sky-400/60 bg-sky-100/55 text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/15 dark:text-sky-200'
-              : checked
-              ? 'border-indigo-400/60 bg-indigo-100/55 text-indigo-700 dark:border-indigo-400/30 dark:bg-indigo-500/15 dark:text-indigo-200'
-              : 'border-white/25 bg-white/45 text-slate-700 hover:border-white/40 hover:bg-white/55 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-500/60 dark:hover:bg-slate-900/55'
-          const badgeTone =
-            state === 'correct'
-              ? 'border border-transparent bg-emerald-500 text-white'
-              : state === 'incorrect'
-              ? 'border border-transparent bg-rose-500 text-white'
-              : state === 'missed'
-              ? 'border border-transparent bg-sky-500 text-white'
-              : checked
-              ? 'border border-transparent bg-indigo-500 text-white'
-              : 'border border-white/40 bg-white/45 text-slate-600 dark:border-slate-600/40 dark:bg-slate-900/60 dark:text-slate-300'
-          const statusBadgeTone =
-            state === 'correct'
-              ? 'bg-emerald-500/85 text-white'
-              : state === 'incorrect'
-              ? 'bg-rose-500/85 text-white'
-              : 'bg-sky-500/85 text-white'
-          
-          return (
-            <label
-              key={option.id}
-              htmlFor={option.id}
-              className={`group relative flex items-start gap-4 p-4 rounded-xl border-2 transition-all touch-manipulation cursor-pointer hover:shadow-md focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-400/50 dark:focus-within:ring-indigo-500/40 ${
-                checked ? 'border-indigo-400 bg-indigo-50/80 dark:border-indigo-500 dark:bg-indigo-500/20' : 'border-gray-200 bg-white/80 dark:border-gray-700 dark:bg-slate-800/80'
-              } ${toneClasses}`}
-            >
-              {/* Radio/Checkbox */}
-              <div className="flex-shrink-0 mt-0.5">
-                <input
-                  type={isMulti ? 'checkbox' : 'radio'}
-                  id={option.id}
-                  name={isMulti ? undefined : currentQuestion.id}
-                  checked={checked}
-                  onChange={() => handleToggleOption(currentQuestion.id, option.id)}
-                  disabled={progress.completed}
-                  className="h-5 w-5 rounded border-2 border-gray-300 bg-white text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-0 dark:border-gray-600 dark:bg-slate-700"
-                />
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                {/* Option Number Badge */}
-                <div className="flex items-center gap-3 mb-2">
-                  <span className={`flex items-center justify-center rounded-lg text-xs font-bold h-6 w-6 ${badgeTone}`}>
-                    {shortcutKey}
-                  </span>
-                  {state !== null && (
-                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadgeTone}`}>
-                      {state === 'correct' ? '✓ Đúng'
-                       : state === 'incorrect' ? '✗ Sai'
-                       : '✓ Đúng (chưa chọn)'}
-                    </span>
-                  )}
-                </div>
-
-                {/* Option Text */}
-                {option.text && (
-                  <p className={`text-base font-medium leading-relaxed mb-3 ${
-                    state === 'correct' ? 'text-emerald-700 dark:text-emerald-300'
-                    : state === 'incorrect' ? 'text-rose-700 dark:text-rose-300'
-                    : state === 'missed' ? 'text-sky-700 dark:text-sky-300'
-                    : 'text-gray-900 dark:text-gray-100'
-                  }`}>
-                    {option.text}
-                  </p>
-                )}
-
-                {/* Option Image */}
-                {option.imageUrl && (
-                  <div className="relative w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 aspect-[4/3] min-h-[180px]">
-                    <SmartImage
-                      src={option.imageUrl}
-                      alt={option.text || 'option image'}
-                      fill
-                      className="object-contain p-3"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
-                  </div>
-                )}
-              </div>
-            </label>
-          )
-        })}
-      </div>
-    )
-  }, [currentQuestion, progress.answers, progress.completed, getOptionState, handleToggleOption, renderMatchingQuestion, renderFillInBlankQuestion])
 
   const renderFilterModal = () => {
     if (!showFilterModal || !progress.completed) return null
@@ -1300,116 +1131,161 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </div>
       </header>
 
-      {/* New Layout: Combined Question+Answers (Left) | Question List (Right) */}
-      <main className="relative mx-auto w-full max-w-[98%] lg:max-w-[1600px] px-2 sm:px-4" {...swipeHandlers}>
+      {/* New Layout: Scrollable Questions List (Left) | Question Navigator (Right) */}
+      <main className="relative mx-auto w-full max-w-[98%] lg:max-w-[1600px] px-2 sm:px-4">
         <div className="grid lg:grid-cols-[1fr_360px] gap-4 lg:gap-6">
-          {/* Left Side - Combined Question and Answers (Mobile: Full Width, Desktop: Left Column) */}
-          <div className="flex flex-col space-y-4">
-            {/* Question Section */}
-            <article className="rounded-xl border border-white/40 bg-white/70 p-4 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70">
-              {/* Question Header */}
-              <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-200/50 dark:border-gray-700/50">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
-                    Câu {currentQuestionIndex + 1}/{quiz.questions.length}
-                  </span>
-                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
-                    {currentQuestion.points}đ
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}
-                    disabled={currentQuestionIndex === 0}
-                    className="h-7 px-2 text-xs"
-                  >
-                    ←
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))}
-                    disabled={currentQuestionIndex === quiz.questions.length - 1}
-                    className="h-7 px-2 text-xs"
-                  >
-                    →
-                  </Button>
-                </div>
-              </div>
-
-              {/* Question Title */}
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight text-gray-900 dark:text-gray-100 mb-4 font-sans">
-                {currentQuestion.title}
-              </h2>
-
-              {/* Question Content */}
-              {currentQuestion.content && (
-                <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 mb-4 bg-gray-50/80 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200/50 dark:border-gray-700/50">
-                  {currentQuestion.content}
-                </p>
-              )}
-
-              {/* Question Image */}
-              {currentQuestion.imageUrl && (
-                <div className="relative w-full min-h-[200px] sm:min-h-[300px] mb-4 rounded-lg border-2 border-gray-200/50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/50 overflow-hidden">
-                  <SmartImage
-                    src={currentQuestion.imageUrl}
-                    alt={currentQuestion.title}
-                    fill
-                    className="object-contain p-4"
-                    sizes="(max-width: 1024px) 100vw, 60vw"
-                  />
-                </div>
-              )}
-
-              {/* Explanation (if completed) */}
-              {progress.completed && currentQuestion.explanation && (
-                <div className="mt-4 pt-4 border-t border-emerald-200/50 dark:border-emerald-800/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">💡</span>
-                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                      Giải thích
-                    </p>
-                  </div>
-                  <p className="text-sm leading-relaxed text-emerald-800 dark:text-emerald-200">
-                    {currentQuestion.explanation}
-                  </p>
-                </div>
-              )}
-            </article>
-
-            {/* Answer Options Section */}
-            <div className="rounded-xl border border-white/40 bg-white/70 p-4 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70">
-              <div className="mb-4 pb-3 border-b border-gray-200/50 dark:border-gray-700/50">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                  Chọn đáp án
-                </h3>
-              </div>
+          {/* Left Side - Scrollable Questions List */}
+          <div 
+            ref={scrollContainerRef}
+            className="space-y-6 max-h-[calc(100vh-160px)] overflow-y-auto pr-2 scroll-smooth"
+          >
+            {quiz.questions.map((question, index) => {
+              const isMulti = isMultipleChoice(question)
+              const rawAnswer = progress.answers[question.id]
               
-              <div className="space-y-3">
-                {renderOptions}
-              </div>
+              return (
+                <div
+                  key={question.id}
+                  ref={(el) => {
+                    questionRefs.current[index] = el
+                  }}
+                  className={`rounded-xl border-2 transition-all ${
+                    currentQuestionIndex === index
+                      ? 'border-indigo-400 bg-white/80 shadow-xl dark:border-indigo-500 dark:bg-slate-900/80'
+                      : 'border-white/40 bg-white/70 shadow-lg dark:border-white/10 dark:bg-slate-900/70'
+                  } p-4 sm:p-6 lg:p-8 backdrop-blur-xl`}
+                >
+                  {/* Question Header */}
+                  <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
+                        Câu {index + 1}/{quiz.questions.length}
+                      </span>
+                      <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
+                        {question.points}đ
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Keyboard shortcuts hint */}
-              <div className="mt-6 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">1-9</span>
-                  <span>chọn đáp án</span>
-                  <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">Enter</span>
-                  <span>câu tiếp</span>
-                  <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
-                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">↑↓</span>
-                  <span>di chuyển</span>
+                  {/* Question Title */}
+                  <h2 className="text-xl sm:text-2xl font-bold leading-tight text-gray-900 dark:text-gray-100 mb-4 font-sans">
+                    {question.title}
+                  </h2>
+
+                  {/* Question Content */}
+                  {question.content && (
+                    <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 mb-4 bg-gray-50/80 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200/50 dark:border-gray-700/50">
+                      {question.content}
+                    </p>
+                  )}
+
+                  {/* Question Image */}
+                  {question.imageUrl && (
+                    <div className="relative w-full min-h-[200px] sm:min-h-[300px] mb-4 rounded-lg border-2 border-gray-200/50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/50 overflow-hidden">
+                      <SmartImage
+                        src={question.imageUrl}
+                        alt={question.title}
+                        fill
+                        className="object-contain p-4"
+                        sizes="(max-width: 1024px) 100vw, 60vw"
+                        priority={index < 3}
+                      />
+                    </div>
+                  )}
+
+                  {/* Answer Options */}
+                  <div className="mb-4">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-3">
+                      {question.type === 'MATCHING' ? 'Ghép cặp' : question.type === 'FILL_IN_BLANK' ? 'Điền vào chỗ trống' : 'Chọn đáp án'}
+                    </h3>
+                    
+                    {question.type === 'MATCHING' ? (
+                      renderMatchingQuestionForIndex(question, index)
+                    ) : question.type === 'FILL_IN_BLANK' ? (
+                      renderFillInBlankQuestionForIndex(question, index)
+                    ) : (
+                      <div className="space-y-3">
+                        {question.options.map((option, optionIdx) => {
+                          const state = getOptionState(question, option)
+                          const answerArray = Array.isArray(rawAnswer) ? rawAnswer : []
+                          const checked = answerArray.includes(option.id)
+                          
+                          return (
+                            <label
+                              key={option.id}
+                              htmlFor={`${question.id}-${option.id}`}
+                              className={`group relative flex items-start gap-4 p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                                state === 'correct'
+                                  ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15'
+                                  : state === 'incorrect'
+                                  ? 'border-rose-400/60 bg-rose-100/55 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15'
+                                  : state === 'missed'
+                                  ? 'border-sky-400/60 bg-sky-100/55 text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/15'
+                                  : checked
+                                  ? 'border-indigo-400 bg-indigo-50/80 dark:border-indigo-500 dark:bg-indigo-500/20'
+                                  : 'border-gray-200 bg-white/80 hover:border-indigo-300 dark:border-gray-700 dark:bg-slate-800/80'
+                              }`}
+                            >
+                              <div className="flex-shrink-0 mt-0.5">
+                                <input
+                                  type={isMulti ? 'checkbox' : 'radio'}
+                                  id={`${question.id}-${option.id}`}
+                                  name={isMulti ? undefined : question.id}
+                                  checked={checked}
+                                  onChange={() => handleToggleOption(question.id, option.id)}
+                                  disabled={progress.completed}
+                                  className="h-5 w-5 rounded border-2 border-gray-300 bg-white text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 dark:border-gray-600 dark:bg-slate-700"
+                                />
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                {option.text && (
+                                  <p className="text-base font-medium leading-relaxed">
+                                    {option.text}
+                                  </p>
+                                )}
+                                {option.imageUrl && (
+                                  <div className="relative w-full h-32 mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                                    <SmartImage
+                                      src={option.imageUrl}
+                                      alt={option.text || 'option image'}
+                                      fill
+                                      className="object-contain"
+                                      sizes="(max-width: 1024px) 100vw, 50vw"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Explanation (if completed) */}
+                  {progress.completed && question.explanation && (
+                    <div className="mt-4 pt-4 border-t border-emerald-200/50 dark:border-emerald-800/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">💡</span>
+                        <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                          Giải thích
+                        </p>
+                      </div>
+                      <p className="text-sm leading-relaxed text-emerald-800 dark:text-emerald-200">
+                        {question.explanation}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )
+            })}
 
-              {error && <p className="mt-4 text-sm text-rose-500 dark:text-rose-300">{error}</p>}
-            </div>
+            {error && (
+              <div className="rounded-xl border border-rose-400/60 bg-rose-100/55 p-4 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15">
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
           </div>
 
           {/* Right Side - Question List Panel (Desktop Only) */}
