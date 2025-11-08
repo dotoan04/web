@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo, lazy, Suspense } from 'react'
 import { useSwipeable } from 'react-swipeable'
 import { createPortal } from 'react-dom'
-import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SmartImage } from '@/components/ui/smart-image'
 import { useLocalStorage } from '@/hooks/use-local-storage'
 import { collectUserInfo, type UserInfo } from '@/lib/user-info'
+import { QuestionListPanel } from './question-list-panel'
+import { MobileQuizMenu } from './mobile-quiz-menu'
 
 // Lazy load the theme notification to improve initial load performance
 const ThemeFeatureNotification = lazy(() => import('@/components/theme-feature-notification').then(mod => ({ default: mod.ThemeFeatureNotification })))
@@ -186,60 +187,8 @@ const TimerDisplay = memo(({ timePercentage, isCriticalTime, isLowTime, remainin
 
 TimerDisplay.displayName = 'TimerDisplay'
 
-const QuestionList = memo(({
-  questions,
-  currentQuestionIndex,
-  onSelectQuestion,
-  progress,
-  className,
-}: {
-  questions: QuizQuestion[]
-  currentQuestionIndex: number
-  onSelectQuestion: (index: number) => void
-  progress: SubmissionState
-  className?: string
-}) => {
-  return (
-    <div className={`grid grid-cols-4 gap-2 sm:grid-cols-5 ${className ?? ''}`}>
-      {questions.map((question, index) => {
-        const answerValue = progress.answers[question.id]
-        const answered = Array.isArray(answerValue)
-          ? answerValue.length > 0
-          : typeof answerValue === 'string'
-            ? answerValue.trim().length > 0
-            : false
-        const selected = currentQuestionIndex === index
-        const baseClasses =
-          'relative flex h-10 items-center justify-center rounded-lg border text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 touch-manipulation'
-        const tone = selected
-          ? 'border-indigo-500 bg-indigo-500 text-white shadow-lg shadow-indigo-200/60 dark:shadow-indigo-900/40'
-          : answered
-            ? 'border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-200'
-            : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-indigo-500/40 dark:hover:bg-slate-700'
-        return (
-          <button
-            key={question.id}
-            type="button"
-            onClick={() => onSelectQuestion(index)}
-            className={`${baseClasses} ${tone}`}
-          >
-            <span>{index + 1}</span>
-            {answered && !selected && (
-              <span className="absolute -top-1 -right-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
-                ✓
-              </span>
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
-})
-
-QuestionList.displayName = 'QuestionList'
 
 export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
-  const router = useRouter()
   const storageKey = useMemo(() => `quiz-progress:${quiz.id}`, [quiz.id])
   const historyKey = useMemo(() => `quiz-history:${quiz.id}`, [quiz.id])
 
@@ -263,7 +212,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const [showNamePrompt, setShowNamePrompt] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [loadingGifUrl, setLoadingGifUrl] = useState<string | null>(null)
-  const [showQuestionSheet, setShowQuestionSheet] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const pendingSubmissionRef = useRef<{ answers: AnswerState; durationSeconds: number } | null>(null)
   const hasPromptedRef = useRef(false)
 
@@ -504,13 +453,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     }).length,
     [progress.answers],
   )
-  const totalQuestions = quiz.questions.length
-  const progressPercentage = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0
-  const participantLabel = storedName?.trim().length ? storedName.trim() : 'Ẩn danh'
-  const maxScore = useMemo(
-    () => quiz.questions.reduce((sum, question) => sum + question.points, 0),
-    [quiz.questions],
-  )
 
   const filteredQuestions = useMemo(() => {
     if (!progress.completed || filter === 'all' || progress.score == null) {
@@ -626,6 +568,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     setError(null)
     setShowNamePrompt(false)
     setSubmitting(false)
+    setShowMobileMenu(false)
     hasPromptedRef.current = false
     pendingSubmissionRef.current = null
   }, [clearProgress, quiz, setProgress])
@@ -1110,23 +1053,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     )
   }, [currentQuestion, progress.answers, progress.completed, getOptionState, handleToggleOption, renderMatchingQuestion, renderFillInBlankQuestion])
 
-  const handleBack = useCallback(() => {
-    router.back()
-  }, [router])
-
-  const handleOpenQuestionSheet = useCallback(() => {
-    setShowQuestionSheet(true)
-  }, [])
-
-  const handleCloseQuestionSheet = useCallback(() => {
-    setShowQuestionSheet(false)
-  }, [])
-
-  const handleSelectQuestionFromSheet = useCallback((index: number) => {
-    goToQuestion(index)
-    setShowQuestionSheet(false)
-  }, [goToQuestion])
-
   const renderFilterModal = () => {
     if (!showFilterModal || !progress.completed) return null
     
@@ -1295,410 +1221,211 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       
       {renderFilterModal()}
       
-      {showQuestionSheet &&
-        typeof document !== 'undefined' &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-40 flex flex-col justify-end bg-black/60 sm:hidden"
-            onClick={handleCloseQuestionSheet}
-          >
-            <div
-              className="mt-auto max-h-[90vh] w-full rounded-t-3xl border border-white/20 bg-white p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="mx-auto mb-4 h-1.5 w-16 rounded-full bg-slate-200 dark:bg-slate-700" />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Danh sách câu hỏi
-                  </p>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    {answeredCount}/{totalQuestions} đã trả lời
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCloseQuestionSheet}
-                  className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="mt-5 max-h-[50vh] overflow-y-auto pr-1">
-                <QuestionList
-                  questions={quiz.questions}
-                  currentQuestionIndex={currentQuestionIndex}
-                  onSelectQuestion={handleSelectQuestionFromSheet}
-                  progress={progress}
-                  className="gap-2"
-                />
-              </div>
-
-              <div className="mt-6 space-y-3">
-                {progress.completed ? (
-                  <>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        handleCloseQuestionSheet()
-                        handleReset()
-                      }}
-                      className="w-full py-5 text-base font-semibold"
-                    >
-                      Làm lại
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        handleCloseQuestionSheet()
-                        setShowFilterModal(true)
-                      }}
-                      className="w-full py-5 text-base font-semibold"
-                    >
-                      Xem kết quả
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      handleCloseQuestionSheet()
-                      handleSubmit()
-                    }}
-                    disabled={submitting}
-                    className="w-full py-5 text-base font-semibold"
-                  >
-                    {submitting ? 'Đang nộp...' : 'Nộp bài'}
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    handleCloseQuestionSheet()
-                    handleBack()
-                  }}
-                  className="w-full py-5 text-base font-semibold"
-                >
-                  Thoát
-                </Button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
-
-      <header className="sticky top-0 z-20 -mx-2 sm:-mx-4 border-b border-white/40 bg-white/80 px-2 py-4 shadow-sm backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/70">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleBack}
-              className="flex items-center gap-2 rounded-full border border-indigo-100 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm transition-all hover:bg-indigo-50 focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-indigo-200 dark:hover:bg-slate-900"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
-              </svg>
-              Quay lại
-            </Button>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Thí sinh
-              </span>
-              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {participantLabel}
-              </span>
+      {/* Mobile Quiz Menu */}
+      <MobileQuizMenu
+        isOpen={showMobileMenu}
+        onClose={() => setShowMobileMenu(false)}
+        questions={quiz.questions}
+        currentQuestionIndex={currentQuestionIndex}
+        onQuestionSelect={goToQuestion}
+        progress={progress}
+        onSubmit={!progress.completed ? handleSubmit : undefined}
+        onReset={progress.completed ? handleReset : undefined}
+        enableVirtualization={quiz.questions.length > 50}
+      />
+      
+      {/* Header - Simplified */}
+      <header className="sticky top-0 z-10 mb-4 rounded-xl border border-white/40 bg-white/70 p-4 shadow-md backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <TimerDisplay
+              timePercentage={timePercentage}
+              isCriticalTime={isCriticalTime}
+              isLowTime={isLowTime}
+              remainingSeconds={progress.remainingSeconds}
+              completed={progress.completed ?? false}
+            />
+            <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xs font-semibold text-gray-900 dark:text-gray-100 font-sans truncate">{quiz.title}</h1>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-sans">
+                {quiz.questions.length} câu · {answeredCount} đã trả lời
+              </p>
             </div>
           </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5 sm:pl-6">
-            <div className="flex items-center gap-3">
-              {renderCompactTimer}
-              <div className="hidden sm:flex flex-col">
-                <span className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  Tiến độ
-                </span>
-                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {answeredCount}/{totalQuestions} câu
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:ml-auto">
+          
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Mobile Menu Button */}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowMobileMenu(true)}
+              className="lg:hidden text-xs h-8 px-2"
+              aria-label="Mở menu"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </Button>
+            
+            {progress.completed && (
               <Button
                 type="button"
+                size="sm"
                 variant="ghost"
-                onClick={handleOpenQuestionSheet}
-                className="flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:bg-slate-900/70 dark:text-indigo-200 dark:hover:border-indigo-500 dark:hover:bg-slate-900 sm:hidden"
+                onClick={() => setShowFilterModal(true)}
+                className="hidden lg:flex text-[10px] px-2 h-7"
               >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5h4v4H5zM15 5h4v4h-4zM5 15h4v4H5zM15 15h4v4h-4z" />
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
-                Danh sách
               </Button>
-              {!progress.completed ? (
-                <Button type="button" onClick={handleSubmit} disabled={submitting} className="px-4 py-2 text-sm font-semibold">
-                  {submitting ? 'Đang nộp...' : 'Nộp bài'}
+            )}
+            {!progress.completed ? (
+              <Button type="button" size="sm" onClick={handleSubmit} disabled={submitting} className="hidden lg:flex text-xs h-7 px-3">
+                {submitting ? '...' : 'Nộp'}
+              </Button>
+            ) : (
+              <div className="hidden lg:flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                  {progress.score}/{progress.totalPoints}
+                </span>
+                <Button type="button" size="sm" variant="subtle" onClick={handleReset} className="text-xs h-7 px-2">
+                  Làm lại
                 </Button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    {progress.score}/{progress.totalPoints ?? maxScore}
-                  </span>
-                  <Button type="button" variant="subtle" onClick={handleReset} className="px-3 py-2 text-sm font-semibold">
-                    Làm lại
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setShowFilterModal(true)}
-                    className="hidden px-3 py-2 text-sm font-semibold sm:inline-flex"
-                  >
-                    Xem kết quả
-                  </Button>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto mt-6 w-full max-w-6xl px-2 pb-16 sm:px-4 lg:pb-8" {...swipeHandlers}>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2.1fr)_minmax(280px,1fr)]">
-          <section className="flex flex-col gap-6">
-            <article className="rounded-3xl border border-white/40 bg-white/80 p-4 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/70 sm:p-6 lg:p-8">
-              <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-4 dark:border-slate-700/60 sm:flex-row sm:items-center sm:justify-between">
+      {/* New Layout: Combined Question+Answers (Left) | Question List (Right) */}
+      <main className="relative mx-auto w-full max-w-[98%] lg:max-w-[1600px] px-2 sm:px-4" {...swipeHandlers}>
+        <div className="grid lg:grid-cols-[1fr_360px] gap-4 lg:gap-6">
+          {/* Left Side - Combined Question and Answers (Mobile: Full Width, Desktop: Left Column) */}
+          <div className="flex flex-col space-y-4">
+            {/* Question Section */}
+            <article className="rounded-xl border border-white/40 bg-white/70 p-4 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70">
+              {/* Question Header */}
+              <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-200/50 dark:border-gray-700/50">
                 <div className="flex items-center gap-3">
-                  <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200">
-                    Câu {currentQuestionIndex + 1}/{totalQuestions}
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
+                    Câu {currentQuestionIndex + 1}/{quiz.questions.length}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800/60 dark:text-slate-200">
-                    {currentQuestion.points} điểm
+                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/20 rounded-full px-3 py-1.5">
+                    {currentQuestion.points}đ
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}
                     disabled={currentQuestionIndex === 0}
-                    className="h-9 rounded-full px-3 text-sm"
+                    className="h-7 px-2 text-xs"
                   >
-                    ← Trước
+                    ←
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => goToQuestion(Math.min(totalQuestions - 1, currentQuestionIndex + 1))}
-                    disabled={currentQuestionIndex === totalQuestions - 1}
-                    className="h-9 rounded-full px-3 text-sm"
+                    onClick={() => goToQuestion(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))}
+                    disabled={currentQuestionIndex === quiz.questions.length - 1}
+                    className="h-7 px-2 text-xs"
                   >
-                    Sau →
+                    →
                   </Button>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-5">
-                <h2 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100 sm:text-2xl lg:text-3xl">
-                  {currentQuestion.title}
-                </h2>
+              {/* Question Title */}
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight text-gray-900 dark:text-gray-100 mb-4 font-sans">
+                {currentQuestion.title}
+              </h2>
 
-                {currentQuestion.content && (
-                  <p className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 text-sm leading-relaxed text-slate-700 dark:border-slate-700/60 dark:bg-slate-800/50 dark:text-slate-200 sm:text-base">
-                    {currentQuestion.content}
+              {/* Question Content */}
+              {currentQuestion.content && (
+                <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 mb-4 bg-gray-50/80 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200/50 dark:border-gray-700/50">
+                  {currentQuestion.content}
+                </p>
+              )}
+
+              {/* Question Image */}
+              {currentQuestion.imageUrl && (
+                <div className="relative w-full min-h-[200px] sm:min-h-[300px] mb-4 rounded-lg border-2 border-gray-200/50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/50 overflow-hidden">
+                  <SmartImage
+                    src={currentQuestion.imageUrl}
+                    alt={currentQuestion.title}
+                    fill
+                    className="object-contain p-4"
+                    sizes="(max-width: 1024px) 100vw, 60vw"
+                  />
+                </div>
+              )}
+
+              {/* Explanation (if completed) */}
+              {progress.completed && currentQuestion.explanation && (
+                <div className="mt-4 pt-4 border-t border-emerald-200/50 dark:border-emerald-800/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">💡</span>
+                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                      Giải thích
+                    </p>
+                  </div>
+                  <p className="text-sm leading-relaxed text-emerald-800 dark:text-emerald-200">
+                    {currentQuestion.explanation}
                   </p>
-                )}
-
-                {currentQuestion.imageUrl && (
-                  <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-slate-50/80 dark:border-slate-700/60 dark:bg-slate-900/40">
-                    <div className="relative mx-auto aspect-[4/3] w-full max-w-2xl">
-                      <SmartImage
-                        src={currentQuestion.imageUrl}
-                        alt={currentQuestion.title}
-                        fill
-                        className="object-contain p-4"
-                        sizes="(max-width: 1024px) 100vw, 60vw"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Chọn đáp án
-                    </h3>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
-                      Bấm số 1-9 để chọn nhanh
-                    </span>
-                  </div>
-                  <div className="space-y-3">{renderOptions}</div>
                 </div>
-
-                {error && <p className="text-sm text-rose-500 dark:text-rose-300">{error}</p>}
-
-                {progress.completed && currentQuestion.explanation && (
-                  <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50/70 p-4 dark:border-emerald-500/30 dark:bg-emerald-900/20">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">💡</span>
-                      <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-300">
-                        Giải thích
-                      </p>
-                    </div>
-                    <p className="mt-2 text-sm leading-relaxed text-emerald-700 dark:text-emerald-200">
-                      {currentQuestion.explanation}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 text-xs text-slate-500 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-300 sm:text-sm">
-                  <span className="font-mono rounded-md bg-white px-2 py-1 shadow-sm dark:bg-slate-900">
-                    1-9
-                  </span>
-                  <span>Chọn đáp án</span>
-                  <span className="h-3 w-px bg-slate-300 dark:bg-slate-600" />
-                  <span className="font-mono rounded-md bg-white px-2 py-1 shadow-sm dark:bg-slate-900">
-                    Enter
-                  </span>
-                  <span>Câu kế tiếp</span>
-                  <span className="h-3 w-px bg-slate-300 dark:bg-slate-600" />
-                  <span className="font-mono rounded-md bg-white px-2 py-1 shadow-sm dark:bg-slate-900">
-                    ↑ ↓
-                  </span>
-                  <span>Di chuyển</span>
-                </div>
-              </div>
+              )}
             </article>
-          </section>
 
-          <aside className="hidden lg:block">
-            <div className="sticky top-[124px] flex flex-col gap-6">
-              <div className="rounded-3xl border border-white/40 bg-white/80 p-6 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/70">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                      Thông tin
-                    </p>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                      {quiz.title}
-                    </h3>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFilterModal(true)}
-                    className="hidden h-8 px-3 text-xs font-semibold sm:inline-flex"
-                    disabled={!progress.completed}
-                  >
-                    Xem kết quả
-                  </Button>
-                </div>
+            {/* Answer Options Section */}
+            <div className="rounded-xl border border-white/40 bg-white/70 p-4 sm:p-6 lg:p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70">
+              <div className="mb-4 pb-3 border-b border-gray-200/50 dark:border-gray-700/50">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+                  Chọn đáp án
+                </h3>
+              </div>
+              
+              <div className="space-y-3">
+                {renderOptions}
+              </div>
 
-                <div className="mt-5 flex items-center gap-4">
-                  <TimerDisplay
-                    timePercentage={timePercentage}
-                    isCriticalTime={isCriticalTime}
-                    isLowTime={isLowTime}
-                    remainingSeconds={progress.remainingSeconds}
-                    completed={progress.completed ?? false}
-                  />
-                  <div className="flex flex-col gap-1 text-sm">
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
-                      {formatDuration(progress.remainingSeconds)}
-                    </span>
-                    <span className="text-xs uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                      Thời gian còn lại
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                      <span>Tiến độ</span>
-                      <span>{progressPercentage}%</span>
-                    </div>
-                    <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
-                      <div
-                        className={`h-2 rounded-full ${progress.completed ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                        style={{ width: `${progressPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    <div className="flex items-center justify-between">
-                      <span>Đã trả lời</span>
-                      <span className="font-semibold">
-                        {answeredCount}/{totalQuestions}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Điểm hiện tại</span>
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-300">
-                        {progress.completed ? `${progress.score}/${progress.totalPoints ?? maxScore}` : `—/${maxScore}`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {!progress.completed ? (
-                      <Button type="button" onClick={handleSubmit} disabled={submitting} className="w-full py-3 font-semibold">
-                        {submitting ? 'Đang nộp...' : 'Nộp bài'}
-                      </Button>
-                    ) : (
-                      <Button type="button" onClick={handleReset} className="w-full py-3 font-semibold">
-                        Làm lại
-                      </Button>
-                    )}
-                    <Button type="button" variant="ghost" onClick={handleBack} className="w-full py-3 font-semibold">
-                      Thoát
-                    </Button>
-                  </div>
+              {/* Keyboard shortcuts hint */}
+              <div className="mt-6 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">1-9</span>
+                  <span>chọn đáp án</span>
+                  <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
+                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">Enter</span>
+                  <span>câu tiếp</span>
+                  <span className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
+                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">↑↓</span>
+                  <span>di chuyển</span>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/40 bg-white/80 p-6 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/70">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    Danh sách câu hỏi
-                  </h3>
-                  <span className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    {answeredCount}/{totalQuestions}
-                  </span>
-                </div>
-                <div className="mt-5">
-                  <QuestionList
-                    questions={quiz.questions}
-                    currentQuestionIndex={currentQuestionIndex}
-                    onSelectQuestion={goToQuestion}
-                    progress={progress}
-                  />
-                </div>
-              </div>
+              {error && <p className="mt-4 text-sm text-rose-500 dark:text-rose-300">{error}</p>}
             </div>
-          </aside>
+          </div>
+
+          {/* Right Side - Question List Panel (Desktop Only) */}
+          <div className="hidden lg:block lg:sticky lg:top-[140px] lg:h-[calc(100vh-180px)]">
+            <div className="h-full rounded-xl border border-white/40 bg-white/70 p-4 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70">
+              <QuestionListPanel
+                questions={quiz.questions}
+                currentQuestionIndex={currentQuestionIndex}
+                onQuestionSelect={goToQuestion}
+                progress={progress}
+                enableVirtualization={quiz.questions.length > 50}
+              />
+            </div>
+          </div>
         </div>
       </main>
-
-      {!showQuestionSheet && (
-        <button
-          type="button"
-          onClick={handleOpenQuestionSheet}
-          className="fixed bottom-5 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-2xl transition-transform hover:scale-105 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/60 sm:hidden"
-        >
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5h4v4H5zM15 5h4v4h-4zM5 15h4v4H5zM15 15h4v4h-4z" />
-          </svg>
-        </button>
-      )}
     </div>
   )
 }
