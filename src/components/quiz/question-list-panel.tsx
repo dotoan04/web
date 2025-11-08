@@ -123,7 +123,8 @@ export const QuestionListPanel = memo(({
         } else if (question.type === 'FILL_IN_BLANK') {
           const correctAnswer = question.options[0]?.text || ''
           const userAnswer = Array.isArray(selected) ? selected[0] : selected
-          isCorrect = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+          const userAnswerStr = typeof userAnswer === 'string' ? userAnswer : ''
+          isCorrect = userAnswerStr.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
         } else {
           const correctIds = question.options
             .filter((option) => option.isCorrect)
