@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1'
+const CACHE_VERSION = 'v2'
 const CACHE_NAME = `blogvibe-${CACHE_VERSION}`
 const OFFLINE_URL = '/offline'
 const PRECACHE_URLS = ['/', OFFLINE_URL]
