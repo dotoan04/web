@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo, lazy, Suspense } from 'react'
 import { useSwipeable } from 'react-swipeable'
 import { createPortal } from 'react-dom'
+import { Roboto } from 'next/font/google'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +12,13 @@ import { useLocalStorage } from '@/hooks/use-local-storage'
 import { collectUserInfo, type UserInfo } from '@/lib/user-info'
 import { QuestionListPanel } from './question-list-panel'
 import { MobileQuizMenu } from './mobile-quiz-menu'
+
+// Configure Roboto font with Vietnamese support
+const roboto = Roboto({
+  weight: ['300', '400', '500', '700'],
+  subsets: ['latin', 'vietnamese'],
+  display: 'swap',
+})
 
 // Lazy load the theme notification to improve initial load performance
 const ThemeFeatureNotification = lazy(() => import('@/components/theme-feature-notification').then(mod => ({ default: mod.ThemeFeatureNotification })))
@@ -966,7 +974,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }
 
   return (
-    <div className="relative mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6">
+    <div className={`relative mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6 ${roboto.className}`}>
       <Suspense fallback={null}>
         <ThemeFeatureNotification />
       </Suspense>
