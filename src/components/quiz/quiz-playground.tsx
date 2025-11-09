@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo, lazy, Suspense } from 'react'
 import { useSwipeable } from 'react-swipeable'
 import { createPortal } from 'react-dom'
-import { Roboto } from 'next/font/google'
+import { Be_Vietnam_Pro } from 'next/font/google'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,11 +13,12 @@ import { collectUserInfo, type UserInfo } from '@/lib/user-info'
 import { QuestionListPanel } from './question-list-panel'
 import { MobileQuizMenu } from './mobile-quiz-menu'
 
-// Configure Roboto font with Vietnamese support
-const roboto = Roboto({
-  weight: ['300', '400', '500', '700'],
+// Configure Be Vietnam Pro font - designed specifically for Vietnamese
+const beVietnamPro = Be_Vietnam_Pro({
+  weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin', 'vietnamese'],
   display: 'swap',
+  preload: true,
 })
 
 // Lazy load the theme notification to improve initial load performance
@@ -175,7 +176,7 @@ const TimerDisplay = memo(({ timePercentage, isCriticalTime, isLowTime, remainin
         }}
       />
       <div className="absolute inset-2 rounded-md sm:rounded-lg bg-white/60 backdrop-blur-sm dark:bg-white/10" />
-      <span className={`relative text-[10px] sm:text-xs font-bold transition-colors font-sans ${
+      <span className={`relative text-[10px] sm:text-xs font-bold transition-colors ${
         isCriticalTime
           ? 'text-rose-600 dark:text-rose-400'
           : isLowTime
@@ -186,7 +187,7 @@ const TimerDisplay = memo(({ timePercentage, isCriticalTime, isLowTime, remainin
       </span>
     </div>
     {isLowTime && !completed && (
-      <span className="hidden sm:inline text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300 font-sans">
+      <span className="hidden sm:inline text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300">
         ⚠️ Cẩn thận!
       </span>
     )}
@@ -661,7 +662,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           }}
         />
         <div className="absolute inset-2 rounded-md sm:rounded-lg bg-white/60 backdrop-blur-sm dark:bg-white/10" />
-        <span className={`relative text-[10px] sm:text-xs font-bold transition-colors font-sans ${
+        <span className={`relative text-[10px] sm:text-xs font-bold transition-colors ${
           isCriticalTime 
             ? 'text-rose-600 dark:text-rose-400' 
             : isLowTime 
@@ -672,7 +673,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </span>
       </div>
       {isLowTime && !progress.completed && (
-        <span className="hidden sm:inline text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300 font-sans">
+        <span className="hidden sm:inline text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300">
           ⚠️ Cẩn thận!
         </span>
       )}
@@ -974,7 +975,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }
 
   return (
-    <div className={`relative mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6 ${roboto.className}`}>
+    <div className={`relative mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6 ${beVietnamPro.className}`}>
       <Suspense fallback={null}>
         <ThemeFeatureNotification />
       </Suspense>
@@ -1091,7 +1092,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 }}
               />
               <div className="absolute inset-1.5 rounded bg-white/60 backdrop-blur-sm dark:bg-white/10" />
-              <span className={`relative text-[10px] font-bold transition-colors font-mono ${
+              <span className={`relative text-[10px] font-bold transition-colors ${
                 isCriticalTime
                   ? 'text-rose-600 dark:text-rose-400'
                   : isLowTime
