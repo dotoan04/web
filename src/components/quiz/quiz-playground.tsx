@@ -179,19 +179,43 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const nameInputRef = useRef<HTMLInputElement | null>(null)
 
   // Normalize legacy localStorage data (convert null to empty arrays)
+  // But preserve string values for FILL_IN_BLANK questions
+  // Only run once on mount to avoid interfering with user input
   useEffect(() => {
     if (normalized.current) return
-    const needsNormalization = Object.values(progress.answers).some((value) => !Array.isArray(value))
+    // Check if normalization is needed (only check once on mount)
+    const needsNormalization = Object.entries(progress.answers).some(([questionId, value]) => {
+      const question = quiz.questions.find((q) => q.id === questionId)
+      // Only normalize if it's not a FILL_IN_BLANK question and value is not an array
+      if (question?.type === 'FILL_IN_BLANK') {
+        // For FILL_IN_BLANK, value should be a string, don't normalize
+        return false
+      }
+      // For other question types, normalize if value is not an array or is null/undefined
+      return !Array.isArray(value) && value !== null && value !== undefined
+    })
     if (needsNormalization) {
       normalized.current = true
       setProgress((prev) => ({
         ...prev,
         answers: Object.fromEntries(
-          Object.entries(prev.answers).map(([key, value]) => [key, Array.isArray(value) ? value : []])
+          Object.entries(prev.answers).map(([key, value]) => {
+            const question = quiz.questions.find((q) => q.id === key)
+            // Keep string values for FILL_IN_BLANK questions
+            if (question?.type === 'FILL_IN_BLANK') {
+              return [key, typeof value === 'string' ? value : '']
+            }
+            // Convert to array for other question types (preserve existing arrays)
+            return [key, Array.isArray(value) ? value : []]
+          })
         ),
       }))
+    } else {
+      // Mark as normalized even if no normalization was needed
+      normalized.current = true
     }
-  }, [progress.answers, setProgress])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run once on mount
 
   useEffect(() => {
     if (!progress.completed || storedName || pendingSubmissionRef.current || hasPromptedRef.current) {
@@ -661,9 +685,9 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     }
     
     return (
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-300">Bên trái</h4>
+          <h4 className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">Bên trái</h4>
           {leftItems.map((leftOption) => {
             const pairedRightId = pairMap.get(leftOption.id)
             const isPaired = Boolean(pairedRightId)
@@ -684,7 +708,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   }
                 }}
                 disabled={progress.completed}
-                className={`w-full text-left rounded-lg border p-2 text-sm transition-colors ${
+                className={`w-full text-left rounded-lg border p-2 sm:p-2.5 text-xs sm:text-sm transition-colors ${
                   isCorrectPair
                     ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700'
                     : isIncorrectPair
@@ -703,7 +727,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         </div>
         
         <div className="space-y-2">
-          <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-300">Bên phải</h4>
+          <h4 className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">Bên phải</h4>
           {shuffledRightItems.map((rightOption) => {
             const isPaired = [...pairMap.values()].includes(rightOption.id)
             const leftId = [...pairMap.entries()].find(([, right]) => right === rightOption.id)?.[0]
@@ -720,7 +744,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   }
                 }}
                 disabled={progress.completed || !selectedLeft}
-                className={`w-full text-left rounded-lg border p-2 text-sm transition-colors ${
+                className={`w-full text-left rounded-lg border p-2 sm:p-2.5 text-xs sm:text-sm transition-colors ${
                   isCorrectPair
                     ? 'border-emerald-400/60 bg-emerald-100/55 text-emerald-700'
                     : isIncorrectPair
@@ -750,7 +774,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     const isCorrect = currentAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
     
     return (
-      <div>
+      <div className="space-y-2">
         <Input
           type="text"
           value={currentAnswer}
@@ -766,17 +790,17 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           }}
           placeholder="Nhập câu trả lời của bạn..."
           disabled={progress.completed}
-          className={`w-full px-4 py-3 text-base border-2 rounded-xl transition-colors ${
+          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 rounded-lg transition-colors ${
             progress.completed
               ? (isCorrect
                 ? 'border-emerald-400/60 bg-emerald-50'
                 : 'border-rose-400/60 bg-rose-50')
-              : 'border-gray-300 bg-white'
+              : 'border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
           }`}
         />
         
         {progress.completed && (
-          <div className={`mt-2 p-2 rounded-lg text-sm ${
+          <div className={`mt-2 p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm ${
             isCorrect
               ? 'bg-emerald-100/55 text-emerald-700'
               : 'bg-rose-100/55 text-rose-700'
@@ -969,107 +993,134 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         enableVirtualization={quiz.questions.length > 50}
       />
       
-      {/* Header - Matching the design */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
-        <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Left: Back Button */}
-          <button
-            type="button"
-            onClick={() => window.history.back()}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span>Quay lại</span>
-          </button>
-
-          {/* Center: User Name */}
-          <div className="flex-1 text-center">
-            <span className="text-sm font-medium text-gray-700">
-              Thí sinh: {displayName}
-            </span>
-          </div>
-
-          {/* Right: Timer, Icons, Submit Button */}
-          <div className="flex items-center gap-3">
-            {/* Timer */}
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm font-medium text-gray-700">
-                {formatTimer(progress.remainingSeconds)}
-              </span>
-            </div>
-
-            {/* Icons */}
-            <button
-              type="button"
-              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-              aria-label="Tìm kiếm"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-
-            <button
-              type="button"
-              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-              aria-label="Phóng to"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowMobileMenu(true)}
-              className="lg:hidden p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-              aria-label="Danh sách"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-
-            {/* Submit Button */}
-            {!progress.completed ? (
+      {/* Header - Optimized for mobile */}
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-[1800px] mx-auto px-2 sm:px-4 py-2 sm:py-3">
+          {/* Mobile Layout: Stack vertically on small screens */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+            {/* Top Row: Back Button, Timer, Menu (Mobile) */}
+            <div className="flex items-center justify-between sm:justify-start gap-2">
+              {/* Back Button */}
               <button
                 type="button"
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => window.history.back()}
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-gray-700 hover:bg-gray-50 rounded transition-colors"
               >
-                {submitting ? '...' : 'Nộp bài'}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="hidden sm:inline">Quay lại</span>
               </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-emerald-600">
-                  {progress.score}/{progress.totalPoints}
+
+              {/* Timer - Prominent on mobile */}
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-none justify-center sm:justify-start">
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm sm:text-base font-semibold text-gray-900 tabular-nums">
+                  {formatTimer(progress.remainingSeconds)}
                 </span>
+              </div>
+
+              {/* Menu Button - Mobile only */}
+              <button
+                type="button"
+                onClick={() => setShowMobileMenu(true)}
+                className="sm:hidden p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                aria-label="Danh sách"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Bottom Row: Student Name, Actions (Mobile) or Right side (Desktop) */}
+            <div className="flex items-center justify-between sm:justify-end gap-2">
+              {/* Student Name - Compact on mobile */}
+              <div className="flex-1 sm:flex-none text-left sm:text-center">
+                <span className="text-xs sm:text-sm text-gray-600 sm:text-gray-700">
+                  <span className="hidden sm:inline">Thí sinh: </span>
+                  <span className="font-medium">{displayName}</span>
+                </span>
+              </div>
+
+              {/* Desktop: Icons and Submit Button */}
+              <div className="hidden sm:flex items-center gap-2">
+                {/* Menu Button - Desktop */}
                 <button
                   type="button"
-                  onClick={handleReset}
-                  className="px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                  onClick={() => setShowMobileMenu(true)}
+                  className="lg:hidden p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                  aria-label="Danh sách"
                 >
-                  Làm lại
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
                 </button>
+
+                {/* Submit Button */}
+                {!progress.completed ? (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  >
+                    {submitting ? '...' : 'Nộp bài'}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-emerald-600">
+                      {progress.score}/{progress.totalPoints}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      className="px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                    >
+                      Làm lại
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Mobile: Submit Button */}
+              {!progress.completed ? (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="sm:hidden px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                >
+                  {submitting ? '...' : 'Nộp'}
+                </button>
+              ) : (
+                <div className="sm:hidden flex items-center gap-2">
+                  <span className="text-xs font-semibold text-emerald-600">
+                    {progress.score}/{progress.totalPoints}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    Làm lại
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-[1800px] mx-auto px-4 py-4">
-        <div className="grid lg:grid-cols-[1fr_280px] gap-4">
+      <main className="max-w-[1800px] mx-auto px-2 sm:px-4 py-3 sm:py-4">
+        <div className="grid lg:grid-cols-[1fr_280px] gap-3 sm:gap-4">
           {/* Left Side - Scrollable Questions List */}
           <div 
             ref={scrollContainerRef}
-            className="space-y-4 max-h-[calc(100vh-80px)] overflow-y-auto pr-2 scroll-smooth"
+            className="space-y-3 sm:space-y-4 max-h-[calc(100vh-140px)] sm:max-h-[calc(100vh-80px)] overflow-y-auto pr-1 sm:pr-2 scroll-smooth"
           >
             {quiz.questions.map((question, index) => {
               const isMulti = isMultipleChoice(question)
@@ -1081,28 +1132,28 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   ref={(el) => {
                     questionRefs.current[index] = el
                   }}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4"
                 >
                   {/* Question Number */}
-                  <h2 className="text-base font-bold text-gray-900 mb-3">
+                  <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-3">
                     Câu {index + 1}
                   </h2>
 
                   {/* Question Title */}
-                  <p className="text-sm text-gray-700 mb-4 leading-relaxed">
+                  <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 leading-relaxed">
                     {question.title}
                   </p>
 
                   {/* Question Content */}
                   {question.content && (
-                    <div className="mb-4 text-sm text-gray-700 leading-relaxed">
+                    <div className="mb-3 sm:mb-4 text-sm text-gray-700 leading-relaxed">
                       {question.content}
                     </div>
                   )}
 
                   {/* Question Image */}
                   {question.imageUrl && (
-                    <div className="relative w-full min-h-[200px] mb-4 rounded border border-gray-200 bg-gray-50 overflow-hidden">
+                    <div className="relative w-full min-h-[150px] sm:min-h-[200px] mb-3 sm:mb-4 rounded border border-gray-200 bg-gray-50 overflow-hidden">
                       <SmartImage
                         src={question.imageUrl}
                         alt={question.title}
@@ -1122,12 +1173,14 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                       renderFillInBlankQuestionForIndex(question, index)
                     ) : (
                       <>
-                        {/* "Chọn một đáp án đúng" text */}
-                        <div className="text-right mb-3">
-                          <span className="text-xs text-gray-600">
-                            Chọn một đáp án đúng
-                          </span>
-                        </div>
+                        {/* "Chọn một đáp án đúng" text - Only show if no answer selected */}
+                        {(!rawAnswer || (Array.isArray(rawAnswer) && rawAnswer.length === 0)) && (
+                          <div className="text-right mb-2 sm:mb-3">
+                            <span className="text-xs text-gray-500">
+                              {isMulti ? 'Chọn một hoặc nhiều đáp án' : 'Chọn một đáp án đúng'}
+                            </span>
+                          </div>
+                        )}
                         
                         {/* Options */}
                         <div className="space-y-2">
@@ -1141,7 +1194,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                               <label
                                 key={option.id}
                                 htmlFor={`${question.id}-${option.id}`}
-                                className={`flex items-start gap-3 p-3 rounded border transition-all cursor-pointer ${
+                                className={`flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border transition-all cursor-pointer ${
                                   state === 'correct'
                                     ? 'border-emerald-400 bg-emerald-50'
                                     : state === 'incorrect'
@@ -1150,7 +1203,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                                     ? 'border-sky-400 bg-sky-50'
                                     : checked
                                     ? 'border-blue-500 bg-blue-50'
-                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                    : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                                 }`}
                               >
                                 <div className="flex-shrink-0 mt-0.5">
@@ -1161,17 +1214,17 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                                     checked={checked}
                                     onChange={() => handleToggleOption(question.id, option.id)}
                                     disabled={progress.completed}
-                                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                    className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 border-gray-300 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
                                   />
                                 </div>
 
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-start gap-2">
-                                    <span className="text-sm font-medium text-gray-700 flex-shrink-0">
+                                  <div className="flex items-start gap-1.5 sm:gap-2">
+                                    <span className="text-sm sm:text-base font-semibold text-gray-700 flex-shrink-0">
                                       {optionLabel}.
                                     </span>
                                     {option.text && (
-                                      <p className="text-sm text-gray-700 leading-relaxed">
+                                      <p className="text-sm sm:text-base text-gray-700 leading-relaxed flex-1">
                                         {option.text}
                                       </p>
                                     )}
@@ -1198,14 +1251,14 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
                   {/* Explanation (if completed) */}
                   {progress.completed && question.explanation && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-sm">💡</span>
-                        <p className="text-xs font-semibold text-emerald-700">
+                        <p className="text-xs sm:text-sm font-semibold text-emerald-700">
                           Giải thích
                         </p>
                       </div>
-                      <p className="text-xs leading-relaxed text-gray-700">
+                      <p className="text-xs sm:text-sm leading-relaxed text-gray-700">
                         {question.explanation}
                       </p>
                     </div>
