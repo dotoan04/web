@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 
 import { quizInputSchema } from '@/lib/validators/quiz'
 import { getCurrentSession } from '@/lib/auth/session'
@@ -38,6 +39,15 @@ export async function POST(request: Request) {
         })),
       })),
     })
+
+    // Revalidate quiz page and admin pages to ensure fresh data
+    if (quiz.slug) {
+      revalidatePath(`/doquizz/${quiz.slug}`)
+    }
+    revalidatePath('/admin/quizzes')
+    if (quiz.id) {
+      revalidatePath(`/admin/quizzes/${quiz.id}`)
+    }
 
     return NextResponse.json({ quiz }, { status: 201 })
   } catch (error) {

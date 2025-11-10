@@ -5,6 +5,9 @@ import { QuizPlayground } from '@/components/quiz/quiz-playground'
 import { absoluteUrl } from '@/lib/metadata'
 import { getQuizBySlug } from '@/server/quizzes'
 
+// Revalidate every 60 seconds to ensure fresh data
+export const revalidate = 60
+
 type Params = {
   params: {
     slug: string

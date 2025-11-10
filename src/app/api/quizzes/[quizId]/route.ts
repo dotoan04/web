@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 
 import { quizInputSchema } from '@/lib/validators/quiz'
 import { getCurrentSession } from '@/lib/auth/session'
@@ -41,6 +42,13 @@ export async function PUT(request: Request, { params }: Params) {
       })),
     })
 
+    // Revalidate quiz page and admin pages to ensure fresh data
+    if (quiz.slug) {
+      revalidatePath(`/doquizz/${quiz.slug}`)
+    }
+    revalidatePath('/admin/quizzes')
+    revalidatePath(`/admin/quizzes/${params.quizId}`)
+
     return NextResponse.json({ quiz })
   } catch (error) {
     console.error('Không thể cập nhật quiz:', error)
@@ -56,7 +64,16 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   try {
+    const quiz = await getQuizById(params.quizId)
     await deleteQuiz(params.quizId)
+
+    // Revalidate pages after deletion
+    if (quiz?.slug) {
+      revalidatePath(`/doquizz/${quiz.slug}`)
+    }
+    revalidatePath('/admin/quizzes')
+    revalidatePath(`/admin/quizzes/${params.quizId}`)
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Không thể xoá quiz:', error)
