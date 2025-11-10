@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useMemo } from 'react'
+import { memo } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useRef } from 'react'
 
@@ -45,48 +45,6 @@ type QuestionListPanelProps = {
   enableVirtualization?: boolean
 }
 
-const QuestionButton = memo(({
-  question,
-  index,
-  isSelected,
-  isAnswered,
-  isCorrect,
-  onClick,
-}: {
-  question: QuizQuestion
-  index: number
-  isSelected: boolean
-  isAnswered: boolean
-  isCorrect: boolean | null
-  onClick: () => void
-}) => {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`
-        relative flex h-10 w-full items-center justify-center rounded text-xs font-semibold
-        transition-all touch-manipulation
-        ${
-          isSelected
-            ? 'border-2 border-indigo-500 bg-indigo-500 text-white shadow-sm scale-105'
-            : isCorrect === true
-            ? 'border border-emerald-400 bg-emerald-500 text-white'
-            : isCorrect === false
-            ? 'border border-rose-400 bg-rose-500 text-white'
-            : isAnswered
-            ? 'border border-emerald-400 bg-emerald-500 text-white'
-            : 'border border-gray-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-gray-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-indigo-500 dark:hover:bg-indigo-900/40'
-        }
-      `}
-    >
-      <span className="relative">{index + 1}</span>
-    </button>
-  )
-})
-
-QuestionButton.displayName = 'QuestionButton'
-
 export const QuestionListPanel = memo(({
   questions,
   currentQuestionIndex,
@@ -95,50 +53,6 @@ export const QuestionListPanel = memo(({
   enableVirtualization = false,
 }: QuestionListPanelProps) => {
   const parentRef = useRef<HTMLDivElement>(null)
-  
-  // Determine if each question is answered and correct
-  const questionStates = useMemo(() => {
-    return questions.map((question) => {
-      const answerValue = progress.answers[question.id]
-      const isAnswered = Array.isArray(answerValue) 
-        ? answerValue.length > 0 
-        : (typeof answerValue === 'string' && answerValue.trim().length > 0)
-      
-      let isCorrect: boolean | null = null
-      if (progress.completed) {
-        const selected = answerValue ?? []
-        
-        if (question.type === 'MATCHING') {
-          const correctPairs = new Set<string>()
-          for (let i = 0; i < question.options.length; i += 2) {
-            const leftId = question.options[i]?.id
-            const rightId = question.options[i + 1]?.id
-            if (leftId && rightId) {
-              correctPairs.add(`${leftId}:${rightId}`)
-            }
-          }
-          const selectedPairs = new Set(Array.isArray(selected) ? selected : [])
-          isCorrect = correctPairs.size === selectedPairs.size &&
-            [...correctPairs].every(pair => selectedPairs.has(pair))
-        } else if (question.type === 'FILL_IN_BLANK') {
-          const correctAnswer = question.options[0]?.text || ''
-          const userAnswer = Array.isArray(selected) ? selected[0] : selected
-          const userAnswerStr = typeof userAnswer === 'string' ? userAnswer : ''
-          isCorrect = userAnswerStr.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
-        } else {
-          const correctIds = question.options
-            .filter((option) => option.isCorrect)
-            .map((option) => option.id)
-            .sort()
-          const selectedIds = Array.isArray(selected) ? selected.sort() : [selected].sort()
-          isCorrect = correctIds.length === selectedIds.length &&
-            correctIds.every((id, i) => id === selectedIds[i])
-        }
-      }
-      
-      return { isAnswered, isCorrect }
-    })
-  }, [questions, progress])
 
   // Virtualization for long lists
   const rowVirtualizer = useVirtualizer({
@@ -152,16 +66,13 @@ export const QuestionListPanel = memo(({
   if (enableVirtualization) {
     return (
       <div className="h-full flex flex-col">
-        <div className="mb-4 pb-3 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+        <div className="mb-3 pb-3 border-b border-gray-200">
+          <h3 className="text-sm font-bold text-gray-900">
             Danh sách câu hỏi
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-            {questions.length} câu
-          </p>
         </div>
         
-        <div ref={parentRef} className="flex-1 overflow-auto">
+        <div ref={parentRef} className="flex-1 overflow-auto pr-1">
           <div
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
@@ -188,18 +99,25 @@ export const QuestionListPanel = memo(({
                   <div className="grid grid-cols-5 gap-2 pb-2">
                     {rowQuestions.map((question, relativeIndex) => {
                       const absoluteIndex = startIndex + relativeIndex
-                      const { isAnswered, isCorrect } = questionStates[absoluteIndex]
+                      const isSelected = currentQuestionIndex === absoluteIndex
                       
                       return (
-                        <QuestionButton
+                        <button
                           key={question.id}
-                          question={question}
-                          index={absoluteIndex}
-                          isSelected={currentQuestionIndex === absoluteIndex}
-                          isAnswered={isAnswered}
-                          isCorrect={isCorrect}
+                          type="button"
                           onClick={() => onQuestionSelect(absoluteIndex)}
-                        />
+                          className={`
+                            h-10 w-full flex items-center justify-center rounded text-xs font-medium
+                            transition-all
+                            ${
+                              isSelected
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                            }
+                          `}
+                        >
+                          {(absoluteIndex + 1).toString().padStart(2, '0')}
+                        </button>
                       )
                     })}
                   </div>
@@ -215,30 +133,34 @@ export const QuestionListPanel = memo(({
   // Non-virtualized version for shorter lists
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-2 pb-2 border-b border-gray-200/50 dark:border-gray-700/50">
-        <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+      <div className="mb-3 pb-3 border-b border-gray-200">
+        <h3 className="text-sm font-bold text-gray-900">
           Danh sách câu hỏi
         </h3>
-        <p className="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">
-          {questions.length} câu
-        </p>
       </div>
       
-      <div className="flex-1 overflow-auto">
-        <div className="grid grid-cols-5 gap-1.5">
+      <div className="flex-1 overflow-auto pr-1">
+        <div className="grid grid-cols-5 gap-2">
           {questions.map((question, index) => {
-            const { isAnswered, isCorrect } = questionStates[index]
+            const isSelected = currentQuestionIndex === index
             
             return (
-              <QuestionButton
+              <button
                 key={question.id}
-                question={question}
-                index={index}
-                isSelected={currentQuestionIndex === index}
-                isAnswered={isAnswered}
-                isCorrect={isCorrect}
+                type="button"
                 onClick={() => onQuestionSelect(index)}
-              />
+                className={`
+                  h-10 w-full flex items-center justify-center rounded text-xs font-medium
+                  transition-all
+                  ${
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                  }
+                `}
+              >
+                {(index + 1).toString().padStart(2, '0')}
+              </button>
             )
           })}
         </div>

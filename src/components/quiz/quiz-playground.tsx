@@ -144,50 +144,6 @@ const computeResult = (quiz: Quiz, answers: AnswerState) => {
   return { score, totalPoints }
 }
 
-// Memoized components for better performance
-const TimerDisplay = memo(({ timePercentage, isCriticalTime, isLowTime, remainingSeconds, completed }: {
-  timePercentage: number
-  isCriticalTime: boolean
-  isLowTime: boolean
-  remainingSeconds: number
-  completed: boolean
-}) => (
-  <div className="flex items-center gap-2 sm:gap-3">
-    <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl border border-white/30 bg-white/20 backdrop-blur-xl shadow-lg shadow-white/10 dark:border-white/10 dark:bg-white/5 dark:shadow-white/5">
-      <div
-        className={`absolute inset-1 rounded-lg sm:rounded-xl transition-all ${
-          isCriticalTime
-            ? 'border-2 border-rose-500/50'
-            : isLowTime
-            ? 'border-2 border-orange-400/50'
-            : 'border-2 border-indigo-400/50'
-        }`}
-        style={{
-          background: `conic-gradient(${isCriticalTime ? 'rgb(244 63 94)' : isLowTime ? 'rgb(251 146 60)' : 'rgb(99 102 241)'} ${timePercentage * 3.6}deg, transparent 0deg)`,
-        }}
-      />
-      <div className="absolute inset-2 rounded-md sm:rounded-lg bg-white/60 backdrop-blur-sm dark:bg-white/10" />
-      <span className={`relative text-[10px] sm:text-xs font-bold transition-colors ${
-        isCriticalTime
-          ? 'text-rose-600 dark:text-rose-400'
-          : isLowTime
-          ? 'text-orange-600 dark:text-orange-400'
-          : 'text-gray-700 dark:text-gray-200'
-      }`}>
-        {formatDuration(remainingSeconds)}
-      </span>
-    </div>
-    {isLowTime && !completed && (
-      <span className="hidden sm:inline text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300">
-        ⚠️ Cẩn thận!
-      </span>
-    )}
-  </div>
-))
-
-TimerDisplay.displayName = 'TimerDisplay'
-
-
 export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const storageKey = useMemo(() => `quiz-progress:${quiz.id}`, [quiz.id])
   const historyKey = useMemo(() => `quiz-history:${quiz.id}`, [quiz.id])
@@ -219,19 +175,8 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const hasPromptedRef = useRef(false)
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const mounted = useRef(false)
   const normalized = useRef(false)
   const nameInputRef = useRef<HTMLInputElement | null>(null)
-
-  const timerProgress = useRef(1)
-
-  useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true
-      return
-    }
-    timerProgress.current = progress.remainingSeconds / quiz.durationSeconds
-  }, [progress.remainingSeconds, quiz.durationSeconds])
 
   // Normalize legacy localStorage data (convert null to empty arrays)
   useEffect(() => {
@@ -414,7 +359,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       setProgress((prev) => {
         if (prev.completed) return prev
         const next = { ...prev, remainingSeconds: Math.max(0, prev.remainingSeconds - 1) }
-        timerProgress.current = next.remainingSeconds / quiz.durationSeconds
         if (next.remainingSeconds === 0) {
           next.completed = true
         }
@@ -632,45 +576,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     },
     [progress.answers, progress.completed],
   )
-
-  const timePercentage = (progress.remainingSeconds / quiz.durationSeconds) * 100
-  const isLowTime = timePercentage < 20
-  const isCriticalTime = timePercentage < 10
-
-  const renderCompactTimer = useMemo(() => (
-    <div className="flex items-center gap-2 sm:gap-3">
-      <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl border border-white/30 bg-white/20 backdrop-blur-xl shadow-lg shadow-white/10 dark:border-white/10 dark:bg-white/5 dark:shadow-white/5">
-        <div 
-          className={`absolute inset-1 rounded-lg sm:rounded-xl transition-all ${
-            isCriticalTime 
-              ? 'border-2 border-rose-500/50' 
-              : isLowTime 
-              ? 'border-2 border-orange-400/50'
-              : 'border-2 border-indigo-400/50'
-          }`}
-          style={{
-            background: `conic-gradient(${isCriticalTime ? 'rgb(244 63 94)' : isLowTime ? 'rgb(251 146 60)' : 'rgb(99 102 241)'} ${timePercentage * 3.6}deg, transparent 0deg)`,
-          }}
-        />
-        <div className="absolute inset-2 rounded-md sm:rounded-lg bg-white/60 backdrop-blur-sm dark:bg-white/10" />
-        <span className={`relative text-[10px] sm:text-xs font-bold transition-colors ${
-          isCriticalTime 
-            ? 'text-rose-600 dark:text-rose-400' 
-            : isLowTime 
-            ? 'text-orange-600 dark:text-orange-400'
-            : 'text-gray-700 dark:text-gray-200'
-        }`}>
-          {formatDuration(progress.remainingSeconds)}
-        </span>
-      </div>
-      {isLowTime && !progress.completed && (
-        <span className="hidden sm:inline text-xs font-semibold text-rose-600 rounded-full px-2 py-1 bg-rose-50/80 backdrop-blur-sm border border-rose-200/50 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300">
-          ⚠️ Cẩn thận!
-        </span>
-      )}
-    </div>
-  ), [timePercentage, isCriticalTime, isLowTime, progress.remainingSeconds, progress.completed])
-
 
   // No swipe handlers needed for scrollable list
 
@@ -965,8 +870,17 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     )
   }
 
+  const formatTimer = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return `${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`
+  }
+
+  const displayName = storedName || 'Thí sinh'
+
   return (
-    <div className="relative mx-auto min-h-screen max-w-7xl p-3 sm:p-4 md:p-6">
+    <div className="relative min-h-screen bg-[#F8FAFC]" style={{ fontFamily: 'var(--font-body), sans-serif' }}>
       <Suspense fallback={null}>
         <ThemeFeatureNotification />
       </Suspense>
@@ -1039,16 +953,6 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           </div>,
           document.body,
         )}
-
-      {/* Ambient gradient to emulate liquid glass */}
-      <div className="pointer-events-none fixed inset-0 -z-20 bg-[radial-gradient(circle_at_15%_15%,rgba(195,221,255,0.6),transparent_55%),radial-gradient(circle_at_85%_10%,rgba(214,187,255,0.55),transparent_60%),radial-gradient(circle_at_50%_80%,rgba(165,243,252,0.45),transparent_65%)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(37,99,235,0.45),transparent_60%),radial-gradient(circle_at_85%_10%,rgba(109,40,217,0.5),transparent_65%),radial-gradient(circle_at_50%_80%,rgba(6,182,212,0.35),transparent_70%)]" />
-      
-      {/* Soft light blobs to reinforce depth without affecting layout */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 left-1/3 h-72 w-72 rounded-[40%] bg-white/30 blur-3xl dark:bg-white/10" />
-        <div className="absolute bottom-10 right-1/4 h-80 w-80 rounded-[45%] bg-white/20 blur-3xl dark:bg-white/5" />
-        <div className="absolute top-1/4 right-0 h-64 w-64 rounded-[38%] bg-white/15 blur-2xl dark:bg-white/5" />
-      </div>
       
       {renderFilterModal()}
       
@@ -1065,79 +969,107 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         enableVirtualization={quiz.questions.length > 50}
       />
       
-      {/* Header - Compact */}
-      <header className="sticky top-2 z-10 mb-3 mx-2 sm:mx-0 rounded-xl border border-white/40 bg-white/95 px-3 py-2.5 shadow-md backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/95">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/30 bg-white/20 backdrop-blur-xl dark:border-white/10 dark:bg-white/5 shrink-0">
-              <div
-                className={`absolute inset-0.5 rounded-md transition-all ${
-                  isCriticalTime
-                    ? 'border border-rose-500/50'
-                    : isLowTime
-                    ? 'border border-orange-400/50'
-                    : 'border border-indigo-400/50'
-                }`}
-                style={{
-                  background: `conic-gradient(${isCriticalTime ? 'rgb(244 63 94)' : isLowTime ? 'rgb(251 146 60)' : 'rgb(99 102 241)'} ${timePercentage * 3.6}deg, transparent 0deg)`,
-                }}
-              />
-              <div className="absolute inset-1.5 rounded bg-white/60 backdrop-blur-sm dark:bg-white/10" />
-              <span className={`relative text-[10px] font-bold transition-colors ${
-                isCriticalTime
-                  ? 'text-rose-600 dark:text-rose-400'
-                  : isLowTime
-                  ? 'text-orange-600 dark:text-orange-400'
-                  : 'text-gray-700 dark:text-gray-200'
-              }`}>
-                {formatDuration(progress.remainingSeconds)}
+      {/* Header - Matching the design */}
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
+        <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
+          {/* Left: Back Button */}
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Quay lại</span>
+          </button>
+
+          {/* Center: User Name */}
+          <div className="flex-1 text-center">
+            <span className="text-sm font-medium text-gray-700">
+              Thí sinh: {displayName}
+            </span>
+          </div>
+
+          {/* Right: Timer, Icons, Submit Button */}
+          <div className="flex items-center gap-3">
+            {/* Timer */}
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-medium text-gray-700">
+                {formatTimer(progress.remainingSeconds)}
               </span>
             </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{quiz.title}</h1>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Mobile Menu Button */}
-            <Button
+
+            {/* Icons */}
+            <button
               type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setShowMobileMenu(true)}
-              className="lg:hidden h-8 w-8 px-0"
-              aria-label="Mở menu"
+              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              aria-label="Tìm kiếm"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              aria-label="Phóng to"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowMobileMenu(true)}
+              className="lg:hidden p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              aria-label="Danh sách"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-            </Button>
-            
+            </button>
+
+            {/* Submit Button */}
             {!progress.completed ? (
-              <Button type="button" size="sm" onClick={handleSubmit} disabled={submitting} className="hidden lg:flex text-xs h-7 px-3">
-                {submitting ? '...' : 'Nộp'}
-              </Button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? '...' : 'Nộp bài'}
+              </button>
             ) : (
-              <div className="hidden lg:flex items-center gap-1">
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-emerald-600">
                   {progress.score}/{progress.totalPoints}
                 </span>
-                <Button type="button" size="sm" variant="subtle" onClick={handleReset} className="text-xs h-7 px-2">
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                >
                   Làm lại
-                </Button>
+                </button>
               </div>
             )}
           </div>
         </div>
       </header>
 
-      {/* New Layout: Scrollable Questions List (Left) | Question Navigator (Right) */}
-      <main className="relative mx-auto w-full max-w-[98%] lg:max-w-[1800px] px-2 sm:px-3 pb-4">
-        <div className="grid lg:grid-cols-[1fr_300px] gap-3 lg:gap-4">
+      {/* Main Content Area */}
+      <main className="max-w-[1800px] mx-auto px-4 py-4">
+        <div className="grid lg:grid-cols-[1fr_280px] gap-4">
           {/* Left Side - Scrollable Questions List */}
           <div 
             ref={scrollContainerRef}
-            className="space-y-3 max-h-[calc(100vh-120px)] lg:max-h-[calc(100vh-100px)] overflow-y-auto pr-1 scroll-smooth"
+            className="space-y-4 max-h-[calc(100vh-80px)] overflow-y-auto pr-2 scroll-smooth"
           >
             {quiz.questions.map((question, index) => {
               const isMulti = isMultipleChoice(question)
@@ -1149,37 +1081,28 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   ref={(el) => {
                     questionRefs.current[index] = el
                   }}
-                  className={`rounded-lg border transition-all ${
-                    currentQuestionIndex === index
-                      ? 'border-indigo-400 bg-white/90 shadow-md dark:border-indigo-500 dark:bg-slate-900/90'
-                      : 'border-gray-200/60 bg-white/80 dark:border-gray-700/50 dark:bg-slate-900/70'
-                  } p-3 sm:p-4 backdrop-blur-sm`}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
                 >
-                  {/* Question Header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 rounded px-2 py-0.5">
-                      Câu {index + 1}
-                    </span>
-                    <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-                      {question.points} điểm
-                    </span>
-                  </div>
+                  {/* Question Number */}
+                  <h2 className="text-base font-bold text-gray-900 mb-3">
+                    Câu {index + 1}
+                  </h2>
 
                   {/* Question Title */}
-                  <h2 className="text-base sm:text-lg font-semibold leading-snug text-gray-900 dark:text-gray-100 mb-2">
+                  <p className="text-sm text-gray-700 mb-4 leading-relaxed">
                     {question.title}
-                  </h2>
+                  </p>
 
                   {/* Question Content */}
                   {question.content && (
-                    <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400 mb-3 bg-gray-50/60 dark:bg-gray-800/40 rounded p-2 border border-gray-200/40 dark:border-gray-700/40">
+                    <div className="mb-4 text-sm text-gray-700 leading-relaxed">
                       {question.content}
-                    </p>
+                    </div>
                   )}
 
                   {/* Question Image */}
                   {question.imageUrl && (
-                    <div className="relative w-full min-h-[150px] sm:min-h-[200px] mb-3 rounded border border-gray-200/50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/50 overflow-hidden">
+                    <div className="relative w-full min-h-[200px] mb-4 rounded border border-gray-200 bg-gray-50 overflow-hidden">
                       <SmartImage
                         src={question.imageUrl}
                         alt={question.title}
@@ -1192,81 +1115,97 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   )}
 
                   {/* Answer Options */}
-                  <div className="mb-2">
+                  <div>
                     {question.type === 'MATCHING' ? (
                       renderMatchingQuestionForIndex(question, index)
                     ) : question.type === 'FILL_IN_BLANK' ? (
                       renderFillInBlankQuestionForIndex(question, index)
                     ) : (
-                      <div className="space-y-2">
-                        {question.options.map((option, optionIdx) => {
-                          const state = getOptionState(question, option)
-                          const answerArray = Array.isArray(rawAnswer) ? rawAnswer : []
-                          const checked = answerArray.includes(option.id)
-                          
-                          return (
-                            <label
-                              key={option.id}
-                              htmlFor={`${question.id}-${option.id}`}
-                              className={`group relative flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
-                                state === 'correct'
-                                  ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10'
-                                  : state === 'incorrect'
-                                  ? 'border-rose-400 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10'
-                                  : state === 'missed'
-                                  ? 'border-sky-400 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10'
-                                  : checked
-                                  ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-500/15'
-                                  : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-slate-800/60 dark:hover:border-gray-600'
-                              }`}
-                            >
-                              <div className="flex-shrink-0">
-                                <input
-                                  type={isMulti ? 'checkbox' : 'radio'}
-                                  id={`${question.id}-${option.id}`}
-                                  name={isMulti ? undefined : question.id}
-                                  checked={checked}
-                                  onChange={() => handleToggleOption(question.id, option.id)}
-                                  disabled={progress.completed}
-                                  className="h-4 w-4 rounded border border-gray-300 bg-white text-indigo-600 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-slate-700"
-                                />
-                              </div>
+                      <>
+                        {/* "Chọn một đáp án đúng" text */}
+                        <div className="text-right mb-3">
+                          <span className="text-xs text-gray-600">
+                            Chọn một đáp án đúng
+                          </span>
+                        </div>
+                        
+                        {/* Options */}
+                        <div className="space-y-2">
+                          {question.options.map((option, optionIdx) => {
+                            const state = getOptionState(question, option)
+                            const answerArray = Array.isArray(rawAnswer) ? rawAnswer : []
+                            const checked = answerArray.includes(option.id)
+                            const optionLabel = String.fromCharCode(65 + optionIdx) // A, B, C, D
+                            
+                            return (
+                              <label
+                                key={option.id}
+                                htmlFor={`${question.id}-${option.id}`}
+                                className={`flex items-start gap-3 p-3 rounded border transition-all cursor-pointer ${
+                                  state === 'correct'
+                                    ? 'border-emerald-400 bg-emerald-50'
+                                    : state === 'incorrect'
+                                    ? 'border-rose-400 bg-rose-50'
+                                    : state === 'missed'
+                                    ? 'border-sky-400 bg-sky-50'
+                                    : checked
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex-shrink-0 mt-0.5">
+                                  <input
+                                    type={isMulti ? 'checkbox' : 'radio'}
+                                    id={`${question.id}-${option.id}`}
+                                    name={isMulti ? undefined : question.id}
+                                    checked={checked}
+                                    onChange={() => handleToggleOption(question.id, option.id)}
+                                    disabled={progress.completed}
+                                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                  />
+                                </div>
 
-                              <div className="flex-1 min-w-0">
-                                {option.text && (
-                                  <p className="text-sm leading-snug">
-                                    {option.text}
-                                  </p>
-                                )}
-                                {option.imageUrl && (
-                                  <div className="relative w-full h-24 mt-1.5 rounded overflow-hidden border border-gray-200 dark:border-gray-700">
-                                    <SmartImage
-                                      src={option.imageUrl}
-                                      alt={option.text || 'option image'}
-                                      fill
-                                      className="object-contain"
-                                      sizes="(max-width: 1024px) 100vw, 50vw"
-                                    />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-sm font-medium text-gray-700 flex-shrink-0">
+                                      {optionLabel}.
+                                    </span>
+                                    {option.text && (
+                                      <p className="text-sm text-gray-700 leading-relaxed">
+                                        {option.text}
+                                      </p>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            </label>
-                          )
-                        })}
-                      </div>
+                                  {option.imageUrl && (
+                                    <div className="relative w-full h-24 mt-2 rounded overflow-hidden border border-gray-200">
+                                      <SmartImage
+                                        src={option.imageUrl}
+                                        alt={option.text || 'option image'}
+                                        fill
+                                        className="object-contain"
+                                        sizes="(max-width: 1024px) 100vw, 50vw"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </>
                     )}
                   </div>
 
                   {/* Explanation (if completed) */}
                   {progress.completed && question.explanation && (
-                    <div className="mt-2 pt-2 border-t border-emerald-200/50 dark:border-emerald-800/50">
-                      <div className="flex items-center gap-1.5 mb-1">
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="flex items-center gap-2 mb-2">
                         <span className="text-sm">💡</span>
-                        <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        <p className="text-xs font-semibold text-emerald-700">
                           Giải thích
                         </p>
                       </div>
-                      <p className="text-xs leading-relaxed text-emerald-800 dark:text-emerald-200">
+                      <p className="text-xs leading-relaxed text-gray-700">
                         {question.explanation}
                       </p>
                     </div>
@@ -1276,15 +1215,15 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
             })}
 
             {error && (
-              <div className="rounded-lg border border-rose-400/60 bg-rose-100/55 p-3 text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/15">
+              <div className="rounded-lg border border-rose-400 bg-rose-50 p-3 text-rose-700">
                 <p className="text-sm">{error}</p>
               </div>
             )}
           </div>
 
-          {/* Right Side - Question List Panel (Desktop Only) */}
-          <div className="hidden lg:block lg:sticky lg:top-[72px] lg:h-[calc(100vh-88px)]">
-            <div className="h-full rounded-xl border border-gray-200/60 bg-white/90 p-3 shadow-sm backdrop-blur-sm dark:border-gray-700/50 dark:bg-slate-900/90">
+          {/* Right Side - Question List Panel */}
+          <div className="hidden lg:block sticky top-[73px] h-[calc(100vh-89px)]">
+            <div className="h-full bg-[#F8FAFC] rounded-lg border border-gray-200 p-4">
               <QuestionListPanel
                 questions={quiz.questions}
                 currentQuestionIndex={currentQuestionIndex}
