@@ -167,7 +167,7 @@ const OptionRow = memo(({ option, questionIndex, optionIndex, isCorrect, disable
           value={option.text}
           onChange={(event) => onChangeText(event.target.value)}
           placeholder={`Phương án ${option.order + 1}`}
-          className="flex-1"
+          className={`flex-1 ${!option.text.trim() ? 'border-amber-300 focus:border-amber-500' : ''}`}
         />
         <div className="flex items-center gap-2">
           <ImageUploader
@@ -201,20 +201,26 @@ const OptionRow = memo(({ option, questionIndex, optionIndex, isCorrect, disable
 OptionRow.displayName = 'OptionRow'
 
 const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, onRemove, onAddOption, onRemoveOption, onSetCorrect, onToggleCorrect }: QuestionEditorProps) => (
-  <section className="rounded-xl border-2 border-ink-200/70 bg-white p-6 shadow-md transition-all hover:shadow-lg dark:border-ink-700 dark:bg-ink-900">
+  <section className="rounded-xl border-2 border-ink-200/70 bg-white p-6 shadow-md transition-all duration-300 hover:shadow-lg hover:border-ink-300/70 dark:border-ink-700 dark:bg-ink-900">
     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div className="flex flex-1 items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-ink-100 font-semibold text-ink-600 dark:bg-ink-800 dark:text-ink-100">
           {index + 1}
         </span>
         <div className="flex-1 space-y-2">
-          <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">Tiêu đề</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500">
+            Tiêu đề <span className="text-rose-500">*</span>
+          </label>
           <Input
             value={question.title}
             onChange={(event) => onChange((current) => ({ ...current, title: event.target.value }))}
             placeholder="Nhập nội dung câu hỏi"
             required
+            className={!question.title.trim() ? 'border-rose-300 focus:border-rose-500' : ''}
           />
+          {!question.title.trim() && (
+            <p className="mt-1 text-xs text-rose-500">Vui lòng nhập tiêu đề câu hỏi</p>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-3">
@@ -317,8 +323,16 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
         rows={3}
         value={question.content}
         onChange={(event) => onChange((current) => ({ ...current, content: event.target.value }))}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault()
+          }
+        }}
         placeholder="Nhập dữ kiện hoặc mô tả bổ sung cho câu hỏi"
       />
+      <p className="text-xs text-ink-400 dark:text-ink-500">
+        💡 Nhấn <kbd className="rounded bg-ink-100 px-1 py-0.5 text-xs dark:bg-ink-800">Shift</kbd> + <kbd className="rounded bg-ink-100 px-1 py-0.5 text-xs dark:bg-ink-800">Enter</kbd> để xuống dòng
+      </p>
     </div>
 
     <div className="mt-4">
@@ -511,8 +525,16 @@ const QuizQuestionEditor = memo(({ question, index, totalQuestions, onChange, on
         rows={2}
         value={question.explanation}
         onChange={(event) => onChange((current) => ({ ...current, explanation: event.target.value }))}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault()
+          }
+        }}
         placeholder="Giải thích ngắn gọn cho đáp án đúng"
       />
+      <p className="text-xs text-ink-400 dark:text-ink-500">
+        💡 Nhấn <kbd className="rounded bg-ink-100 px-1 py-0.5 text-xs dark:bg-ink-800">Shift</kbd> + <kbd className="rounded bg-ink-100 px-1 py-0.5 text-xs dark:bg-ink-800">Enter</kbd> để xuống dòng
+      </p>
     </div>
   </section>
 ))
@@ -552,6 +574,22 @@ export const QuizForm = ({ quiz }: QuizFormProps) => {
     if (suggested === values.slug) return
     setValues((prev) => ({ ...prev, slug: suggested }))
   }, [slugLocked, values.title, values.slug])
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl+S to save
+      if (event.ctrlKey && event.key === 's') {
+        event.preventDefault()
+        if (!loading) {
+          handleSubmit(event as any)
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [loading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetPreview = () => {
     setPreview([])
@@ -1276,7 +1314,7 @@ const addFillInBlankQuestion = useCallback(() => {
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500" htmlFor="title">
-                  Tiêu đề
+                  Tiêu đề <span className="text-rose-500">*</span>
                 </label>
                 <Input
                   id="title"
@@ -1288,7 +1326,11 @@ const addFillInBlankQuestion = useCallback(() => {
                     updateQuiz({ title: event.target.value })
                   }}
                   required
+                  className={!values.title.trim() ? 'border-rose-300 focus:border-rose-500' : ''}
                 />
+                {!values.title.trim() && (
+                  <p className="mt-1 text-xs text-rose-500">Vui lòng nhập tiêu đề quiz</p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-ink-400 dark:text-ink-500" htmlFor="slug">
@@ -1357,8 +1399,20 @@ const addFillInBlankQuestion = useCallback(() => {
                 rows={3}
                 value={values.description}
                 onChange={(event) => updateQuiz({ description: event.target.value })}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault()
+                  } else if (event.key === 'Enter' && event.ctrlKey) {
+                    // Submit form with Ctrl+Enter
+                    event.preventDefault()
+                    handleSubmit(event as any)
+                  }
+                }}
                 placeholder="Giới thiệu nội dung bài kiểm tra, mức độ và mục tiêu."
               />
+              <p className="text-xs text-ink-400 dark:text-ink-500">
+                💡 Nhấn <kbd className="rounded bg-ink-100 px-1 py-0.5 text-xs dark:bg-ink-800">Shift</kbd> + <kbd className="rounded bg-ink-100 px-1 py-0.5 text-xs dark:bg-ink-800">Enter</kbd> để xuống dòng • <kbd className="rounded bg-ink-100 px-1 py-0.5 text-xs dark:bg-ink-800">Ctrl</kbd> + <kbd className="rounded bg-ink-100 px-1 py-0.5 text-xs dark:bg-ink-800">Enter</kbd> để lưu nhanh
+              </p>
             </div>
           </section>
 
@@ -1422,6 +1476,11 @@ const addFillInBlankQuestion = useCallback(() => {
                   </div>
                 </div>
               ) : null}
+              <div className="flex flex-wrap items-center gap-3 text-xs text-ink-500 dark:text-ink-400">
+                <span>⌨️ Phím tắt:</span>
+                <span><kbd className="rounded bg-ink-100 px-1 py-0.5 dark:bg-ink-800">Ctrl</kbd> + <kbd className="rounded bg-ink-100 px-1 py-0.5 dark:bg-ink-800">S</kbd> để lưu</span>
+                <span><kbd className="rounded bg-ink-100 px-1 py-0.5 dark:bg-ink-800">Shift</kbd> + <kbd className="rounded bg-ink-100 px-1 py-0.5 dark:bg-ink-800">Enter</kbd> để xuống dòng</span>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Button type="submit" disabled={loading} size="lg" className="min-w-[140px] bg-indigo-600 hover:bg-indigo-700">
