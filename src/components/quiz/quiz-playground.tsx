@@ -97,46 +97,55 @@ const computeResult = (quiz: Quiz, answers: AnswerState) => {
   const totalQuestions = quiz.questions.length
 
   quiz.questions.forEach((question) => {
-    const selected = answers[question.id] ?? []
+    try {
+      const selected = answers[question.id] ?? []
 
-    let isCorrectAnswer = false
+      let isCorrectAnswer = false
 
-    if (question.type === 'MATCHING') {
-      // For matching questions, answers are in format "leftId:rightId"
-      // Correct pairs are: option[0] with option[1], option[2] with option[3], etc.
-      const correctPairs = new Set<string>()
-      for (let i = 0; i < question.options.length; i += 2) {
-        const leftId = question.options[i]?.id
-        const rightId = question.options[i + 1]?.id
-        if (leftId && rightId) {
-          correctPairs.add(`${leftId}:${rightId}`)
+      if (question.type === 'MATCHING') {
+        // For matching questions, answers are in format "leftId:rightId"
+        // Correct pairs are: option[0] with option[1], option[2] with option[3], etc.
+        const correctPairs = new Set<string>()
+        if (question.options) {
+          for (let i = 0; i < question.options.length; i += 2) {
+            const leftId = question.options[i]?.id
+            const rightId = question.options[i + 1]?.id
+            if (leftId && rightId) {
+              correctPairs.add(`${leftId}:${rightId}`)
+            }
+          }
         }
+
+        const selectedPairs = new Set(selected)
+        isCorrectAnswer =
+          correctPairs.size === selectedPairs.size &&
+          [...correctPairs].every(pair => selectedPairs.has(pair))
+      } else if (question.type === 'FILL_IN_BLANK') {
+        // For fill-in-the-blank questions, answers are strings
+        const correctAnswer = (question.options && question.options[0]?.text) || ''
+        const userAnswer = Array.isArray(selected) ? selected[0] : selected
+
+        isCorrectAnswer = (userAnswer || '').toString().toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+      } else {
+        // For regular questions
+        if (!question.options) return
+
+        const correctIds = question.options
+          .filter((option) => option.isCorrect)
+          .map((option) => option.id)
+          .sort()
+        const selectedIds = Array.isArray(selected) ? selected.sort() : (selected ? [selected] : []).sort()
+        isCorrectAnswer =
+          correctIds.length === selectedIds.length &&
+          correctIds.every((id, i) => id === selectedIds[i])
       }
 
-      const selectedPairs = new Set(selected)
-      isCorrectAnswer =
-        correctPairs.size === selectedPairs.size &&
-        [...correctPairs].every(pair => selectedPairs.has(pair))
-    } else if (question.type === 'FILL_IN_BLANK') {
-      // For fill-in-the-blank questions, answers are strings
-      const correctAnswer = question.options[0]?.text || ''
-      const userAnswer = Array.isArray(selected) ? selected[0] : selected
-
-      isCorrectAnswer = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
-    } else {
-      // For regular questions
-      const correctIds = question.options
-        .filter((option) => option.isCorrect)
-        .map((option) => option.id)
-        .sort()
-      const selectedIds = Array.isArray(selected) ? selected.sort() : [selected].sort()
-      isCorrectAnswer =
-        correctIds.length === selectedIds.length &&
-        correctIds.every((id, i) => id === selectedIds[i])
-    }
-
-    if (isCorrectAnswer) {
-      correctAnswers += 1
+      if (isCorrectAnswer) {
+        correctAnswers += 1
+      }
+    } catch (error) {
+      console.error('Error computing result for question:', question.id, error)
+      // Skip this question if there's an error
     }
   })
 
@@ -788,11 +797,12 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   // Helper function to render fill-in-blank questions for each question in the list
   const renderFillInBlankQuestionForIndex = useCallback((question: QuizQuestion, index: number) => {
-    const currentAnswer = Array.isArray(progress.answers[question.id])
-      ? (progress.answers[question.id] as string[])[0] || ''
-      : (progress.answers[question.id] as string) ?? ''
-    const correctAnswer = question.options[0]?.text || ''
-    const isCorrect = currentAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+    try {
+      const currentAnswer = Array.isArray(progress.answers[question.id])
+        ? (progress.answers[question.id] as string[])[0] || ''
+        : (progress.answers[question.id] as string) ?? ''
+      const correctAnswer = (question.options && question.options[0]?.text) || ''
+      const isCorrect = (currentAnswer || '').toString().toLowerCase().trim() === correctAnswer.toLowerCase().trim()
     
     return (
       <div className="space-y-2">
@@ -831,6 +841,14 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         )}
       </div>
     )
+    } catch (error) {
+      console.error('Error rendering fill-in-blank question:', question.id, error)
+      return (
+        <div className="space-y-2 text-red-500">
+          <p>Lỗi hiển thị câu hỏi điền khuyết</p>
+        </div>
+      )
+    }
   }, [progress, setProgress])
 
 

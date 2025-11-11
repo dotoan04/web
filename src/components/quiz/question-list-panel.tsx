@@ -46,33 +46,42 @@ type QuestionListPanelProps = {
 }
 
 const isQuestionCorrect = (question: QuizQuestion, answers: AnswerState) => {
-  const selected = answers[question.id] ?? []
+  try {
+    const selected = answers[question.id] ?? []
 
-  if (question.type === 'MATCHING') {
-    const correctPairs = new Set<string>()
-    for (let i = 0; i < question.options.length; i += 2) {
-      const leftId = question.options[i]?.id
-      const rightId = question.options[i + 1]?.id
-      if (leftId && rightId) {
-        correctPairs.add(`${leftId}:${rightId}`)
+    if (question.type === 'MATCHING') {
+      const correctPairs = new Set<string>()
+      if (question.options) {
+        for (let i = 0; i < question.options.length; i += 2) {
+          const leftId = question.options[i]?.id
+          const rightId = question.options[i + 1]?.id
+          if (leftId && rightId) {
+            correctPairs.add(`${leftId}:${rightId}`)
+          }
+        }
       }
-    }
 
-    const selectedPairs = new Set(selected)
-    return correctPairs.size === selectedPairs.size &&
-           [...correctPairs].every(pair => selectedPairs.has(pair))
-  } else if (question.type === 'FILL_IN_BLANK') {
-    const correctAnswer = question.options[0]?.text || ''
-    const userAnswer = Array.isArray(selected) ? selected[0] : selected
-    return userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
-  } else {
-    const correctIds = question.options
-      .filter((option) => option.isCorrect)
-      .map((option) => option.id)
-      .sort()
-    const selectedIds = Array.isArray(selected) ? selected.sort() : [selected].sort()
-    return correctIds.length === selectedIds.length &&
-           correctIds.every((id, i) => id === selectedIds[i])
+      const selectedPairs = new Set(selected)
+      return correctPairs.size === selectedPairs.size &&
+             [...correctPairs].every(pair => selectedPairs.has(pair))
+    } else if (question.type === 'FILL_IN_BLANK') {
+      const correctAnswer = (question.options && question.options[0]?.text) || ''
+      const userAnswer = Array.isArray(selected) ? selected[0] : selected
+      return (userAnswer || '').toString().toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+    } else {
+      if (!question.options) return false
+
+      const correctIds = question.options
+        .filter((option) => option.isCorrect)
+        .map((option) => option.id)
+        .sort()
+      const selectedIds = Array.isArray(selected) ? selected.sort() : (selected ? [selected] : []).sort()
+      return correctIds.length === selectedIds.length &&
+             correctIds.every((id, i) => id === selectedIds[i])
+    }
+  } catch (error) {
+    console.error('Error checking if question is correct:', question.id, error)
+    return false
   }
 }
 
