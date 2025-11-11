@@ -6,5 +6,8 @@ export async function GET() {
   const settings = await resolveSitePreferences()
   return NextResponse.json({
     loadingGifUrl: settings.quizLoadingGifUrl,
+    resultGoodGifUrl: settings.quizResultGoodGifUrl,
+    resultExcellentGifUrl: settings.quizResultExcellentGifUrl,
+    resultPoorGifUrl: settings.quizResultPoorGifUrl,
   })
 }

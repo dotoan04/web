@@ -170,6 +170,15 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const [showResultPopup, setShowResultPopup] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [loadingGifUrl, setLoadingGifUrl] = useState<string | null>(null)
+  const [resultGifUrls, setResultGifUrls] = useState<{
+    resultGoodGifUrl: string | null
+    resultExcellentGifUrl: string | null
+    resultPoorGifUrl: string | null
+  }>({
+    resultGoodGifUrl: null,
+    resultExcellentGifUrl: null,
+    resultPoorGifUrl: null,
+  })
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const pendingSubmissionRef = useRef<{ answers: AnswerState; durationSeconds: number } | null>(null)
   const hasPromptedRef = useRef(false)
@@ -275,16 +284,21 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }, [submitting])
 
   useEffect(() => {
-    const fetchGifUrl = async () => {
+    const fetchGifUrls = async () => {
       try {
         const response = await fetch('/api/quiz-settings')
         const data = await response.json()
         setLoadingGifUrl(data.loadingGifUrl)
+        setResultGifUrls({
+          resultGoodGifUrl: data.resultGoodGifUrl,
+          resultExcellentGifUrl: data.resultExcellentGifUrl,
+          resultPoorGifUrl: data.resultPoorGifUrl,
+        })
       } catch (error) {
         console.error('Failed to fetch quiz settings:', error)
       }
     }
-    void fetchGifUrl()
+    void fetchGifUrls()
   }, [])
   
   const currentQuestion = quiz.questions[currentQuestionIndex]
@@ -910,6 +924,17 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
   const displayName = storedName || 'Thí sinh'
 
+  const getResultGifUrl = (correctAnswers: number, totalQuestions: number) => {
+    const percentage = (correctAnswers / totalQuestions) * 100
+    if (percentage > 90) {
+      return resultGifUrls.resultExcellentGifUrl
+    } else if (percentage > 50) {
+      return resultGifUrls.resultGoodGifUrl
+    } else {
+      return resultGifUrls.resultPoorGifUrl
+    }
+  }
+
   return (
     <div className="relative min-h-screen bg-[#F8FAFC]" style={{ fontFamily: 'var(--font-body), sans-serif' }}>
       <Suspense fallback={null}>
@@ -999,6 +1024,17 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               <h2 className="text-center text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
                 Kết quả bài thi
               </h2>
+
+              {/* Result GIF */}
+              {getResultGifUrl(progress.correctAnswers || 0, progress.totalQuestions || 1) && (
+                <div className="my-6 flex justify-center">
+                  <img
+                    src={getResultGifUrl(progress.correctAnswers || 0, progress.totalQuestions || 1)!}
+                    alt="Kết quả"
+                    className="h-32 w-32 object-contain"
+                  />
+                </div>
+              )}
 
               <div className="text-center mb-6">
                 <div className="text-4xl font-bold text-emerald-600 mb-2">

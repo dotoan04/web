@@ -26,6 +26,9 @@ type Props = {
   effectType?: 'none' | 'snow' | 'sakura'
   parallaxCharacterUrl?: string | null
   quizLoadingGifUrl?: string | null
+  quizResultGoodGifUrl?: string | null
+  quizResultExcellentGifUrl?: string | null
+  quizResultPoorGifUrl?: string | null
 }
 
 export const SettingsForm = ({
@@ -47,6 +50,9 @@ export const SettingsForm = ({
   effectType,
   parallaxCharacterUrl,
   quizLoadingGifUrl,
+  quizResultGoodGifUrl,
+  quizResultExcellentGifUrl,
+  quizResultPoorGifUrl,
 }: Props) => {
   const [values, setValues] = useState({
     siteName,
@@ -66,6 +72,9 @@ export const SettingsForm = ({
     faviconUrl: faviconUrl ?? '',
     parallaxCharacterUrl: parallaxCharacterUrl ?? '',
     quizLoadingGifUrl: quizLoadingGifUrl ?? '',
+    quizResultGoodGifUrl: quizResultGoodGifUrl ?? '',
+    quizResultExcellentGifUrl: quizResultExcellentGifUrl ?? '',
+    quizResultPoorGifUrl: quizResultPoorGifUrl ?? '',
   })
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -110,6 +119,9 @@ export const SettingsForm = ({
         effectType: selectedEffect,
         parallaxCharacterUrl: values.parallaxCharacterUrl.trim() ? values.parallaxCharacterUrl.trim() : null,
         quizLoadingGifUrl: values.quizLoadingGifUrl.trim() ? values.quizLoadingGifUrl.trim() : null,
+        quizResultGoodGifUrl: values.quizResultGoodGifUrl.trim() ? values.quizResultGoodGifUrl.trim() : null,
+        quizResultExcellentGifUrl: values.quizResultExcellentGifUrl.trim() ? values.quizResultExcellentGifUrl.trim() : null,
+        quizResultPoorGifUrl: values.quizResultPoorGifUrl.trim() ? values.quizResultPoorGifUrl.trim() : null,
       }
 
       const response = await fetch('/api/settings', {
@@ -390,6 +402,48 @@ export const SettingsForm = ({
             />
             <p className="mt-1 text-xs text-ink-400">
               Ảnh GIF sẽ hiển thị khi đang chấm điểm quiz. Để trống nếu không muốn hiển thị GIF.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="quizResultGoodGifUrl">
+              GIF kết quả tốt (đúng >50%)
+            </label>
+            <Input
+              id="quizResultGoodGifUrl"
+              value={values.quizResultGoodGifUrl}
+              onChange={(event) => setValues((prev) => ({ ...prev, quizResultGoodGifUrl: event.target.value }))}
+              placeholder="https://..."
+            />
+            <p className="mt-1 text-xs text-ink-400">
+              Ảnh GIF sẽ hiển thị khi kết quả quiz tốt (đúng trên 50% câu hỏi).
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="quizResultExcellentGifUrl">
+              GIF kết quả xuất sắc (đúng >90%)
+            </label>
+            <Input
+              id="quizResultExcellentGifUrl"
+              value={values.quizResultExcellentGifUrl}
+              onChange={(event) => setValues((prev) => ({ ...prev, quizResultExcellentGifUrl: event.target.value }))}
+              placeholder="https://..."
+            />
+            <p className="mt-1 text-xs text-ink-400">
+              Ảnh GIF sẽ hiển thị khi kết quả quiz xuất sắc (đúng trên 90% câu hỏi).
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="quizResultPoorGifUrl">
+              GIF kết quả kém (đúng <50%)
+            </label>
+            <Input
+              id="quizResultPoorGifUrl"
+              value={values.quizResultPoorGifUrl}
+              onChange={(event) => setValues((prev) => ({ ...prev, quizResultPoorGifUrl: event.target.value }))}
+              placeholder="https://..."
+            />
+            <p className="mt-1 text-xs text-ink-400">
+              Ảnh GIF sẽ hiển thị khi kết quả quiz kém (đúng dưới 50% câu hỏi).
             </p>
           </div>
           <div className="flex items-center justify-between">

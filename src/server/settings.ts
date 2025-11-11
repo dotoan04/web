@@ -17,6 +17,9 @@ const keyMap = {
   effectType: 'site.effects.type',
   parallaxCharacter: 'site.parallaxCharacter',
   quizLoadingGif: 'quiz.loadingGif',
+  quizResultGoodGif: 'quiz.resultGoodGif',
+  quizResultExcellentGif: 'quiz.resultExcellentGif',
+  quizResultPoorGif: 'quiz.resultPoorGif',
   owner: 'portfolio.owner',
   education: 'portfolio.education',
   certifications: 'portfolio.certifications',
@@ -47,6 +50,9 @@ export const getSiteSettings = async () => {
       'site.effects.type': 'sakura',
       'site.parallaxCharacter': null,
       'quiz.loadingGif': null,
+      'quiz.resultGoodGif': null,
+      'quiz.resultExcellentGif': null,
+      'quiz.resultPoorGif': null,
       'portfolio.owner': {
         name: null,
         age: null,
@@ -77,6 +83,9 @@ export const updateSiteSettings = async (settings: {
   effectType?: 'none' | 'snow' | 'sakura'
   parallaxCharacterUrl?: string | null
   quizLoadingGifUrl?: string | null
+  quizResultGoodGifUrl?: string | null
+  quizResultExcellentGifUrl?: string | null
+  quizResultPoorGifUrl?: string | null
 }) => {
   const ownerProfile = {
     name: settings.ownerName?.trim() ? settings.ownerName.trim() : null,
@@ -194,6 +203,36 @@ export const updateSiteSettings = async (settings: {
       },
     }),
     prisma.siteSetting.upsert({
+      where: { key: keyMap.quizResultGoodGif },
+      create: {
+        key: keyMap.quizResultGoodGif,
+        value: settings.quizResultGoodGifUrl ?? Prisma.JsonNull,
+      },
+      update: {
+        value: settings.quizResultGoodGifUrl ?? Prisma.JsonNull,
+      },
+    }),
+    prisma.siteSetting.upsert({
+      where: { key: keyMap.quizResultExcellentGif },
+      create: {
+        key: keyMap.quizResultExcellentGif,
+        value: settings.quizResultExcellentGifUrl ?? Prisma.JsonNull,
+      },
+      update: {
+        value: settings.quizResultExcellentGifUrl ?? Prisma.JsonNull,
+      },
+    }),
+    prisma.siteSetting.upsert({
+      where: { key: keyMap.quizResultPoorGif },
+      create: {
+        key: keyMap.quizResultPoorGif,
+        value: settings.quizResultPoorGifUrl ?? Prisma.JsonNull,
+      },
+      update: {
+        value: settings.quizResultPoorGifUrl ?? Prisma.JsonNull,
+      },
+    }),
+    prisma.siteSetting.upsert({
       where: { key: keyMap.owner },
       create: {
         key: keyMap.owner,
@@ -248,6 +287,9 @@ export const resolveSitePreferences = cache(async () => {
     effectType: (settings[keyMap.effectType] as 'none' | 'snow' | 'sakura') ?? 'sakura',
     parallaxCharacterUrl: typeof settings[keyMap.parallaxCharacter] === 'string' ? (settings[keyMap.parallaxCharacter] as string) : null,
     quizLoadingGifUrl: typeof settings[keyMap.quizLoadingGif] === 'string' ? (settings[keyMap.quizLoadingGif] as string) : null,
+    quizResultGoodGifUrl: typeof settings[keyMap.quizResultGoodGif] === 'string' ? (settings[keyMap.quizResultGoodGif] as string) : null,
+    quizResultExcellentGifUrl: typeof settings[keyMap.quizResultExcellentGif] === 'string' ? (settings[keyMap.quizResultExcellentGif] as string) : null,
+    quizResultPoorGifUrl: typeof settings[keyMap.quizResultPoorGif] === 'string' ? (settings[keyMap.quizResultPoorGif] as string) : null,
     owner: (settings[keyMap.owner] as { name?: string; age?: number | null; avatarUrl?: string | null }) ?? {},
     education: (settings[keyMap.education] as string) ?? '',
     certifications: (settings[keyMap.certifications] as string[]) ?? [],

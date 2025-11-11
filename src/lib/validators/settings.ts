@@ -45,6 +45,21 @@ export const siteSettingsSchema = z.object({
     .url('URL ảnh GIF loading phải hợp lệ')
     .nullable()
     .optional(),
+  quizResultGoodGifUrl: z
+    .string()
+    .url('URL ảnh GIF kết quả tốt phải hợp lệ')
+    .nullable()
+    .optional(),
+  quizResultExcellentGifUrl: z
+    .string()
+    .url('URL ảnh GIF kết quả xuất sắc phải hợp lệ')
+    .nullable()
+    .optional(),
+  quizResultPoorGifUrl: z
+    .string()
+    .url('URL ảnh GIF kết quả kém phải hợp lệ')
+    .nullable()
+    .optional(),
 })
 
 export type SiteSettingsInput = z.infer<typeof siteSettingsSchema>

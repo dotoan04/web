@@ -38,6 +38,9 @@ export default async function SettingsPage() {
       effectType={settings.effectType}
       parallaxCharacterUrl={settings.parallaxCharacterUrl ?? ''}
       quizLoadingGifUrl={settings.quizLoadingGifUrl ?? ''}
+      quizResultGoodGifUrl={settings.quizResultGoodGifUrl ?? ''}
+      quizResultExcellentGifUrl={settings.quizResultExcellentGifUrl ?? ''}
+      quizResultPoorGifUrl={settings.quizResultPoorGifUrl ?? ''}
     />
   )
 }
