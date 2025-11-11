@@ -954,7 +954,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#F8FAFC]" style={{ fontFamily: 'var(--font-body), sans-serif' }}>
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900" style={{ fontFamily: 'var(--font-body), sans-serif' }}>
       <Suspense fallback={null}>
         <ThemeFeatureNotification />
       </Suspense>
@@ -963,33 +963,50 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         typeof document !== 'undefined' &&
         createPortal(
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-300"
             onClick={handleSkipName}
           >
             <div
-              className="w-full max-w-sm rounded-2xl border border-white/20 bg-white/80 p-6 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/80"
+              className="w-full max-w-md rounded-3xl border border-white/20 bg-white/80 p-8 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
               onClick={(event) => event.stopPropagation()}
             >
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                Tên của bạn là gì?
-              </h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                Bạn có thể lưu lại tên của mình cho các lần nộp tiếp theo hoặc bỏ qua.
-              </p>
-              <div className="mt-4 space-y-4">
+              <div className="text-center mb-6">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                  Tên của bạn là gì?
+                </h2>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  Bạn có thể lưu lại tên của mình cho các lần nộp tiếp theo hoặc bỏ qua.
+                </p>
+              </div>
+              
+              <div className="space-y-4">
                 <Input
                   ref={nameInputRef}
                   value={nameInput}
                   onChange={(event) => setNameInput(event.target.value)}
                   placeholder="Nhập tên của bạn"
                   autoComplete="name"
-                  className="h-11"
+                  className="h-12 text-base rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200"
                 />
-                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                  <Button type="button" variant="ghost" onClick={handleSkipName} className="sm:flex-1">
+                <div className="flex flex-col-reverse gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleSkipName}
+                    className="h-12 rounded-xl text-slate-600 hover:text-slate-800 hover:bg-slate-100/50 transition-all duration-200"
+                  >
                     Bỏ qua
                   </Button>
-                  <Button type="button" onClick={handleSaveName} className="sm:flex-1">
+                  <Button
+                    type="button"
+                    onClick={handleSaveName}
+                    className="h-12 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
                     Lưu tên
                   </Button>
                 </div>
@@ -1002,27 +1019,34 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       {submitting &&
         typeof document !== 'undefined' &&
         createPortal(
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
-            <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-white/90 p-8 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/90">
-              <h2 className="text-center text-2xl font-bold text-slate-900 dark:text-slate-100">
-                Chờ xíu !!
-              </h2>
-              
-              {/* Loading GIF */}
-              {loadingGifUrl && (
-                <div className="my-8 flex justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={loadingGifUrl} 
-                    alt="Loading..." 
-                    className="h-32 w-32 object-contain"
-                  />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/90 p-10 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/90 animate-in zoom-in-95 duration-300">
+              <div className="text-center">
+                {/* Animated Loading Spinner */}
+                <div className="relative mx-auto w-20 h-20 mb-6">
+                  <div className="absolute inset-0 rounded-full border-4 border-indigo-200 dark:border-indigo-800"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 animate-spin"></div>
                 </div>
-              )}
-              
-              <p className="text-center text-base font-medium text-slate-700 dark:text-slate-300">
-                Đang chấm điểm cho bạn
-              </p>
+                
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                  Đang xử lý
+                </h2>
+                
+                {/* Loading GIF */}
+                {loadingGifUrl && (
+                  <div className="my-6 flex justify-center">
+                    <img
+                      src={loadingGifUrl}
+                      alt="Loading..."
+                      className="h-24 w-24 object-contain rounded-2xl shadow-lg"
+                    />
+                  </div>
+                )}
+                
+                <p className="text-base text-slate-600 dark:text-slate-300 font-medium">
+                  Đang chấm điểm cho bạn...
+                </p>
+              </div>
             </div>
           </div>,
           document.body,
@@ -1032,45 +1056,53 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         typeof document !== 'undefined' &&
         createPortal(
           <div
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4"
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300"
             onClick={() => setShowResultPopup(false)}
           >
             <div
-              className="w-full max-w-sm rounded-2xl border border-white/20 bg-white/90 p-8 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/90"
+              className="w-full max-w-lg rounded-3xl border border-white/20 bg-white/90 p-8 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/90 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
               onClick={(event) => event.stopPropagation()}
             >
-              <h2 className="text-center text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-                Kết quả bài thi
-              </h2>
-
-              {/* Result GIF */}
-              {getResultGifUrl(progress.correctAnswers || 0, progress.totalQuestions || 1) && (
-                <div className="my-6 flex justify-center">
-                  <img
-                    src={getResultGifUrl(progress.correctAnswers || 0, progress.totalQuestions || 1)!}
-                    alt="Kết quả"
-                    className="h-32 w-32 object-contain"
-                  />
+              <div className="text-center">
+                <div className="mx-auto w-20 h-20 bg-gradient-to-br from-emerald-400 to-green-600 rounded-2xl flex items-center justify-center mb-6">
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
-              )}
+                
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+                  Kết quả bài thi
+                </h2>
 
-              <div className="text-center mb-6">
-                <div className="text-4xl font-bold text-emerald-600 mb-2">
-                  {progress.correctAnswers}/{progress.totalQuestions}
+                {/* Result GIF */}
+                {getResultGifUrl(progress.correctAnswers || 0, progress.totalQuestions || 1) && (
+                  <div className="my-6 flex justify-center">
+                    <img
+                      src={getResultGifUrl(progress.correctAnswers || 0, progress.totalQuestions || 1)!}
+                      alt="Kết quả"
+                      className="h-24 w-24 object-contain rounded-2xl shadow-lg"
+                    />
+                  </div>
+                )}
+
+                <div className="text-center mb-8">
+                  <div className="text-5xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent mb-2">
+                    {progress.correctAnswers}/{progress.totalQuestions}
+                  </div>
+                  <p className="text-lg text-slate-700 dark:text-slate-300 font-medium">
+                    câu đúng
+                  </p>
                 </div>
-                <p className="text-lg text-slate-700 dark:text-slate-300">
-                  câu đúng
-                </p>
-              </div>
 
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setShowResultPopup(false)}
-                  className="px-6 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
-                >
-                  Xem chi tiết
-                </button>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowResultPopup(false)}
+                    className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    Xem chi tiết
+                  </button>
+                </div>
               </div>
             </div>
           </div>,
@@ -1092,91 +1124,109 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         enableVirtualization={quiz.questions.length > 50}
       />
       
-      {/* Header - Optimized for mobile */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-[1800px] mx-auto px-2 sm:px-4 py-2 sm:py-3">
+      {/* Header - Modern glassmorphism design */}
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-lg shadow-black/5">
+        <div className="max-w-[1800px] mx-auto px-3 sm:px-6 py-3 sm:py-4">
           {/* Mobile Layout: Stack vertically on small screens */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             {/* Top Row: Back Button, Timer, Menu (Mobile) */}
-            <div className="flex items-center justify-between sm:justify-start gap-2">
+            <div className="flex items-center justify-between sm:justify-start gap-3">
               {/* Back Button */}
               <button
                 type="button"
                 onClick={() => window.history.back()}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-gray-700 hover:bg-gray-50 rounded transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:text-slate-900 hover:bg-white/60 rounded-xl transition-all duration-200 border border-transparent hover:border-white/30"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                <span className="hidden sm:inline">Quay lại</span>
+                <span className="hidden sm:inline font-medium">Quay lại</span>
               </button>
 
-              {/* Timer - Prominent on mobile */}
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-none justify-center sm:justify-start">
-                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm sm:text-base font-semibold text-gray-900 tabular-nums">
-                  {formatTimer(progress.remainingSeconds)}
-                </span>
+              {/* Timer - Modern design with glow effect */}
+              <div className="flex items-center gap-2 flex-1 sm:flex-none justify-center sm:justify-start">
+                <div className="relative">
+                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="absolute -inset-1 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl opacity-20 blur-sm animate-pulse"></div>
+                </div>
+                <div className="bg-white/60 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/30 shadow-sm">
+                  <span className="text-sm font-bold text-slate-900 tabular-nums">
+                    {formatTimer(progress.remainingSeconds)}
+                  </span>
+                </div>
               </div>
 
               {/* Menu Button - Mobile only */}
               <button
                 type="button"
                 onClick={() => setShowMobileMenu(true)}
-                className="sm:hidden p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                className="sm:hidden p-2 text-slate-600 hover:text-slate-800 hover:bg-white/60 rounded-xl transition-all duration-200"
                 aria-label="Danh sách"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
             </div>
 
             {/* Bottom Row: Student Name, Actions (Mobile) or Right side (Desktop) */}
-            <div className="flex items-center justify-between sm:justify-end gap-2">
-              {/* Student Name - Compact on mobile */}
-              <div className="flex-1 sm:flex-none text-left sm:text-center">
-                <span className="text-xs sm:text-sm text-gray-600 sm:text-gray-700">
-                  <span className="hidden sm:inline">Thí sinh: </span>
-                  <span className="font-medium">{displayName}</span>
-                </span>
+            <div className="flex items-center justify-between sm:justify-end gap-3">
+              {/* Student Name - Modern design */}
+              <div className="flex-1 sm:flex-none">
+                <div className="bg-gradient-to-r from-white/60 to-white/40 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30 shadow-sm">
+                  <span className="text-sm text-slate-700">
+                    <span className="hidden sm:inline font-medium">Thí sinh: </span>
+                    <span className="font-semibold text-slate-900">{displayName}</span>
+                  </span>
+                </div>
               </div>
 
               {/* Desktop: Icons and Submit Button */}
-              <div className="hidden sm:flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-3">
                 {/* Menu Button - Desktop */}
                 <button
                   type="button"
                   onClick={() => setShowMobileMenu(true)}
-                  className="lg:hidden p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                  className="lg:hidden p-2 text-slate-600 hover:text-slate-800 hover:bg-white/60 rounded-xl transition-all duration-200"
                   aria-label="Danh sách"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
 
-                {/* Submit Button */}
+                {/* Submit Button - Modern design */}
                 {!progress.completed ? (
                   <button
                     type="button"
                     onClick={handleSubmit}
                     disabled={submitting}
-                    className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                    className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {submitting ? '...' : 'Nộp bài'}
+                    {submitting ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Đang xử lý...</span>
+                      </div>
+                    ) : (
+                      'Nộp bài'
+                    )}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-emerald-600">
-                      {progress.correctAnswers}/{progress.totalQuestions} đúng
-                    </span>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl px-4 py-2 border border-emerald-200/50">
+                      <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                        {progress.correctAnswers}/{progress.totalQuestions} đúng
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                      className="px-4 py-2.5 text-sm text-slate-700 hover:text-slate-900 hover:bg-white/60 rounded-xl transition-all duration-200 border border-transparent hover:border-white/30"
                     >
                       Làm lại
                     </button>
@@ -1190,19 +1240,21 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   type="button"
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="sm:hidden px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  className="sm:hidden px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-sm font-semibold rounded-xl shadow-lg transition-all duration-200 disabled:opacity-50"
                 >
                   {submitting ? '...' : 'Nộp'}
                 </button>
               ) : (
                 <div className="sm:hidden flex items-center gap-2">
-                  <span className="text-xs font-semibold text-emerald-600">
-                    {progress.correctAnswers}/{progress.totalQuestions} đúng
-                  </span>
+                  <div className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl px-3 py-1.5 border border-emerald-200/50">
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                      {progress.correctAnswers}/{progress.totalQuestions}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={handleReset}
-                    className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                    className="px-3 py-1.5 text-xs text-slate-700 hover:bg-white/60 rounded-lg transition-all duration-200"
                   >
                     Làm lại
                   </button>
@@ -1231,11 +1283,18 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                   ref={(el) => {
                     questionRefs.current[index] = el
                   }}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4"
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-4 sm:p-6"
                 >
                   {/* Question Number */}
                   <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-3">
-                    Câu {index + 1}
+                    <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                      <span className="text-sm font-bold text-white">{index + 1}</span>
+                    </div>
+                    <h2 className="text-lg font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                      Câu hỏi
+                    </h2>
+                  </div>
                   </h2>
 
                   {/* Question Title */}
