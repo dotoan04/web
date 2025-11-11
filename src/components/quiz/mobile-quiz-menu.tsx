@@ -33,8 +33,8 @@ type SubmissionState = {
   startedAt: string
   remainingSeconds: number
   completed?: boolean
-  score?: number
-  totalPoints?: number
+  correctAnswers?: number
+  totalQuestions?: number
   submittedAt?: string
 }
 

@@ -56,15 +56,15 @@ type SubmissionState = {
   startedAt: string
   remainingSeconds: number
   completed?: boolean
-  score?: number
-  totalPoints?: number
+  correctAnswers?: number
+  totalQuestions?: number
   submittedAt?: string
 }
 
 type HistoryEntry = {
   submissionId: string
-  score: number
-  totalPoints: number
+  correctAnswers: number
+  totalQuestions: number
   submittedAt: string
   answers: AnswerState
 }
@@ -93,15 +93,14 @@ const isMultipleChoice = (question: QuizQuestion) =>
   question.type === 'MULTIPLE_CHOICE' || question.options.filter((o) => o.isCorrect).length > 1
 
 const computeResult = (quiz: Quiz, answers: AnswerState) => {
-  let score = 0
-  let totalPoints = 0
+  let correctAnswers = 0
+  const totalQuestions = quiz.questions.length
 
   quiz.questions.forEach((question) => {
-    totalPoints += question.points
     const selected = answers[question.id] ?? []
-    
+
     let isCorrectAnswer = false
-    
+
     if (question.type === 'MATCHING') {
       // For matching questions, answers are in format "leftId:rightId"
       // Correct pairs are: option[0] with option[1], option[2] with option[3], etc.
@@ -113,7 +112,7 @@ const computeResult = (quiz: Quiz, answers: AnswerState) => {
           correctPairs.add(`${leftId}:${rightId}`)
         }
       }
-      
+
       const selectedPairs = new Set(selected)
       isCorrectAnswer =
         correctPairs.size === selectedPairs.size &&
@@ -122,7 +121,7 @@ const computeResult = (quiz: Quiz, answers: AnswerState) => {
       // For fill-in-the-blank questions, answers are strings
       const correctAnswer = question.options[0]?.text || ''
       const userAnswer = Array.isArray(selected) ? selected[0] : selected
-      
+
       isCorrectAnswer = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
     } else {
       // For regular questions
@@ -135,13 +134,13 @@ const computeResult = (quiz: Quiz, answers: AnswerState) => {
         correctIds.length === selectedIds.length &&
         correctIds.every((id, i) => id === selectedIds[i])
     }
-    
+
     if (isCorrectAnswer) {
-      score += question.points
+      correctAnswers += 1
     }
   })
 
-  return { score, totalPoints }
+  return { correctAnswers, totalQuestions }
 }
 
 export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
@@ -168,6 +167,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   const [error, setError] = useState<string | null>(null)
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [showNamePrompt, setShowNamePrompt] = useState(false)
+  const [showResultPopup, setShowResultPopup] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [loadingGifUrl, setLoadingGifUrl] = useState<string | null>(null)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -399,18 +399,18 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   }, [quiz.durationSeconds, setProgress, progress.completed])
 
   useEffect(() => {
-    if (progress.completed && progress.score != null && progress.totalPoints != null && !progress.submittedAt) {
+    if (progress.completed && progress.correctAnswers != null && progress.totalQuestions != null && !progress.submittedAt) {
       const entry: HistoryEntry = {
         submissionId: `${quiz.id}-${Date.now()}`,
-        score: progress.score,
-        totalPoints: progress.totalPoints,
+        correctAnswers: progress.correctAnswers,
+        totalQuestions: progress.totalQuestions,
         submittedAt: new Date().toISOString(),
         answers: progress.answers,
       }
       setHistory((prev) => [entry, ...prev].slice(0, 10))
       setProgress((prev) => ({ ...prev, submittedAt: entry.submittedAt }))
     }
-  }, [progress.answers, progress.completed, progress.score, progress.totalPoints, progress.submittedAt, quiz.id, setHistory, setProgress])
+  }, [progress.answers, progress.completed, progress.correctAnswers, progress.totalQuestions, progress.submittedAt, quiz.id, setHistory, setProgress])
 
   const answeredCount = useMemo(
     () => Object.values(progress.answers).filter((value) => {
@@ -422,7 +422,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
   )
 
   const filteredQuestions = useMemo(() => {
-    if (!progress.completed || filter === 'all' || progress.score == null) {
+    if (!progress.completed || filter === 'all' || progress.correctAnswers == null) {
       return quiz.questions
     }
 
@@ -438,7 +438,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
         correctIds.every((id, i) => id === selectedIds[i])
       return filter === 'correct' ? isCorrectAnswer : !isCorrectAnswer
     })
-  }, [filter, progress.answers, progress.completed, progress.score, quiz.questions])
+  }, [filter, progress.answers, progress.completed, progress.correctAnswers, quiz.questions])
 
   const submitQuiz = useCallback(
     async (payload: { answers: AnswerState; durationSeconds: number; participant: string; userInfo?: UserInfo }) => {
@@ -460,24 +460,30 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
       const result = await response.json()
       const submittedAt = new Date().toISOString()
 
+      // Calculate correct answers locally since API might still return old format
+      const { correctAnswers, totalQuestions } = computeResult(quiz, payload.answers)
+
       setProgress((prev) => ({
         ...prev,
         completed: true,
         submittedAt,
-        score: result.score,
-        totalPoints: result.totalPoints,
+        correctAnswers,
+        totalQuestions,
       }))
 
       setHistory((prev) => [
         {
-          submissionId: result.submissionId,
-          score: result.score,
-          totalPoints: result.totalPoints,
+          submissionId: result.submissionId || `${quiz.id}-${Date.now()}`,
+          correctAnswers,
+          totalQuestions,
           submittedAt,
           answers: payload.answers,
         },
         ...prev,
       ].slice(0, 10))
+
+      // Show result popup
+      setShowResultPopup(true)
     },
     [quiz.slug, setHistory, setProgress],
   )
@@ -534,6 +540,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
     setFilter('all')
     setError(null)
     setShowNamePrompt(false)
+    setShowResultPopup(false)
     setSubmitting(false)
     setShowMobileMenu(false)
     hasPromptedRef.current = false
@@ -977,7 +984,45 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
           </div>,
           document.body,
         )}
-      
+
+      {showResultPopup &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4"
+            onClick={() => setShowResultPopup(false)}
+          >
+            <div
+              className="w-full max-w-sm rounded-2xl border border-white/20 bg-white/90 p-8 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/90"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h2 className="text-center text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+                Kết quả bài thi
+              </h2>
+
+              <div className="text-center mb-6">
+                <div className="text-4xl font-bold text-emerald-600 mb-2">
+                  {progress.correctAnswers}/{progress.totalQuestions}
+                </div>
+                <p className="text-lg text-slate-700 dark:text-slate-300">
+                  câu đúng
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowResultPopup(false)}
+                  className="px-6 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  Xem chi tiết
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
       {renderFilterModal()}
       
       {/* Mobile Quiz Menu */}
@@ -1072,7 +1117,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-emerald-600">
-                      {progress.score}/{progress.totalPoints}
+                      {progress.correctAnswers}/{progress.totalQuestions} đúng
                     </span>
                     <button
                       type="button"
@@ -1098,7 +1143,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
               ) : (
                 <div className="sm:hidden flex items-center gap-2">
                   <span className="text-xs font-semibold text-emerald-600">
-                    {progress.score}/{progress.totalPoints}
+                    {progress.correctAnswers}/{progress.totalQuestions} đúng
                   </span>
                   <button
                     type="button"

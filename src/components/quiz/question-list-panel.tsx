@@ -32,8 +32,8 @@ type SubmissionState = {
   startedAt: string
   remainingSeconds: number
   completed?: boolean
-  score?: number
-  totalPoints?: number
+  correctAnswers?: number
+  totalQuestions?: number
   submittedAt?: string
 }
 
@@ -43,6 +43,37 @@ type QuestionListPanelProps = {
   onQuestionSelect: (index: number) => void
   progress: SubmissionState
   enableVirtualization?: boolean
+}
+
+const isQuestionCorrect = (question: QuizQuestion, answers: AnswerState) => {
+  const selected = answers[question.id] ?? []
+
+  if (question.type === 'MATCHING') {
+    const correctPairs = new Set<string>()
+    for (let i = 0; i < question.options.length; i += 2) {
+      const leftId = question.options[i]?.id
+      const rightId = question.options[i + 1]?.id
+      if (leftId && rightId) {
+        correctPairs.add(`${leftId}:${rightId}`)
+      }
+    }
+
+    const selectedPairs = new Set(selected)
+    return correctPairs.size === selectedPairs.size &&
+           [...correctPairs].every(pair => selectedPairs.has(pair))
+  } else if (question.type === 'FILL_IN_BLANK') {
+    const correctAnswer = question.options[0]?.text || ''
+    const userAnswer = Array.isArray(selected) ? selected[0] : selected
+    return userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+  } else {
+    const correctIds = question.options
+      .filter((option) => option.isCorrect)
+      .map((option) => option.id)
+      .sort()
+    const selectedIds = Array.isArray(selected) ? selected.sort() : [selected].sort()
+    return correctIds.length === selectedIds.length &&
+           correctIds.every((id, i) => id === selectedIds[i])
+  }
 }
 
 export const QuestionListPanel = memo(({
@@ -100,7 +131,9 @@ export const QuestionListPanel = memo(({
                     {rowQuestions.map((question, relativeIndex) => {
                       const absoluteIndex = startIndex + relativeIndex
                       const isSelected = currentQuestionIndex === absoluteIndex
-                      
+                      const isCompleted = progress.completed
+                      const isCorrect = isCompleted ? isQuestionCorrect(question, progress.answers) : null
+
                       return (
                         <button
                           key={question.id}
@@ -112,6 +145,10 @@ export const QuestionListPanel = memo(({
                             ${
                               isSelected
                                 ? 'bg-blue-600 text-white shadow-sm'
+                                : isCompleted && isCorrect === true
+                                ? 'bg-emerald-500 text-white border border-emerald-600'
+                                : isCompleted && isCorrect === false
+                                ? 'bg-rose-500 text-white border border-rose-600'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                             }
                           `}
@@ -143,7 +180,9 @@ export const QuestionListPanel = memo(({
         <div className="grid grid-cols-5 gap-2">
           {questions.map((question, index) => {
             const isSelected = currentQuestionIndex === index
-            
+            const isCompleted = progress.completed
+            const isCorrect = isCompleted ? isQuestionCorrect(question, progress.answers) : null
+
             return (
               <button
                 key={question.id}
@@ -155,6 +194,10 @@ export const QuestionListPanel = memo(({
                   ${
                     isSelected
                       ? 'bg-blue-600 text-white shadow-sm'
+                      : isCompleted && isCorrect === true
+                      ? 'bg-emerald-500 text-white border border-emerald-600'
+                      : isCompleted && isCorrect === false
+                      ? 'bg-rose-500 text-white border border-rose-600'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                   }
                 `}
