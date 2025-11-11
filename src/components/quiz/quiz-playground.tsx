@@ -1245,7 +1245,7 @@ export const QuizPlayground = ({ quiz }: QuizPlaygroundProps) => {
 
                   {/* Question Content */}
                   {question.content && (
-                    <div className="mb-3 sm:mb-4 text-sm text-gray-700 leading-relaxed">
+                    <div className="mb-3 sm:mb-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                       {question.content}
                     </div>
                   )}
