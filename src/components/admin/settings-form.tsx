@@ -406,7 +406,7 @@ export const SettingsForm = ({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="quizResultGoodGifUrl">
-              GIF kết quả tốt (đúng >50%)
+              GIF kết quả tốt (đúng {'>'}50%)
             </label>
             <Input
               id="quizResultGoodGifUrl"
@@ -420,7 +420,7 @@ export const SettingsForm = ({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="quizResultExcellentGifUrl">
-              GIF kết quả xuất sắc (đúng >90%)
+              GIF kết quả xuất sắc (đúng {'>'}90%)
             </label>
             <Input
               id="quizResultExcellentGifUrl"
@@ -434,7 +434,7 @@ export const SettingsForm = ({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-600" htmlFor="quizResultPoorGifUrl">
-              GIF kết quả kém (đúng <50%)
+              GIF kết quả kém (đúng {'<'}50%)
             </label>
             <Input
               id="quizResultPoorGifUrl"
